@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Dashboard - CubbyCove</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Nunito', 'sans-serif'] },
+                    colors: {
+                        'cubby-blue': '#4CC9F0',
+                        'cubby-purple': '#7209B7',
+                        'cubby-pink': '#F72585',
+                        'cubby-yellow': '#FFD60A',
+                        'cubby-green': '#38B000',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+
+    <!-- TOP BAR -->
+    <header class="bg-white shadow-sm sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Logo -->
+            <div class="flex items-center gap-2">
+                <div class="bg-cubby-purple text-white p-1.5 rounded-lg">
+                    <i class="fa-solid fa-shield-cat text-lg"></i>
+                </div>
+                <span class="text-xl font-extrabold text-gray-800">Parent<span class="text-cubby-purple">Hub</span></span>
+            </div>
+
+            <!-- Right Actions -->
+            <div class="flex items-center gap-4">
+                <button class="relative p-2 text-gray-400 hover:text-cubby-purple transition-colors">
+                    <i class="fa-solid fa-bell text-xl"></i>
+                    <span class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                </button>
+                <div class="flex items-center gap-3 border-l pl-4 border-gray-200">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-bold text-gray-700">Sarah Jenkins</p>
+                        <p class="text-xs text-gray-500">Verified Parent <i class="fa-solid fa-circle-check text-green-500 ml-1"></i></p>
+                    </div>
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" class="w-10 h-10 rounded-full bg-gray-100 border border-gray-200">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col lg:flex-row gap-8">
+            
+            <!-- SIDEBAR NAVIGATION -->
+            <nav class="w-full lg:w-64 flex-shrink-0 space-y-2">
+                <a href="#" class="flex items-center gap-3 px-4 py-3 bg-cubby-purple text-white rounded-xl font-bold shadow-md shadow-purple-200 transition-transform transform hover:scale-105">
+                    <i class="fa-solid fa-chart-pie w-6 text-center"></i> Overview
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-white hover:shadow-sm rounded-xl font-semibold transition-all">
+                    <i class="fa-solid fa-users w-6 text-center"></i> My Kids
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-white hover:shadow-sm rounded-xl font-semibold transition-all">
+                    <i class="fa-solid fa-clock-rotate-left w-6 text-center"></i> Activity Log
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-white hover:shadow-sm rounded-xl font-semibold transition-all">
+                    <i class="fa-solid fa-sliders w-6 text-center"></i> Settings
+                </a>
+                <div class="pt-4 mt-4 border-t border-gray-200">
+                    <a href="../index.html" class="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl font-semibold transition-all">
+                        <i class="fa-solid fa-right-from-bracket w-6 text-center"></i> Log Out
+                    </a>
+                </div>
+            </nav>
+
+            <!-- MAIN CONTENT AREA -->
+            <main class="flex-1">
+                
+                <!-- Welcome Section -->
+                <div class="mb-8">
+                    <h1 class="text-2xl font-extrabold text-gray-800">Dashboard Overview</h1>
+                    <p class="text-gray-500">Here's what's happening with your family today.</p>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <!-- Stat 1 -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="bg-blue-100 text-cubby-blue p-3 rounded-lg">
+                                <i class="fa-solid fa-clock text-xl"></i>
+                            </div>
+                            <span class="text-xs font-bold text-green-500 bg-green-50 px-2 py-1 rounded">+12%</span>
+                        </div>
+                        <h3 class="text-2xl font-extrabold text-gray-800">2h 15m</h3>
+                        <p class="text-sm text-gray-500">Total Screen Time</p>
+                    </div>
+                    <!-- Stat 2 -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="bg-purple-100 text-cubby-purple p-3 rounded-lg">
+                                <i class="fa-solid fa-shield-halved text-xl"></i>
+                            </div>
+                            <span class="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded">0 New</span>
+                        </div>
+                        <h3 class="text-2xl font-extrabold text-gray-800">Safe</h3>
+                        <p class="text-sm text-gray-500">Threats Detected</p>
+                    </div>
+                    <!-- Stat 3 -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="bg-yellow-100 text-yellow-600 p-3 rounded-lg">
+                                <i class="fa-solid fa-star text-xl"></i>
+                            </div>
+                            <span class="text-xs font-bold text-cubby-blue bg-blue-50 px-2 py-1 rounded">Active</span>
+                        </div>
+                        <h3 class="text-2xl font-extrabold text-gray-800">2</h3>
+                        <p class="text-sm text-gray-500">Active Child Profiles</p>
+                    </div>
+                </div>
+
+                <!-- Main Content Split -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    <!-- Left Column: Child Profiles & Add -->
+                    <div class="lg:col-span-2 space-y-8">
+                        
+                        <!-- Child Profiles Card -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="font-bold text-lg text-gray-800">Your Kids</h3>
+                                <a href="register_child.html" class="text-sm font-bold text-cubby-purple hover:underline flex items-center gap-1">
+                                    <i class="fa-solid fa-plus"></i> Add Child
+                                </a>
+                            </div>
+
+                            <div class="space-y-4">
+                                <!-- Child 1 -->
+                                <div class="flex items-center p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-cubby-blue transition-colors cursor-pointer group">
+                                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="w-12 h-12 rounded-full bg-white border-2 border-white shadow-sm mr-4">
+                                    <div class="flex-1">
+                                        <h4 class="font-bold text-gray-800 group-hover:text-cubby-blue transition-colors">Felix</h4>
+                                        <p class="text-xs text-gray-500">Last active: 10 mins ago</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="block text-xs font-bold text-gray-400 mb-1">Status</span>
+                                        <span class="inline-block w-2 h-2 bg-green-500 rounded-full" title="Online"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Child 2 -->
+                                <div class="flex items-center p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-cubby-purple transition-colors cursor-pointer group">
+                                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Annie" class="w-12 h-12 rounded-full bg-white border-2 border-white shadow-sm mr-4">
+                                    <div class="flex-1">
+                                        <h4 class="font-bold text-gray-800 group-hover:text-cubby-purple transition-colors">Annie</h4>
+                                        <p class="text-xs text-gray-500">Last active: 2 hours ago</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="block text-xs font-bold text-gray-400 mb-1">Status</span>
+                                        <span class="inline-block w-2 h-2 bg-gray-400 rounded-full" title="Offline"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chart Placeholder (Screen Time) -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="font-bold text-lg text-gray-800 mb-4">Weekly Screen Time</h3>
+                            <div class="h-48 bg-gray-50 rounded-xl flex items-end justify-between px-4 pb-4 border-b border-gray-200">
+                                <!-- Fake Bars for Visuals -->
+                                <div class="w-8 bg-cubby-blue/30 hover:bg-cubby-blue rounded-t-lg h-[40%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold opacity-0 group-hover:opacity-100">40m</span></div>
+                                <div class="w-8 bg-cubby-blue/30 hover:bg-cubby-blue rounded-t-lg h-[60%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold opacity-0 group-hover:opacity-100">1h</span></div>
+                                <div class="w-8 bg-cubby-blue/30 hover:bg-cubby-blue rounded-t-lg h-[30%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold opacity-0 group-hover:opacity-100">30m</span></div>
+                                <div class="w-8 bg-cubby-blue/30 hover:bg-cubby-blue rounded-t-lg h-[80%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold opacity-0 group-hover:opacity-100">2h</span></div>
+                                <div class="w-8 bg-cubby-blue/30 hover:bg-cubby-blue rounded-t-lg h-[50%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold opacity-0 group-hover:opacity-100">50m</span></div>
+                                <div class="w-8 bg-cubby-purple rounded-t-lg h-[75%] shadow-lg shadow-purple-200 relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-cubby-purple opacity-0 group-hover:opacity-100">Today</span></div>
+                                <div class="w-8 bg-gray-200 rounded-t-lg h-[10%]"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-400 mt-2 font-bold px-1">
+                                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span class="text-cubby-purple">Sat</span><span>Sun</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Right Column: Recent Activity & Notifications -->
+                    <div class="space-y-8">
+                        
+                        <!-- Recent Activity -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="font-bold text-lg text-gray-800 mb-4">Recent Activity</h3>
+                            <div class="space-y-4 relative">
+                                <!-- Vertical Line -->
+                                <div class="absolute left-2.5 top-2 bottom-4 w-0.5 bg-gray-100"></div>
+
+                                <!-- Item 1 -->
+                                <div class="flex gap-4 relative">
+                                    <div class="w-5 h-5 rounded-full bg-blue-100 border-4 border-white z-10 flex-shrink-0"></div>
+                                    <div>
+                                        <p class="text-sm text-gray-800 font-semibold">Watched "Learn Colors"</p>
+                                        <p class="text-xs text-gray-400">Felix • 5 mins ago</p>
+                                    </div>
+                                </div>
+                                <!-- Item 2 -->
+                                <div class="flex gap-4 relative">
+                                    <div class="w-5 h-5 rounded-full bg-purple-100 border-4 border-white z-10 flex-shrink-0"></div>
+                                    <div>
+                                        <p class="text-sm text-gray-800 font-semibold">Played "Math Puzzle"</p>
+                                        <p class="text-xs text-gray-400">Annie • 25 mins ago</p>
+                                    </div>
+                                </div>
+                                <!-- Item 3 -->
+                                <div class="flex gap-4 relative">
+                                    <div class="w-5 h-5 rounded-full bg-green-100 border-4 border-white z-10 flex-shrink-0"></div>
+                                    <div>
+                                        <p class="text-sm text-gray-800 font-semibold">Logged In</p>
+                                        <p class="text-xs text-gray-400">Felix • 1 hour ago</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="w-full mt-6 text-xs font-bold text-gray-400 hover:text-cubby-purple transition-colors">View Full History</button>
+                        </div>
+
+                        <!-- Safety Alerts -->
+                        <div class="bg-red-50 rounded-2xl border border-red-100 p-6">
+                            <div class="flex items-center gap-2 text-red-500 mb-3">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <h3 class="font-bold text-sm uppercase tracking-wide">Safety Alert</h3>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-4">A message containing restricted words was blocked in Felix's chat.</p>
+                            <button class="w-full bg-white border border-red-200 text-red-500 font-bold py-2 rounded-lg text-sm hover:bg-red-500 hover:text-white transition-all">
+                                Review Incident
+                            </button>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Import Logic -->
+    <script src="../js/parent_logic.js"></script>
+</body>
+</html>

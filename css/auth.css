@@ -33,7 +33,7 @@
 .animate-bounce-slow {
     animation: bounce-slow 3s infinite;
 }
- 
+
 /* 3. Form Fade-In Transition */
 .fade-in {
     animation: fadeIn 0.4s ease-in-out;
@@ -44,8 +44,7 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* 4. Modal Pop-In (NEW FIX) */
-/* Replaces the glitchy 'bounce' animation for popups */
+/* 4. Modal Pop-In (Smooth entry) */
 .modal-pop {
     animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

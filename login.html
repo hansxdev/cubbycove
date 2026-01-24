@@ -1,49 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - CubbyCove</title>
-    
+
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    
+
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Nunito', 'sans-serif'] },
-                    colors: {
-                        'cubby-blue': '#4CC9F0',
-                        'cubby-purple': '#7209B7',
-                        'cubby-pink': '#F72585',
-                        'cubby-yellow': '#FFD60A',
-                    }
-                }
-            }
-        }
-    </script>
+
+    <script src="js/tailwind-config.js"></script>
 
     <!-- Custom Auth Styles -->
     <link rel="stylesheet" href="css/auth.css">
 </head>
+
 <body class="bg-gray-50 h-screen flex items-center justify-center relative overflow-hidden">
 
     <!-- Background Blobs -->
-    <div class="absolute top-0 left-0 w-64 h-64 bg-cubby-blue/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
-    <div class="absolute bottom-0 right-0 w-64 h-64 bg-cubby-pink/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+    <div
+        class="absolute top-0 left-0 w-64 h-64 bg-cubby-blue/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob">
+    </div>
+    <div
+        class="absolute bottom-0 right-0 w-64 h-64 bg-cubby-pink/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000">
+    </div>
 
     <!-- Main Card -->
     <div class="bg-white w-full max-w-4xl h-[600px] rounded-3xl shadow-2xl flex overflow-hidden relative z-10 mx-4">
-        
+
         <!-- Left Side: Graphic & Brand (Hidden on Mobile) -->
-        <div class="hidden md:flex w-1/2 bg-gradient-to-br from-cubby-purple to-indigo-600 p-10 flex-col justify-between text-white relative">
+        <div
+            class="hidden md:flex w-1/2 bg-gradient-to-br from-cubby-purple to-indigo-600 p-10 flex-col justify-between text-white relative">
             <div>
                 <div class="flex items-center gap-2 mb-2">
                     <div class="bg-white/20 p-2 rounded-full">
@@ -53,13 +46,14 @@
                 </div>
                 <h2 class="text-4xl font-bold mt-4 leading-tight">Safe fun for everyone.</h2>
             </div>
-            
+
             <div class="text-center">
-                <img src="https://api.dicebear.com/7.x/fun-emoji/svg?seed=Happy" class="w-48 h-48 mx-auto drop-shadow-2xl animate-bounce-slow" alt="Mascot">
+                <img src="https://api.dicebear.com/7.x/fun-emoji/svg?seed=Happy"
+                    class="w-48 h-48 mx-auto drop-shadow-2xl animate-bounce-slow" alt="Mascot">
             </div>
 
             <p class="text-sm text-white/70">© 2026 CubbyCove Capstone</p>
-            
+
             <!-- Circles Decoration -->
             <div class="absolute top-10 right-10 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
             <div class="absolute bottom-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
@@ -67,13 +61,15 @@
 
         <!-- Right Side: Login Forms -->
         <div class="w-full md:w-1/2 p-8 md:p-12 relative">
-            
+
             <!-- Role Toggle Switch -->
             <div class="flex bg-gray-100 rounded-full p-1 mb-8">
-                <button id="tab-kid" onclick="switchTab('kid')" class="flex-1 py-2 rounded-full text-sm font-bold transition-all bg-white shadow-sm text-cubby-purple">
+                <button id="tab-kid" onclick="switchTab('kid')"
+                    class="flex-1 py-2 rounded-full text-sm font-bold transition-all bg-white shadow-sm text-cubby-purple">
                     <i class="fa-solid fa-face-smile mr-2"></i> I'm a Kid
                 </button>
-                <button id="tab-parent" onclick="switchTab('parent')" class="flex-1 py-2 rounded-full text-sm font-bold text-gray-500 hover:text-gray-700 transition-all">
+                <button id="tab-parent" onclick="switchTab('parent')"
+                    class="flex-1 py-2 rounded-full text-sm font-bold text-gray-500 hover:text-gray-700 transition-all">
                     <i class="fa-solid fa-user-shield mr-2"></i> I'm a Parent
                 </button>
             </div>
@@ -88,23 +84,30 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Your Username</label>
-                        <input type="text" id="kidUsername" placeholder="e.g. SuperMario123" class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 font-bold text-gray-700 focus:outline-none focus:border-cubby-blue focus:bg-white transition-colors" required>
+                        <input type="text" id="kidUsername" placeholder="e.g. SuperMario123"
+                            class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 font-bold text-gray-700 focus:outline-none focus:border-cubby-blue focus:bg-white transition-colors"
+                            required>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Parent's Email</label>
-                        <input type="email" id="guardianEmail" placeholder="mom@gmail.com" class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 font-bold text-gray-700 focus:outline-none focus:border-cubby-blue focus:bg-white transition-colors" required>
+                        <input type="email" id="guardianEmail" placeholder="mom@gmail.com"
+                            class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 font-bold text-gray-700 focus:outline-none focus:border-cubby-blue focus:bg-white transition-colors"
+                            required>
                     </div>
                 </div>
 
-                <button type="submit" class="w-full bg-cubby-yellow hover:bg-yellow-400 text-gray-900 font-extrabold py-4 rounded-xl shadow-lg transform active:scale-95 transition-all text-lg">
+                <button type="submit"
+                    class="w-full bg-cubby-yellow hover:bg-yellow-400 text-gray-900 font-extrabold py-4 rounded-xl shadow-lg transform active:scale-95 transition-all text-lg">
                     LET'S PLAY! 🚀
                 </button>
-                
-                <p class="text-center text-xs text-gray-400 mt-4">Don't have an account? <a href="#" class="text-cubby-blue font-bold hover:underline">Ask a parent to create one!</a></p>
+
+                <p class="text-center text-xs text-gray-400 mt-4">Don't have an account? <a href="#"
+                        class="text-cubby-blue font-bold hover:underline">Ask a parent to create one!</a></p>
             </form>
 
             <!-- PARENT LOGIN FORM (Hidden by default) -->
-            <form id="form-parent" class="space-y-6 hidden fade-in" onsubmit="event.preventDefault(); window.handleParentLogin()">
+            <form id="form-parent" class="space-y-6 hidden fade-in"
+                onsubmit="event.preventDefault(); window.handleParentLogin()">
                 <div class="text-center mb-6">
                     <h3 class="text-2xl font-extrabold text-gray-800">Parent Dashboard</h3>
                     <p class="text-gray-500 text-sm">Manage settings and view reports.</p>
@@ -113,28 +116,35 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Email Address</label>
-                        <input type="email" id="parentEmail" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-cubby-purple/50 focus:border-cubby-purple transition-all" required>
+                        <input type="email" id="parentEmail"
+                            class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-cubby-purple/50 focus:border-cubby-purple transition-all"
+                            required>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Password</label>
-                        <input type="password" id="parentPassword" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-cubby-purple/50 focus:border-cubby-purple transition-all" required>
+                        <input type="password" id="parentPassword"
+                            class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-cubby-purple/50 focus:border-cubby-purple transition-all"
+                            required>
                         <div class="text-right mt-1">
                             <a href="#" class="text-xs text-cubby-purple hover:underline">Forgot Password?</a>
                         </div>
                     </div>
                 </div>
 
-                <button type="submit" class="w-full bg-cubby-purple hover:bg-purple-800 text-white font-bold py-3 rounded-lg shadow-md transform active:scale-95 transition-all">
+                <button type="submit"
+                    class="w-full bg-cubby-purple hover:bg-purple-800 text-white font-bold py-3 rounded-lg shadow-md transform active:scale-95 transition-all">
                     Sign In Securely
                 </button>
 
                 <div class="mt-6 text-center">
-                    <p class="text-sm text-gray-500">New to CubbyCove? <a href="parent/register_parent.html" class="text-cubby-purple font-bold hover:underline">Create Parent Account</a></p>
+                    <p class="text-sm text-gray-500">New to CubbyCove? <a href="parent/register_parent.html"
+                            class="text-cubby-purple font-bold hover:underline">Create Parent Account</a></p>
                 </div>
-                
+
                 <!-- Admin Link (Hidden/Subtle) -->
                 <div class="absolute bottom-4 right-4 opacity-20 hover:opacity-100 transition-opacity">
-                    <a href="staff/admin_dashboard.html" class="text-xs text-gray-400"><i class="fa-solid fa-lock"></i> Staff Login</a>
+                    <a href="staff/admin_dashboard.html" class="text-xs text-gray-400"><i class="fa-solid fa-lock"></i>
+                        Staff Login</a>
                 </div>
             </form>
 
@@ -144,4 +154,5 @@
     <!-- UI Logic for Tabs -->
     <script src="js/auth.js"></script>
 </body>
+
 </html>

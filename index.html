@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CubbyCove - Watch & Play</title>
+    
+    <!-- Fonts: Nunito -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons: FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Nunito', 'sans-serif'] },
+                    colors: {
+                        'cubby-blue': '#4CC9F0',
+                        'cubby-purple': '#7209B7',
+                        'cubby-pink': '#F72585',
+                        'cubby-yellow': '#FFD60A',
+                        'cubby-green': '#38B000',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Import Custom Styles -->
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .video-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .video-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        main { transition: margin-left 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased overflow-x-hidden">
+
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="fixed top-0 left-0 w-full bg-white shadow-md z-50 h-16 flex items-center justify-between px-4 lg:px-6">
+        
+        <!-- Left: Logo & Menu Toggle -->
+        <div class="flex items-center gap-4">
+            <button id="menu-btn" class="text-2xl text-gray-600 hover:text-cubby-blue p-2 rounded-full hover:bg-gray-100 transition-colors">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            
+            <div class="flex items-center gap-2 cursor-pointer">
+                <div class="bg-cubby-blue text-white p-2 rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
+                    <i class="fa-solid fa-shield-cat text-xl"></i>
+                </div>
+                <span class="text-2xl font-extrabold tracking-tight text-cubby-purple hidden sm:block">
+                    Cubby<span class="text-cubby-blue">Cove</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Center: Search Bar -->
+        <div class="flex-1 max-w-2xl mx-4 hidden sm:flex">
+            <div class="relative w-full">
+                <input type="text" placeholder="Search for cartoons, games..." class="w-full bg-gray-100 border-2 border-transparent focus:border-cubby-blue focus:bg-white rounded-full py-2 pl-5 pr-12 outline-none transition-all placeholder-gray-400 font-semibold text-lg">
+                <button class="absolute right-0 top-0 h-full w-12 bg-gray-100 rounded-r-full text-gray-500 hover:text-cubby-blue hover:bg-gray-200 transition-colors border-l border-gray-200">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+            </div>
+            <button class="ml-3 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+        </div>
+
+        <!-- Right: Guest Actions -->
+        <div class="flex items-center gap-3 sm:gap-4">
+            <button class="sm:hidden text-xl text-gray-600"><i class="fa-solid fa-magnifying-glass"></i></button>
+            
+            <!-- Parent Setup Button -->
+            <a href="parent/register_parent.html" class="hidden sm:flex items-center gap-2 text-gray-500 font-bold hover:text-cubby-purple transition-colors bg-gray-100 px-4 py-2 rounded-full text-sm">
+                <i class="fa-solid fa-user-shield"></i>
+                Parents
+            </a>
+
+            <!-- Sign In / Join Button -->
+            <button onclick="showLoginModal()" class="bg-cubby-yellow text-gray-900 font-extrabold px-6 py-2 rounded-full shadow-sm hover:bg-yellow-400 hover:shadow-md transition-all transform hover:-translate-y-0.5 text-sm sm:text-base whitespace-nowrap">
+                Sign In
+            </button>
+        </div>
+    </nav>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white overflow-y-auto transform lg:translate-x-0 -translate-x-full transition-transform duration-300 z-40 pb-10 border-r border-gray-100">
+        
+        <!-- Main Links -->
+        <div class="p-3 space-y-1">
+            <a href="#" class="flex items-center gap-4 px-4 py-3 bg-cubby-blue/10 text-cubby-blue rounded-xl font-bold text-lg">
+                <i class="fa-solid fa-house text-xl w-6 text-center"></i>
+                <span>Home</span>
+            </a>
+            
+            <a href="games.html" class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors">
+                <i class="fa-solid fa-gamepad text-xl w-6 text-center text-cubby-purple"></i>
+                <span>Games</span>
+            </a>
+
+            <!-- Chat (LOCKED) -->
+            <button onclick="showLoginModal('Chat with friends')" class="w-full flex items-center gap-4 px-4 py-3 text-gray-400 hover:bg-gray-50 rounded-xl font-bold text-lg transition-colors text-left group">
+                <div class="relative">
+                    <i class="fa-solid fa-comments text-xl w-6 text-center"></i>
+                    <i class="fa-solid fa-lock text-[10px] absolute -top-1 -right-1 text-cubby-pink"></i>
+                </div>
+                <span>Chat</span>
+            </button>
+
+            <!-- Favorites (LOCKED) -->
+            <button onclick="showLoginModal('Save your favorites')" class="w-full flex items-center gap-4 px-4 py-3 text-gray-400 hover:bg-gray-50 rounded-xl font-bold text-lg transition-colors text-left group">
+                <div class="relative">
+                    <i class="fa-solid fa-heart text-xl w-6 text-center"></i>
+                    <i class="fa-solid fa-lock text-[10px] absolute -top-1 -right-1 text-cubby-pink"></i>
+                </div>
+                <span>Favorites</span>
+            </button>
+        </div>
+
+        <hr class="border-gray-200 mx-4 my-2">
+
+        <!-- Friends (Hidden for Guest) -->
+        <div class="p-4 bg-gray-50 mx-4 rounded-xl text-center mt-2">
+            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-2 text-cubby-green shadow-sm">
+                <i class="fa-solid fa-users text-xl"></i>
+            </div>
+            <h3 class="font-bold text-gray-700 text-sm mb-1">Want to see friends?</h3>
+            <p class="text-xs text-gray-500 mb-3">Ask your parent to create an account!</p>
+            <button onclick="showLoginModal()" class="text-xs font-bold text-cubby-blue hover:underline">Sign In Now</button>
+        </div>
+
+        <hr class="border-gray-200 mx-4 my-2">
+
+        <!-- Bottom Graphic -->
+        <div class="px-6 mt-4">
+            <div class="bg-gradient-to-br from-cubby-yellow to-orange-300 rounded-2xl p-4 text-white text-center shadow-lg">
+                <i class="fa-solid fa-shield-cat text-3xl mb-2 text-yellow-100"></i>
+                <p class="font-bold text-sm leading-tight">Stay Safe & Have Fun!</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- OVERLAY for Mobile Sidebar -->
+    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
+
+    <!-- MAIN CONTENT -->
+    <main id="main-content" class="lg:ml-64 pt-16 min-h-screen transition-all duration-300">
+        
+        <!-- Filter Chips -->
+        <div class="sticky top-16 bg-white/95 backdrop-blur-sm z-20 py-3 border-b border-gray-100 px-4 flex gap-3 overflow-x-auto no-scrollbar">
+            <button class="px-4 py-1.5 bg-black text-white rounded-lg font-bold text-sm whitespace-nowrap hover:opacity-80">All</button>
+            <button class="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-bold text-sm whitespace-nowrap hover:bg-gray-200">Cartoons</button>
+            <button class="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-bold text-sm whitespace-nowrap hover:bg-gray-200">Learning</button>
+            <button class="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-bold text-sm whitespace-nowrap hover:bg-gray-200">Music</button>
+            <button class="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-bold text-sm whitespace-nowrap hover:bg-gray-200">Minecraft</button>
+        </div>
+
+        <!-- Video Grid -->
+        <div class="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-8 gap-x-6">
+
+            <!-- Card 1 -->
+            <div class="video-card group cursor-pointer">
+                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
+                    <div class="w-full h-full bg-blue-100 flex items-center justify-center text-blue-300"><i class="fa-solid fa-image text-4xl"></i></div>
+                    <img src="https://img.youtube.com/vi/a1i436o6h1U/maxresdefault.jpg" alt="Thumbnail" class="absolute inset-0 w-full h-full object-cover">
+                    <div class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">12:05</div>
+                    <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center transition-all">
+                        <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center pl-1 shadow-lg"><i class="fa-solid fa-play text-cubby-blue text-xl"></i></div>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-3">
+                    <div class="min-w-[40px]"><img src="https://api.dicebear.com/7.x/identicon/svg?seed=Math" class="w-9 h-9 rounded-full bg-gray-100"></div>
+                    <div>
+                        <h3 class="font-extrabold text-gray-900 leading-tight mb-1 line-clamp-2 text-base group-hover:text-cubby-blue transition-colors">Learn Colors with Balloons! 🎈 Fun Learning for Kids</h3>
+                        <p class="text-sm text-gray-500 font-semibold">FunLearn TV</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="video-card group cursor-pointer">
+                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
+                    <img src="https://img.youtube.com/vi/C88G_5_620Y/maxresdefault.jpg" alt="Thumbnail" class="absolute inset-0 w-full h-full object-cover">
+                    <div class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">5:30</div>
+                </div>
+                <div class="flex gap-3 mt-3">
+                    <div class="min-w-[40px]"><img src="https://api.dicebear.com/7.x/identicon/svg?seed=Peppa" class="w-9 h-9 rounded-full bg-gray-100"></div>
+                    <div>
+                        <h3 class="font-extrabold text-gray-900 leading-tight mb-1 line-clamp-2 text-base group-hover:text-cubby-blue transition-colors">Peppa Pig Full Episodes | The Golden Boots</h3>
+                        <p class="text-sm text-gray-500 font-semibold">Peppa Pig Official</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="video-card group cursor-pointer">
+                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
+                    <img src="https://img.youtube.com/vi/34zP6j8t5eQ/maxresdefault.jpg" alt="Thumbnail" class="absolute inset-0 w-full h-full object-cover">
+                    <div class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">8:45</div>
+                </div>
+                <div class="flex gap-3 mt-3">
+                    <div class="min-w-[40px]"><img src="https://api.dicebear.com/7.x/identicon/svg?seed=Sci" class="w-9 h-9 rounded-full bg-gray-100"></div>
+                    <div>
+                        <h3 class="font-extrabold text-gray-900 leading-tight mb-1 line-clamp-2 text-base group-hover:text-cubby-blue transition-colors">Why Do Stars Twinkle? | Science for Kids</h3>
+                        <p class="text-sm text-gray-500 font-semibold">SciShow Kids</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 4 (Game Promo) -->
+            <div class="video-card group cursor-pointer">
+                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-cubby-purple to-cubby-pink p-1">
+                    <div class="w-full h-full bg-white/10 flex flex-col items-center justify-center text-white text-center p-4">
+                        <i class="fa-solid fa-gamepad text-5xl mb-2 drop-shadow-md"></i>
+                        <h4 class="font-black text-xl drop-shadow-md">PLAY GAMES</h4>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-3">
+                     <div class="min-w-[40px]">
+                        <div class="w-9 h-9 rounded-full bg-cubby-purple flex items-center justify-center text-white"><i class="fa-solid fa-gamepad text-xs"></i></div>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-gray-900 leading-tight mb-1 text-base group-hover:text-cubby-purple transition-colors">Try the new Math Puzzle Game!</h3>
+                        <p class="text-sm text-gray-500 font-semibold">CubbyCove Games</p>
+                        <span class="inline-block bg-cubby-yellow text-xs font-bold px-2 py-0.5 rounded text-gray-800 mt-1">NEW</span>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Card 5 -->
+             <div class="video-card group cursor-pointer">
+                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
+                    <img src="https://img.youtube.com/vi/_JmA2ClUvUY/maxresdefault.jpg" alt="Thumbnail" class="absolute inset-0 w-full h-full object-cover">
+                    <div class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">15:20</div>
+                </div>
+                <div class="flex gap-3 mt-3">
+                    <div class="min-w-[40px]">
+                        <img src="https://api.dicebear.com/7.x/identicon/svg?seed=Zoo" class="w-9 h-9 rounded-full bg-gray-100">
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-gray-900 leading-tight mb-1 line-clamp-2 text-base group-hover:text-cubby-blue transition-colors">Virtual Zoo Tour 🦁 See Lions and Tigers!</h3>
+                        <p class="text-sm text-gray-500 font-semibold">Nat Geo Kids</p>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Card 6 -->
+             <div class="video-card group cursor-pointer">
+                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
+                    <img src="https://img.youtube.com/vi/PkZNo7MFNFg/maxresdefault.jpg" alt="Thumbnail" class="absolute inset-0 w-full h-full object-cover">
+                    <div class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">3:45</div>
+                </div>
+                <div class="flex gap-3 mt-3">
+                    <div class="min-w-[40px]">
+                        <img src="https://api.dicebear.com/7.x/identicon/svg?seed=Song" class="w-9 h-9 rounded-full bg-gray-100">
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-gray-900 leading-tight mb-1 line-clamp-2 text-base group-hover:text-cubby-blue transition-colors">Baby Shark Dance | Sing and Dance!</h3>
+                        <p class="text-sm text-gray-500 font-semibold">Pinkfong</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- LIMITATION MODAL (Hidden by default) -->
+    <!-- UPDATED: Uses 'modal-pop' instead of 'animate-bounce' -->
+    <div id="login-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative modal-pop">
+            <!-- Close Button -->
+            <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 text-2xl">
+                <i class="fa-solid fa-times"></i>
+            </button>
+            
+            <div class="text-center">
+                <div class="w-20 h-20 bg-cubby-purple text-white rounded-full flex items-center justify-center text-4xl mx-auto mb-4 shadow-lg">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h3 id="modal-title" class="text-2xl font-extrabold text-gray-800 mb-2">Want to do more?</h3>
+                <p class="text-gray-500 mb-8 font-semibold">Ask your parent to sign in or create an account to unlock Chat, Favorites, and Friends!</p>
+                
+                <div class="space-y-3">
+                    <a href="login.html" class="block w-full py-3 bg-cubby-yellow hover:bg-yellow-400 text-gray-900 font-extrabold rounded-xl shadow-md transition-transform hover:scale-105">
+                        Log In Now
+                    </a>
+                    <a href="parent/register_parent.html" class="block w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-xl transition-colors">
+                        Parent Sign Up
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Logic File -->
+    <script src="js/guest_logic.js"></script>
+</body>
+</html>

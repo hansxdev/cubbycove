@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardTitle = document.querySelector('h1');
     if (dashboardTitle && dashboardTitle.innerText.includes('Dashboard')) {
         console.log("Parent Dashboard Loaded");
-        // Future: Fetch real data from Firebase
+        // Future: Fetch real data from Firebase here
     }
 
     // 2. Register Child specific logic
@@ -23,14 +23,17 @@ function saveChild() {
     
     // 2. Show loading state
     const btn = document.querySelector('button[onclick="saveChild()"]');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
-    btn.disabled = true;
-    btn.classList.add('opacity-75');
+    if(btn) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+        btn.disabled = true;
+        btn.classList.add('opacity-75');
 
-    // 3. Simulate Network Request
-    setTimeout(() => {
-        alert("Child Profile Created Successfully!");
-        window.location.href = 'dashboard.html';
-    }, 1500);
+        // 3. Simulate Network Request
+        setTimeout(() => {
+            alert("Child Profile Created Successfully!");
+            // Redirect back to dashboard
+            window.location.href = 'dashboard.html';
+        }, 1500);
+    }
 }

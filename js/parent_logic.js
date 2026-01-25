@@ -1,12 +1,20 @@
 // Logic for parent/dashboard.html AND parent/register_child.html
 
 document.addEventListener('DOMContentLoaded', () => {
-    
+
     // 1. Dashboard specific logic (if on dashboard page)
     const dashboardTitle = document.querySelector('h1');
     if (dashboardTitle && dashboardTitle.innerText.includes('Dashboard')) {
         console.log("Parent Dashboard Loaded");
-        // Future: Fetch real data from Firebase here
+        // Update User Profile
+        const user = DataService.getCurrentUser();
+        if (user) {
+            const userNameEl = document.getElementById('userName');
+            const userAvatarEl = document.getElementById('userAvatar');
+
+            if (userNameEl) userNameEl.textContent = user.fullName;
+            if (userAvatarEl) userAvatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.fullName)}`;
+        }
     }
 
     // 2. Register Child specific logic
@@ -20,10 +28,10 @@ document.addEventListener('DOMContentLoaded', () => {
 function saveChild() {
     // 1. Get values (Mock)
     // In real app: const name = document.querySelector('input[placeholder="e.g. Tommy"]').value;
-    
+
     // 2. Show loading state
     const btn = document.querySelector('button[onclick="saveChild()"]');
-    if(btn) {
+    if (btn) {
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
         btn.disabled = true;

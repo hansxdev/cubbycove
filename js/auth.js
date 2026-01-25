@@ -14,7 +14,7 @@ function switchTab(role) {
         // Activate Kid Tab
         tabKid.classList.add('bg-white', 'shadow-sm', 'text-cubby-purple');
         tabKid.classList.remove('text-gray-500');
-        
+
         tabParent.classList.remove('bg-white', 'shadow-sm', 'text-cubby-purple');
         tabParent.classList.add('text-gray-500');
 
@@ -25,7 +25,7 @@ function switchTab(role) {
         // Activate Parent Tab
         tabParent.classList.add('bg-white', 'shadow-sm', 'text-cubby-purple');
         tabParent.classList.remove('text-gray-500');
-        
+
         tabKid.classList.remove('bg-white', 'shadow-sm', 'text-cubby-purple');
         tabKid.classList.add('text-gray-500');
 
@@ -38,30 +38,49 @@ function switchTab(role) {
 // 2. Mock Login Functions
 function handleParentLogin() {
     const email = document.getElementById('parentEmail') ? document.getElementById('parentEmail').value : null;
-    
-    // Mock Success
+    const password = document.getElementById('parentPassword') ? document.getElementById('parentPassword').value : null;
+
+    if (!email || !password) {
+        alert("Please enter both email and password.");
+        return;
+    }
+
+    // UI Update
     const btn = document.querySelector('#form-parent button');
-    if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing In...';
-    
+    const originalText = btn ? btn.innerHTML : 'Sign In';
+    if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing In...';
+        btn.disabled = true;
+    }
+
     setTimeout(() => {
-        window.location.href = 'parent/dashboard.html';
-    }, 1500);
+        try {
+            const user = DataService.login(email, password);
+            window.location.href = 'parent/dashboard.html';
+        } catch (error) {
+            alert(error.message);
+            if (btn) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+    }, 1000); // Small delay for UX
 }
 
 function handleKidLogin() {
     const user = document.getElementById('kidUsername') ? document.getElementById('kidUsername').value : null;
-    
+
     // Mock Success
     const btn = document.querySelector('#form-kid button');
-    if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
-    
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+
     setTimeout(() => {
         window.location.href = 'kid/home_logged_in.html';
     }, 1500);
 }
 
 // 3. Staff Login Handler
-window.handleStaffLogin = function(email, password) {
+window.handleStaffLogin = function (email, password) {
     if (!email || !password) {
         alert("Please enter credentials.");
         return;

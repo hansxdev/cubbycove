@@ -30,7 +30,7 @@ function nextStep(targetStep) {
 
     // Update Tracker Sidebar
     updateTracker(targetStep);
-    
+
     currentStep = targetStep;
 
     // Trigger Webcam if hitting step 3
@@ -44,7 +44,7 @@ function prevStep(targetStep) {
     if (currentStep === 3 && typeof stopWebcam === 'function') {
         stopWebcam();
     }
-    
+
     nextStep(targetStep);
 }
 
@@ -66,7 +66,7 @@ function validateStep(step) {
         // 1. Check Empty Fields
         inputs.forEach(input => {
             if (!input) return; // Skip if element not found (shouldn't happen)
-            
+
             if (!input.value.trim()) {
                 markError(input);
                 isValid = false;
@@ -96,12 +96,12 @@ function validateStep(step) {
 }
 
 function markError(element) {
-    if(!element) return;
+    if (!element) return;
     element.classList.add('border-red-500', 'ring-2', 'ring-red-200');
 }
 
 function clearError(element) {
-    if(!element) return;
+    if (!element) return;
     element.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
 }
 
@@ -112,15 +112,15 @@ function updateTracker(step) {
     for (let i = 1; i <= 3; i++) {
         const tracker = document.getElementById(`tracker-${i}`);
         if (!tracker) continue;
-        
+
         const circle = tracker.querySelector('div');
         const label = tracker.querySelector('span');
-        
+
         // Default State (Pending)
         tracker.className = 'step-item flex items-center gap-4 text-gray-400 group';
         circle.className = 'w-10 h-10 rounded-full bg-gray-200 group-hover:bg-gray-300 flex items-center justify-center transition-colors';
         circle.innerHTML = i;
-        
+
         if (i < step) {
             // Completed
             tracker.classList.add('text-green-500', 'font-bold');
@@ -139,13 +139,17 @@ function updateTracker(step) {
 // --- SUBMISSION ---
 
 // Called by face-api.js after successful capture
+// Called by face-api.js after successful capture
 function submitRegistration() {
     const fname = document.getElementById('firstName')?.value || '';
+    const mname = document.getElementById('middleName')?.value || '';
     const lname = document.getElementById('lastName')?.value || '';
-    
+
     // 1. Gather Data
     const formData = {
-        fullName: `${fname} ${lname}`.trim(),
+        firstName: fname.trim(),
+        middleName: mname.trim(),
+        lastName: lname.trim(),
         email: document.getElementById('email')?.value,
         password: document.getElementById('password')?.value,
         faceId: 'mock_face_id_' + Date.now()
@@ -166,7 +170,7 @@ function submitRegistration() {
     } catch (error) {
         alert("Registration Failed: " + error.message);
         // Go back to step 1 if duplicate email
-        if(error.message.includes('email')) {
+        if (error.message.includes('email')) {
             document.getElementById('step-3').classList.add('hidden');
             document.getElementById('step-1').classList.remove('hidden');
             currentStep = 1;

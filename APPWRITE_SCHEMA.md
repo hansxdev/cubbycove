@@ -20,7 +20,9 @@ Stores additional user information linked to the Appwrite Auth Account.
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `role` | String | Yes | Enum: `parent`, `staff`, `admin`. Determines access level. |
-| `fullName` | String | Yes | Full name of the user. |
+| `firstName` | String | Yes | User's first name. |
+| `middleName` | String | No | User's middle name. |
+| `lastName` | String | Yes | User's last name/surname. |
 | `faceIdDescriptor` | String (Long Text) | No | JSON string of the face descriptor for biometric login. |
 | `idDocumentFileId` | String | No | ID of the uploaded government ID in Storage (if verification needed). |
 | `phoneNumber` | String | No | Contact number. |

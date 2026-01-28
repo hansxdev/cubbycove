@@ -12,8 +12,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const userNameEl = document.getElementById('userName');
             const userAvatarEl = document.getElementById('userAvatar');
 
-            if (userNameEl) userNameEl.textContent = user.fullName;
-            if (userAvatarEl) userAvatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.fullName)}`;
+            if (userNameEl) {
+                const fullName = [user.firstName, user.middleName, user.lastName].filter(Boolean).join(' ');
+                userNameEl.textContent = fullName;
+            }
+            if (userAvatarEl) {
+                const fullName = [user.firstName, user.middleName, user.lastName].filter(Boolean).join(' ');
+                userAvatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`;
+            }
         }
     }
 

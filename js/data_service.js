@@ -28,24 +28,29 @@ const DataService = {
         const newUser = {
             id: 'parent_' + Date.now(),
             role: 'parent',
+            status: 'pending', // Pending approval
             firstName: parentData.firstName,
             middleName: parentData.middleName,
             lastName: parentData.lastName,
             email: parentData.email,
             password: parentData.password, // In Appwrite, this is handled securely automatically
-            faceId: parentData.faceId || null, // Placeholder for biometric string
-            children: [], // Array of child IDs
-            createdAt: new Date().toISOString()
+            faceId: parentData.faceId || null,
+            children: [], // Array of child objects
+            createdAt: new Date().toISOString(),
+            // Analytics Containers (Empty on create)
+            screenTimeLogs: [],
+            activityLogs: [],
+            threatLogs: []
         };
 
         // 3. Save to DB (Currently LocalStorage)
         existingUsers.push(newUser);
         this._saveLocalStorage('users', existingUsers);
 
-        // 4. Set Active Session
-        this._saveLocalStorage('currentUser', newUser);
+        // 4. Do NOT Set Active Session (User is pending)
+        // this._saveLocalStorage('currentUser', newUser);
 
-        console.log("✅ [Backend] Parent Registered:", newUser.email);
+        console.log("✅ [Backend] Parent Registered (Pending):", newUser.email);
         return newUser;
     },
 

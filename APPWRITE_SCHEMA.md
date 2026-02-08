@@ -18,7 +18,7 @@ Stores additional user information linked to the Appwrite Auth Account.
 
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `role` | String | Yes | Enum: `parent`, `staff`, `admin`. |
+| `role` | String | Yes | Enum: `super_admin`, `admin`, `assistant`, `creator`, `parent`. |
 | `status` | String | Yes | Enum: `pending`, `active`, `suspended`. Default: `pending` on registration. |
 | `firstName` | String | Yes | User's first name. |
 | `middleName` | String | No | User's middle name. |

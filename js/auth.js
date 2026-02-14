@@ -91,16 +91,33 @@ window.handleStaffLogin = function (email, password) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
     btn.disabled = true;
 
-    // Mock Logic for demonstration
+    // Use DataService to authenticate staff
     setTimeout(() => {
-        if (email.toLowerCase().includes("admin")) {
-            window.location.href = 'staff/admin_dashboard.html';
-        } else if (email.toLowerCase().includes("assistant")) {
-            window.location.href = 'staff/assistant_panel.html';
-        } else {
-            alert("Invalid Credentials. Try 'admin@cubbycove.com' or 'assistant@cubbycove.com'");
+        try {
+            const user = DataService.login(email, password);
+
+            // Route based on role
+            switch (user.role) {
+                case 'super_admin':
+                case 'admin':
+                    window.location.href = 'staff/admin_dashboard.html';
+                    break;
+                case 'assistant':
+                    window.location.href = 'staff/assistant_panel.html';
+                    break;
+                case 'creator':
+                    window.location.href = 'creator/creator.html'; // Assuming this page exists or will exist
+                    break;
+                default:
+                    alert("Access Denied: You do not have staff privileges.");
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+            }
+
+        } catch (error) {
+            alert(error.message);
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
-    }, 1500);
+    }, 1000);
 }

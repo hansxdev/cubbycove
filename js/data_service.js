@@ -70,7 +70,7 @@ const DataService = {
 
         try {
             // 1. Create Session
-            await account.createEmailSession(email, password);
+            await account.createEmailPasswordSession(email, password);
 
             // 2. Fetch User Details to Check Status
             // We need to find the document with this email.

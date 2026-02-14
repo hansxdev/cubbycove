@@ -77,6 +77,7 @@
                     { key: 'middleName', type: 'string', size: 100, required: false }, // Added middleName
                     { key: 'lastName', type: 'string', size: 100, required: true },
                     { key: 'email', type: 'string', size: 255, required: true },
+                    { key: 'createdAt', type: 'string', size: 50, required: false }, // Added createdAt
                     { key: 'faceId', type: 'string', size: 5000, required: false }, // Big string for descriptors
                 ]
             },

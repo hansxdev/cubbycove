@@ -33,30 +33,54 @@
             </div>
 
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-                <a href="#"
-                    class="flex items-center gap-3 px-4 py-3 bg-cubby-blue/20 text-cubby-blue rounded-lg font-bold border-l-4 border-cubby-blue">
+                <a href="#" onclick="switchView('dashboard')"
+                    class="nav-item flex items-center gap-3 px-4 py-3 bg-cubby-blue/20 text-cubby-blue rounded-lg font-bold border-l-4 border-cubby-blue transition-colors">
                     <i class="fa-solid fa-gauge-high w-5 text-center"></i> Dashboard
                 </a>
+
+                <!-- Standard Admin Links (Visible to Admin & Super Admin) -->
                 <a href="#"
-                    class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
+                    class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
                     <i class="fa-solid fa-users w-5 text-center"></i> Users
                 </a>
                 <a href="#"
-                    class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
+                    class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
                     <i class="fa-solid fa-video w-5 text-center"></i> Content
                 </a>
                 <a href="#"
-                    class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
-                    <i class="fa-solid fa-user-tie w-5 text-center"></i> Staff
-                </a>
-                <a href="#"
-                    class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
+                    class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
                     <i class="fa-solid fa-chart-line w-5 text-center"></i> Analytics
                 </a>
+
+                <!-- Super Admin Only -->
+                <a href="#" id="menu-staff" onclick="switchView('staff')"
+                    class="nav-item hidden flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
+                    <i class="fa-solid fa-user-shield w-5 text-center text-yellow-500"></i> Manage Staff
+                </a>
+
+                <!-- Super Admin Views -->
+                <div id="super-admin-views" class="hidden">
+                    <div class="pt-4 pb-2">
+                        <p class="px-4 text-xs font-bold text-gray-600 uppercase tracking-widest">Views</p>
+                    </div>
+
+                    <a href="#" onclick="switchDashboardMode('admin')"
+                        class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
+                        <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Admin View
+                    </a>
+                    <a href="#" onclick="switchDashboardMode('assistant')"
+                        class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
+                        <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Assistant View
+                    </a>
+                    <a href="#" onclick="switchDashboardMode('creator')"
+                        class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
+                        <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Creator View
+                    </a>
+                </div>
             </nav>
 
             <div class="p-4 border-t border-gray-700">
-                <a href="../index.html"
+                <a href="#" onclick="handleLogout()"
                     class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
                     <i class="fa-solid fa-right-from-bracket"></i> Logout
                 </a>
@@ -73,10 +97,15 @@
                 </button>
                 <h2 class="text-lg font-bold text-gray-700">Overview</h2>
                 <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <img src="https://ui-avatars.com/api/?name=Admin+User&background=random"
-                            class="w-8 h-8 rounded-full">
-                        <span class="text-sm font-bold text-gray-600">Super Admin</span>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <img id="header-avatar" src="" class="w-8 h-8 rounded-full bg-gray-200">
+                            <div class="flex flex-col text-right">
+                                <span id="header-name" class="text-sm font-bold text-gray-600">Loading...</span>
+                                <span id="header-role"
+                                    class="text-xs text-cubby-blue font-semibold uppercase">Checking...</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -91,7 +120,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-bold text-gray-400 uppercase">Total Parents</p>
-                                <h3 class="text-2xl font-extrabold text-gray-800">1,240</h3>
+                                <h3 id="stat-parents" class="text-2xl font-extrabold text-gray-800">...</h3>
                             </div>
                             <div class="bg-blue-50 text-cubby-blue p-3 rounded-lg"><i
                                     class="fa-solid fa-user-shield text-xl"></i></div>
@@ -102,7 +131,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-bold text-gray-400 uppercase">Total Kids</p>
-                                <h3 class="text-2xl font-extrabold text-gray-800">3,500</h3>
+                                <h3 id="stat-kids" class="text-2xl font-extrabold text-gray-800">...</h3>
                             </div>
                             <div class="bg-purple-50 text-cubby-purple p-3 rounded-lg"><i
                                     class="fa-solid fa-child text-xl"></i></div>
@@ -112,8 +141,8 @@
                     <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-bold text-gray-400 uppercase">Safe Videos</p>
-                                <h3 class="text-2xl font-extrabold text-gray-800">850</h3>
+                                <p class="text-sm font-bold text-gray-400 uppercase">Approved Content</p>
+                                <h3 id="stat-videos" class="text-2xl font-extrabold text-gray-800">...</h3>
                             </div>
                             <div class="bg-green-50 text-green-500 p-3 rounded-lg"><i
                                     class="fa-solid fa-play text-xl"></i></div>
@@ -123,8 +152,8 @@
                     <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-bold text-gray-400 uppercase">Flagged Items</p>
-                                <h3 class="text-2xl font-extrabold text-gray-800">12</h3>
+                                <p class="text-sm font-bold text-gray-400 uppercase">Reports</p>
+                                <h3 id="stat-reports" class="text-2xl font-extrabold text-gray-800">0</h3>
                             </div>
                             <div class="bg-red-50 text-red-500 p-3 rounded-lg"><i class="fa-solid fa-flag text-xl"></i>
                             </div>
@@ -237,11 +266,59 @@
 
                 </div>
 
+                <!-- STAFF MANAGEMENT SECTION (Hidden by default) -->
+                <div id="staff-section" class="hidden space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h3 class="font-bold text-lg text-gray-800 mb-4 border-b pb-2">Create New Staff Account</h3>
+                        <form id="createStaffForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" id="staffFname" placeholder="First Name" required
+                                class="bg-gray-50 border border-gray-300 rounded-lg px-4 py-2">
+                            <input type="text" id="staffLname" placeholder="Last Name" required
+                                class="bg-gray-50 border border-gray-300 rounded-lg px-4 py-2">
+                            <input type="email" id="staffEmail" placeholder="Email Address" required
+                                class="bg-gray-50 border border-gray-300 rounded-lg px-4 py-2">
+                            <input type="password" id="staffPass" placeholder="Temporary Password" required
+                                class="bg-gray-50 border border-gray-300 rounded-lg px-4 py-2">
+
+                            <select id="staffRole" class="bg-gray-50 border border-gray-300 rounded-lg px-4 py-2">
+                                <option value="admin">Admin</option>
+                                <option value="assistant">Assistant</option>
+                                <option value="creator">Creator</option>
+                            </select>
+
+                            <button type="submit"
+                                class="bg-cubby-purple text-white font-bold py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                                <i class="fa-solid fa-plus mr-2"></i> Create Staff
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h3 class="font-bold text-lg text-gray-800 mb-4">Existing Staff</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr>
+                                        <th class="text-xs font-bold text-gray-400 uppercase p-2">Name</th>
+                                        <th class="text-xs font-bold text-gray-400 uppercase p-2">Role</th>
+                                        <th class="text-xs font-bold text-gray-400 uppercase p-2">Email</th>
+                                        <th class="text-xs font-bold text-gray-400 uppercase p-2">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="staff-list-body" class="text-sm">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </main>
         </div>
     </div>
 
     <!-- Import Logic -->
+    <script src="../js/data_service.js"></script>
     <script src="../js/admin_logic.js"></script>
 </body>
 

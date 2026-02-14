@@ -45,6 +45,19 @@ Stores profiles of children registered by parents.
 | `activityLogs` | JSON | No | History of actions. Format: `[{ "action": "Played Math Game", "timestamp": "...", "link": "/games/math" }]` |
 | `status` | String | Yes | Enum: `active`, `inactive`. |
 
+#### Collection: `Videos` (Content Library)
+Stores video content metadata, approval status, and creator details.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `title` | String | Yes | Video Title. |
+| `url` | String | Yes | YouTube URL or ID. |
+| `category` | String | Yes | Enum: `Learning`, `Gaming`, `Music`, `Cartoons`, `Vlog`. |
+| `creatorEmail` | String | Yes | Email of the creator who uploaded it. |
+| `status` | String | Yes | Enum: `pending`, `approved`, `rejected`. Default: `pending`. |
+| `views` | Integer | Yes | View count. Default: `0`. |
+| `uploadedAt` | Datetime | Yes | Timestamp of submission. |
+
 #### Collection: `ThreatLogs` (New)
 Detailed logs of detected threats for review.
 

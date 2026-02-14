@@ -63,8 +63,67 @@ const DataService = {
 
         if (!user) throw new Error("Invalid credentials");
 
+        // CHECK STATUS
+        if (user.role === 'parent' && user.status === 'pending') {
+            throw new Error("Account pending approval. Please wait for verification.");
+        }
+        if (user.status === 'suspended' || user.status === 'banned') {
+            throw new Error("Account suspended. Contact support.");
+        }
+
         this._saveLocalStorage('currentUser', user);
         return user;
+    },
+
+    updateUserStatus: function (email, newStatus) {
+        const users = this._getLocalStorage('users') || [];
+        const index = users.findIndex(u => u.email === email);
+        if (index !== -1) {
+            users[index].status = newStatus;
+            this._saveLocalStorage('users', users);
+            return true;
+        }
+        return false;
+    },
+
+    // --- VIDEO CONTENT METHODS ---
+
+    addVideo: function (videoData) {
+        const videos = this._getLocalStorage('videos') || [];
+        const newVideo = {
+            id: 'vid_' + Date.now(),
+            ...videoData,
+            status: 'pending', // Default
+            views: 0,
+            uploadedAt: new Date().toISOString()
+        };
+        videos.push(newVideo);
+        this._saveLocalStorage('videos', videos);
+        return newVideo;
+    },
+
+    getVideos: function (statusFilter = null) {
+        const videos = this._getLocalStorage('videos') || [];
+        if (statusFilter) {
+            return videos.filter(v => v.status === statusFilter);
+        }
+        return videos;
+    },
+
+    getCreatorVideos: function (creatorEmail) {
+        const videos = this._getLocalStorage('videos') || [];
+        return videos.filter(v => v.creatorEmail === creatorEmail);
+    },
+
+    updateVideoStatus: function (videoId, newStatus) {
+        const videos = this._getLocalStorage('videos') || [];
+        const index = videos.findIndex(v => v.id === videoId);
+        if (index !== -1) {
+            videos[index].status = newStatus;
+            this._saveLocalStorage('videos', videos);
+            return true;
+        }
+        return false;
     },
 
     /**

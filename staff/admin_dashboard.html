@@ -38,32 +38,49 @@
                     <i class="fa-solid fa-gauge-high w-5 text-center"></i> Dashboard
                 </a>
 
+                <!-- Standard Admin Links (Visible to Admin & Super Admin) -->
+                <a href="#"
+                    class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
+                    <i class="fa-solid fa-users w-5 text-center"></i> Users
+                </a>
+                <a href="#"
+                    class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
+                    <i class="fa-solid fa-video w-5 text-center"></i> Content
+                </a>
+                <a href="#"
+                    class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
+                    <i class="fa-solid fa-chart-line w-5 text-center"></i> Analytics
+                </a>
+
                 <!-- Super Admin Only -->
                 <a href="#" id="menu-staff" onclick="switchView('staff')"
                     class="nav-item hidden flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
                     <i class="fa-solid fa-user-shield w-5 text-center text-yellow-500"></i> Manage Staff
                 </a>
 
-                <div class="pt-4 pb-2">
-                    <p class="px-4 text-xs font-bold text-gray-600 uppercase tracking-widest">Views</p>
-                </div>
+                <!-- Super Admin Views -->
+                <div id="super-admin-views" class="hidden">
+                    <div class="pt-4 pb-2">
+                        <p class="px-4 text-xs font-bold text-gray-600 uppercase tracking-widest">Views</p>
+                    </div>
 
-                <a href="#" onclick="switchDashboardMode('admin')"
-                    class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
-                    <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Admin View
-                </a>
-                <a href="#" onclick="switchDashboardMode('assistant')"
-                    class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
-                    <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Assistant View
-                </a>
-                <a href="#" onclick="switchDashboardMode('creator')"
-                    class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
-                    <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Creator View
-                </a>
+                    <a href="#" onclick="switchDashboardMode('admin')"
+                        class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
+                        <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Admin View
+                    </a>
+                    <a href="#" onclick="switchDashboardMode('assistant')"
+                        class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
+                        <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Assistant View
+                    </a>
+                    <a href="#" onclick="switchDashboardMode('creator')"
+                        class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
+                        <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Creator View
+                    </a>
+                </div>
             </nav>
 
             <div class="p-4 border-t border-gray-700">
-                <a href="../index.html"
+                <a href="#" onclick="handleLogout()"
                     class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
                     <i class="fa-solid fa-right-from-bracket"></i> Logout
                 </a>

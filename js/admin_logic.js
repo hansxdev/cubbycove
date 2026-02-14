@@ -12,6 +12,17 @@ function initAdminDashboard() {
     // 1. Check Auth
     currentUser = DataService.getCurrentUser();
 
+    // BACK BUTTON GUARD
+    window.history.pushState(null, "", window.location.href);
+    window.onpopstate = function () {
+        window.history.pushState(null, "", window.location.href);
+    };
+
+    window.handleLogout = function () {
+        DataService.logout();
+        window.location.href = '../staff_access.html';
+    };
+
     // Redirect if not logged in or not staff
     if (!currentUser || !['admin', 'super_admin', 'assistant'].includes(currentUser.role)) {
         window.location.href = '../login.html';
@@ -30,7 +41,10 @@ function initAdminDashboard() {
     // 3. Show Super Admin Features
     if (currentUser.role === 'super_admin') {
         const staffMenu = document.getElementById('menu-staff');
+        const viewsMenu = document.getElementById('super-admin-views');
+
         if (staffMenu) staffMenu.classList.remove('hidden');
+        if (viewsMenu) viewsMenu.classList.remove('hidden');
     }
 
     // 4. Load Initial Data

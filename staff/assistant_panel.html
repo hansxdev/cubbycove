@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assistant Panel - CubbyCove</title>
-    
+
     <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -29,28 +30,38 @@
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/staff_theme.css">
 </head>
+
 <body class="bg-gray-100 text-gray-800 font-sans antialiased">
 
     <div class="flex h-screen overflow-hidden">
-        
+
         <!-- SIDEBAR -->
-        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 transition-all duration-300" id="sidebar">
+        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 transition-all duration-300"
+            id="sidebar">
             <div class="h-16 flex items-center justify-center border-b border-gray-100 bg-cubby-purple text-white">
                 <i class="fa-solid fa-user-shield text-xl mr-2"></i>
                 <span class="text-lg font-bold tracking-wide">Assistant Panel</span>
             </div>
 
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                <!-- Overview -->
+                <a href="#" onclick="showTab('overview')" id="nav-overview"
+                    class="flex items-center gap-3 px-4 py-3 bg-purple-50 text-cubby-purple rounded-lg font-bold border-l-4 border-cubby-purple transition-all">
+                    <i class="fa-solid fa-gauge-high w-5 text-center"></i> Overview
+                </a>
+
                 <!-- Verification -->
-                <a href="#" onclick="showTab('verification')" id="nav-verification" class="flex items-center justify-between px-4 py-3 bg-purple-50 text-cubby-purple rounded-lg font-bold border-l-4 border-cubby-purple transition-all">
+                <a href="#" onclick="showTab('verification')" id="nav-verification"
+                    class="flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
                     <div class="flex items-center gap-3">
                         <i class="fa-solid fa-id-card w-5 text-center"></i> Verification
                     </div>
                     <span class="bg-cubby-purple text-white text-xs px-2 py-0.5 rounded-full">3</span>
                 </a>
-                
+
                 <!-- Chat Reports -->
-                <a href="#" onclick="showTab('moderation')" id="nav-moderation" class="flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
+                <a href="#" onclick="showTab('moderation')" id="nav-moderation"
+                    class="flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
                     <div class="flex items-center gap-3">
                         <i class="fa-solid fa-flag w-5 text-center"></i> Chat Reports
                     </div>
@@ -58,7 +69,8 @@
                 </a>
 
                 <!-- NEW: Content Review -->
-                <a href="#" onclick="showTab('content')" id="nav-content" class="flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
+                <a href="#" onclick="showTab('content')" id="nav-content"
+                    class="flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
                     <div class="flex items-center gap-3">
                         <i class="fa-solid fa-video w-5 text-center"></i> Video Review
                     </div>
@@ -67,7 +79,8 @@
             </nav>
 
             <div class="p-4 border-t border-gray-100">
-                <a href="../index.html" class="flex items-center gap-3 text-gray-400 hover:text-red-500 transition-colors font-bold text-sm">
+                <a href="#" onclick="handleLogout()"
+                    class="flex items-center gap-3 text-gray-400 hover:text-red-500 transition-colors font-bold text-sm">
                     <i class="fa-solid fa-right-from-bracket"></i> Sign Out
                 </a>
             </div>
@@ -75,8 +88,9 @@
 
         <!-- MAIN CONTENT -->
         <div class="flex-1 flex flex-col overflow-hidden">
-            
-            <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10 border-b border-gray-100">
+
+            <header
+                class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10 border-b border-gray-100">
                 <h2 class="text-lg font-bold text-gray-700" id="page-title">Pending Verifications</h2>
                 <div class="flex items-center gap-2">
                     <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
@@ -85,12 +99,95 @@
             </header>
 
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6 relative">
-                
+
+                <!-- TAB 0: OVERVIEW -->
+                <div id="tab-overview" class="space-y-6 max-w-5xl mx-auto">
+                    <!-- Welcome Banner -->
+                    <div
+                        class="bg-gradient-to-r from-cubby-purple to-purple-600 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
+                        <div class="relative z-10">
+                            <h2 class="text-3xl font-extrabold mb-2">Hello, Staff Member! 👋</h2>
+                            <p class="text-purple-100 font-semibold max-w-xl">You have <span
+                                    class="text-white font-bold underline">10 new tasks</span> pending your review
+                                today. Let's keep CubbyCove safe!</p>
+                        </div>
+                        <i
+                            class="fa-solid fa-shield-cat absolute -right-6 -bottom-6 text-9xl text-white opacity-10 transform rotate-12"></i>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Stat 1 -->
+                        <div onclick="showTab('verification')"
+                            class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-cubby-purple cursor-pointer hover:shadow-md transition-all group">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pending Parents
+                                    </p>
+                                    <h3
+                                        class="text-3xl font-black text-gray-800 mt-1 group-hover:text-cubby-purple transition-colors">
+                                        3</h3>
+                                </div>
+                                <div
+                                    class="w-12 h-12 bg-purple-50 text-cubby-purple rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-user-clock"></i>
+                                </div>
+                            </div>
+                            <div class="mt-4 text-xs font-bold text-gray-400 flex items-center gap-1">
+                                <i class="fa-solid fa-circle-exclamation text-yellow-500"></i> Needs Review
+                            </div>
+                        </div>
+
+                        <!-- Stat 2 -->
+                        <div onclick="showTab('moderation')"
+                            class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500 cursor-pointer hover:shadow-md transition-all group">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Chat Reports
+                                    </p>
+                                    <h3
+                                        class="text-3xl font-black text-gray-800 mt-1 group-hover:text-red-500 transition-colors">
+                                        5</h3>
+                                </div>
+                                <div
+                                    class="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-flag"></i>
+                                </div>
+                            </div>
+                            <div class="mt-4 text-xs font-bold text-gray-400 flex items-center gap-1">
+                                <i class="fa-solid fa-fire text-red-500"></i> High Priority
+                            </div>
+                        </div>
+
+                        <!-- Stat 3 -->
+                        <div onclick="showTab('content')"
+                            class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500 cursor-pointer hover:shadow-md transition-all group">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Video Review
+                                    </p>
+                                    <h3
+                                        class="text-3xl font-black text-gray-800 mt-1 group-hover:text-blue-500 transition-colors">
+                                        2</h3>
+                                </div>
+                                <div
+                                    class="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-video"></i>
+                                </div>
+                            </div>
+                            <div class="mt-4 text-xs font-bold text-gray-400 flex items-center gap-1">
+                                <i class="fa-solid fa-clock text-blue-400"></i> Just Added
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- TAB 1: VERIFICATION (Same as before) -->
-                <div id="tab-verification" class="space-y-6 max-w-4xl mx-auto">
+                <div id="tab-verification" class="hidden space-y-6 max-w-4xl mx-auto">
                     <!-- ... (Existing verification card code) ... -->
                     <!-- Placeholder to keep code concise: Insert previous Verify Card 1 here -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card" id="verify-card-1">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card"
+                        id="verify-card-1">
                         <div class="bg-gray-50 px-6 py-3 border-b border-gray-100 flex justify-between items-center">
                             <span class="font-bold text-gray-700 text-sm">Case #2024-882</span>
                             <span class="text-xs text-gray-400"><i class="fa-regular fa-clock"></i> 10 mins ago</span>
@@ -99,16 +196,21 @@
                             <div class="flex flex-col md:flex-row gap-8 items-center justify-center">
                                 <div class="text-center w-1/2">
                                     <p class="text-xs font-bold text-gray-400 uppercase mb-2">Uploaded ID</p>
-                                    <img src="https://placehold.co/400x250/e2e8f0/64748b?text=Driver's+License" class="rounded-lg shadow-md border border-gray-200 w-full object-cover h-48">
+                                    <img src="https://placehold.co/400x250/e2e8f0/64748b?text=Driver's+License"
+                                        class="rounded-lg shadow-md border border-gray-200 w-full object-cover h-48">
                                 </div>
                                 <div class="text-center w-1/2">
                                     <p class="text-xs font-bold text-gray-400 uppercase mb-2">Live Selfie</p>
-                                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Jane" class="rounded-lg shadow-md border border-gray-200 w-full object-cover h-48 bg-white">
+                                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Jane"
+                                        class="rounded-lg shadow-md border border-gray-200 w-full object-cover h-48 bg-white">
                                 </div>
                             </div>
                             <div class="mt-8 flex gap-4">
-                                <button onclick="rejectItem('verify-card-1')" class="flex-1 py-3 border-2 border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-50">Reject</button>
-                                <button onclick="approveItem('verify-card-1')" class="flex-1 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600">Approve Parent</button>
+                                <button onclick="rejectItem('verify-card-1')"
+                                    class="flex-1 py-3 border-2 border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-50">Reject</button>
+                                <button onclick="approveItem('verify-card-1')"
+                                    class="flex-1 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600">Approve
+                                    Parent</button>
                             </div>
                         </div>
                     </div>
@@ -117,57 +219,73 @@
                 <!-- TAB 2: MODERATION (Same as before) -->
                 <div id="tab-moderation" class="hidden space-y-6 max-w-4xl mx-auto">
                     <!-- ... (Existing moderation card code) ... -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 dashboard-card" id="mod-card-1">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 dashboard-card"
+                        id="mod-card-1">
                         <div class="flex justify-between items-start mb-4">
                             <div>
                                 <h3 class="font-bold text-gray-800">Flagged Message</h3>
-                                <p class="text-xs text-gray-500">Reason: <span class="text-red-500 font-bold">Harassment</span></p>
+                                <p class="text-xs text-gray-500">Reason: <span
+                                        class="text-red-500 font-bold">Harassment</span></p>
                             </div>
-                            <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">High Priority</span>
+                            <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">High
+                                Priority</span>
                         </div>
                         <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 space-y-3 mb-6">
                             <div class="flex gap-2 p-2 bg-red-50 border border-red-100 rounded-md">
                                 <span class="text-xs font-bold text-red-500">User B:</span>
-                                <span class="text-xs text-red-700 font-bold">No, you are stupid and ugly. Go away.</span>
+                                <span class="text-xs text-red-700 font-bold">No, you are stupid and ugly. Go
+                                    away.</span>
                             </div>
                         </div>
                         <div class="flex justify-end gap-3">
-                            <button onclick="dismissItem('mod-card-1')" class="text-sm font-bold text-gray-500 hover:text-gray-700 px-4 py-2">Dismiss</button>
-                            <button onclick="warnUser('mod-card-1')" class="bg-orange-100 text-orange-600 text-sm font-bold px-4 py-2 rounded-lg hover:bg-orange-200">Warn User</button>
+                            <button onclick="dismissItem('mod-card-1')"
+                                class="text-sm font-bold text-gray-500 hover:text-gray-700 px-4 py-2">Dismiss</button>
+                            <button onclick="warnUser('mod-card-1')"
+                                class="bg-orange-100 text-orange-600 text-sm font-bold px-4 py-2 rounded-lg hover:bg-orange-200">Warn
+                                User</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- TAB 3: CONTENT REVIEW (NEW) -->
                 <div id="tab-content" class="hidden space-y-6 max-w-4xl mx-auto">
-                    
+
                     <!-- Content Card 1 -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card" id="content-card-1">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card"
+                        id="content-card-1">
                         <div class="flex flex-col md:flex-row">
                             <!-- Thumbnail -->
                             <div class="w-full md:w-1/3 bg-black relative group">
-                                <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
-                                <a href="#" class="absolute inset-0 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg"
+                                    class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
+                                <a href="#"
+                                    class="absolute inset-0 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
                                     <i class="fa-solid fa-play-circle text-5xl drop-shadow-lg"></i>
                                 </a>
                             </div>
-                            
+
                             <!-- Details -->
                             <div class="p-6 flex-1 flex flex-col justify-between">
                                 <div>
                                     <div class="flex justify-between items-start mb-2">
                                         <h3 class="font-bold text-lg text-gray-800">Learning Colors with Balloons</h3>
-                                        <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded">Category: Learning</span>
+                                        <span
+                                            class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded">Category:
+                                            Learning</span>
                                     </div>
-                                    <p class="text-sm text-gray-600 mb-4">Uploaded by: <span class="text-cubby-purple font-bold">Creator_Mike</span></p>
-                                    <p class="text-xs text-gray-500">Submitted 2 hours ago. AI Scan: <span class="text-green-500 font-bold">Clean</span></p>
+                                    <p class="text-sm text-gray-600 mb-4">Uploaded by: <span
+                                            class="text-cubby-purple font-bold">Creator_Mike</span></p>
+                                    <p class="text-xs text-gray-500">Submitted 2 hours ago. AI Scan: <span
+                                            class="text-green-500 font-bold">Clean</span></p>
                                 </div>
 
                                 <div class="mt-6 flex gap-3">
-                                    <button onclick="rejectContent('content-card-1')" class="px-4 py-2 border border-red-200 text-red-500 font-bold rounded-lg hover:bg-red-50 text-sm">
+                                    <button onclick="rejectContent('content-card-1')"
+                                        class="px-4 py-2 border border-red-200 text-red-500 font-bold rounded-lg hover:bg-red-50 text-sm">
                                         <i class="fa-solid fa-ban mr-1"></i> Reject
                                     </button>
-                                    <button onclick="approveContent('content-card-1')" class="px-4 py-2 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 text-sm shadow-md">
+                                    <button onclick="approveContent('content-card-1')"
+                                        class="px-4 py-2 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 text-sm shadow-md">
                                         <i class="fa-solid fa-check mr-1"></i> Approve & Publish
                                     </button>
                                 </div>
@@ -176,7 +294,8 @@
                     </div>
 
                     <!-- Content Card 2 -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card" id="content-card-2">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card"
+                        id="content-card-2">
                         <div class="flex flex-col md:flex-row">
                             <div class="w-full md:w-1/3 bg-gray-200 flex items-center justify-center">
                                 <i class="fa-solid fa-gamepad text-gray-400 text-4xl"></i>
@@ -185,14 +304,20 @@
                                 <div>
                                     <div class="flex justify-between items-start mb-2">
                                         <h3 class="font-bold text-lg text-gray-800">Minecraft Survival Ep. 1</h3>
-                                        <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Category: Gaming</span>
+                                        <span
+                                            class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Category:
+                                            Gaming</span>
                                     </div>
-                                    <p class="text-sm text-gray-600 mb-4">Uploaded by: <span class="text-cubby-purple font-bold">GamerKid99</span></p>
+                                    <p class="text-sm text-gray-600 mb-4">Uploaded by: <span
+                                            class="text-cubby-purple font-bold">GamerKid99</span></p>
                                     <p class="text-xs text-gray-500">Submitted 5 hours ago.</p>
                                 </div>
                                 <div class="mt-6 flex gap-3">
-                                    <button onclick="rejectContent('content-card-2')" class="px-4 py-2 border border-red-200 text-red-500 font-bold rounded-lg hover:bg-red-50 text-sm">Reject</button>
-                                    <button onclick="approveContent('content-card-2')" class="px-4 py-2 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 text-sm shadow-md">Approve & Publish</button>
+                                    <button onclick="rejectContent('content-card-2')"
+                                        class="px-4 py-2 border border-red-200 text-red-500 font-bold rounded-lg hover:bg-red-50 text-sm">Reject</button>
+                                    <button onclick="approveContent('content-card-2')"
+                                        class="px-4 py-2 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 text-sm shadow-md">Approve
+                                        & Publish</button>
                                 </div>
                             </div>
                         </div>
@@ -204,6 +329,8 @@
         </div>
     </div>
 
+    <script src="../js/data_service.js"></script>
     <script src="../js/assistant_logic.js"></script>
 </body>
+
 </html>

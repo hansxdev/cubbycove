@@ -63,3 +63,5 @@ function initSidebar() {
         }
     });
 }
+
+document.addEventListener('DOMContentLoaded', initSidebar);

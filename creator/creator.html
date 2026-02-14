@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creator Studio - CubbyCove</title>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind-config.js"></script>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/staff_theme.css">
+</head>
+
+<body class="bg-gray-100 text-gray-800 font-sans antialiased">
+
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 transition-all duration-300"
+            id="sidebar">
+            <div class="h-16 flex items-center justify-center border-b border-gray-100 bg-orange-500 text-white">
+                <i class="fa-solid fa-video text-xl mr-2"></i>
+                <span class="text-lg font-bold tracking-wide">Creator Studio</span>
+            </div>
+
+            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                <a href="#" onclick="showTab('uploads')" id="nav-uploads"
+                    class="flex items-center gap-3 px-4 py-3 bg-orange-50 text-orange-600 rounded-lg font-bold border-l-4 border-orange-500 transition-all">
+                    <i class="fa-solid fa-upload w-5 text-center"></i> My Uploads
+                </a>
+                <a href="#" onclick="showTab('new')" id="nav-new"
+                    class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
+                    <i class="fa-solid fa-plus w-5 text-center"></i> New Video
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-gray-100">
+                <a href="../index.html"
+                    class="flex items-center gap-3 text-gray-400 hover:text-red-500 transition-colors font-bold text-sm">
+                    <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+                </a>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+
+            <!-- HEADER -->
+            <header
+                class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10 border-b border-gray-100">
+                <h2 class="text-lg font-bold text-gray-700" id="page-title">My Content</h2>
+                <div class="flex items-center gap-2">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=CreatorMike"
+                        class="w-8 h-8 rounded-full border border-gray-200">
+                    <span class="text-sm font-bold text-gray-600">Creator_Mike</span>
+                </div>
+            </header>
+
+            <!-- CONTENT AREA -->
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6 relative">
+
+                <!-- TAB 1: MY UPLOADS -->
+                <div id="tab-uploads" class="space-y-6 max-w-5xl mx-auto">
+
+                    <!-- Stats Bar -->
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center">
+                            <span class="text-2xl font-bold text-gray-800" id="stat-live">12</span>
+                            <p class="text-xs text-gray-400 uppercase">Live Videos</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center">
+                            <span class="text-2xl font-bold text-yellow-500" id="stat-pending">1</span>
+                            <p class="text-xs text-gray-400 uppercase">Pending Review</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center">
+                            <span class="text-2xl font-bold text-cubby-blue">5.4k</span>
+                            <p class="text-xs text-gray-400 uppercase">Total Views</p>
+                        </div>
+                    </div>
+
+                    <!-- Video List -->
+                    <div class="space-y-4" id="video-list">
+                        <!-- Pending Video (Static Mock) -->
+                        <div
+                            class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex gap-4 items-center dashboard-card">
+                            <div class="w-32 h-20 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden relative">
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <i class="fa-solid fa-clock text-gray-400 text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex justify-between">
+                                    <h4 class="font-bold text-gray-800">Learning Colors with Balloons</h4>
+                                    <span
+                                        class="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded">Pending
+                                        Review</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Uploaded 2 hours ago</p>
+                            </div>
+                        </div>
+
+                        <!-- Live Video (Static Mock) -->
+                        <div
+                            class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex gap-4 items-center dashboard-card">
+                            <div class="w-32 h-20 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden relative group">
+                                <img src="https://img.youtube.com/vi/a1i436o6h1U/mqdefault.jpg"
+                                    class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex justify-between">
+                                    <h4 class="font-bold text-gray-800">Fun with Shapes!</h4>
+                                    <span
+                                        class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Live</span>
+                                </div>
+                                <div class="flex gap-4 mt-2 text-xs text-gray-500">
+                                    <span><i class="fa-solid fa-eye text-cubby-blue"></i> 1.2k views</span>
+                                    <span><i class="fa-solid fa-calendar"></i> 2 days ago</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: UPLOAD NEW -->
+                <div id="tab-new" class="hidden max-w-3xl mx-auto">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                        <div class="text-center mb-8">
+                            <div
+                                class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 text-orange-500">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-800">Upload New Content</h3>
+                            <p class="text-gray-500 text-sm">Your video will be reviewed by our safety team before going
+                                live.</p>
+                        </div>
+
+                        <form id="uploadForm" class="space-y-6">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Video Source</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="videoUrl" placeholder="Paste YouTube URL or ID"
+                                        class="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                        required>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Title</label>
+                                <input type="text" id="videoTitle" placeholder="e.g. My Awesome Science Experiment"
+                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                    required>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Category</label>
+                                <select id="videoCategory"
+                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400">
+                                    <option>Learning</option>
+                                    <option>Gaming</option>
+                                    <option>Music</option>
+                                    <option>Vlog</option>
+                                    <option>Cartoons</option>
+                                </select>
+                            </div>
+
+                            <button type="submit"
+                                class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg shadow-md shadow-orange-200 transition-all mt-4">
+                                Submit for Review
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Import Logic -->
+    <script src="../js/creator_logic.js"></script>
+</body>
+
+</html>

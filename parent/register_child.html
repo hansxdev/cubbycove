@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Child - CubbyCove</title>
+
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind-config.js"></script>
+
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white w-full max-w-2xl rounded-3xl shadow-xl overflow-hidden relative">
+        <!-- Close Button -->
+        <a href="dashboard.html" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors">
+            <i class="fa-solid fa-times text-2xl"></i>
+        </a>
+
+        <div class="p-8 md:p-12">
+            <div class="text-center mb-8">
+                <div
+                    class="w-16 h-16 bg-cubby-green text-white rounded-full flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg shadow-green-200">
+                    <i class="fa-solid fa-child-reaching"></i>
+                </div>
+                <h2 class="text-3xl font-extrabold text-gray-800">Add a Child Profile</h2>
+                <p class="text-gray-500">Create a safe space for them to explore.</p>
+            </div>
+
+            <form id="addChildForm" class="space-y-6">
+
+                <!-- Avatar Selection -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-500 uppercase mb-3 text-center">Choose an
+                        Avatar</label>
+                    <div class="flex justify-center gap-4 flex-wrap" id="avatar-grid">
+                        <!-- Avatar Option 1 -->
+                        <label class="cursor-pointer group relative">
+                            <input type="radio" name="avatar" value="Felix" class="peer sr-only" checked>
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                                class="w-16 h-16 rounded-full border-4 border-transparent peer-checked:border-cubby-blue peer-checked:scale-110 transition-all group-hover:opacity-80">
+                            <div
+                                class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100">
+                                <i class="fa-solid fa-check text-cubby-blue text-2xl drop-shadow-md"></i>
+                            </div>
+                        </label>
+                        <!-- Avatar Option 2 -->
+                        <label class="cursor-pointer group relative">
+                            <input type="radio" name="avatar" value="Annie" class="peer sr-only">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Annie"
+                                class="w-16 h-16 rounded-full border-4 border-transparent peer-checked:border-cubby-purple peer-checked:scale-110 transition-all group-hover:opacity-80">
+                        </label>
+                        <!-- Avatar Option 3 -->
+                        <label class="cursor-pointer group relative">
+                            <input type="radio" name="avatar" value="Leo" class="peer sr-only">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Leo"
+                                class="w-16 h-16 rounded-full border-4 border-transparent peer-checked:border-cubby-yellow peer-checked:scale-110 transition-all group-hover:opacity-80">
+                        </label>
+                        <!-- Avatar Option 4 -->
+                        <label class="cursor-pointer group relative">
+                            <input type="radio" name="avatar" value="Zoe" class="peer sr-only">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Zoe"
+                                class="w-16 h-16 rounded-full border-4 border-transparent peer-checked:border-cubby-pink peer-checked:scale-110 transition-all group-hover:opacity-80">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Child Name -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Child's Name (Display
+                            Name)</label>
+                        <input type="text" placeholder="e.g. Tommy"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-cubby-blue focus:bg-white transition-all">
+                    </div>
+                    <!-- Username -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Create Username</label>
+                        <input type="text" placeholder="e.g. TommyRox123"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-cubby-blue focus:bg-white transition-all">
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Create a Simple
+                        Password</label>
+                    <input type="text" placeholder="e.g. dino123"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-cubby-blue focus:bg-white transition-all">
+                    <p class="text-xs text-gray-400 mt-1 ml-1">Make it easy for them to remember!</p>
+                </div>
+
+                <!-- Settings Toggles -->
+                <div class="bg-gray-50 rounded-xl p-4 space-y-3">
+                    <h4 class="font-bold text-gray-600 text-sm mb-2">Initial Permissions</h4>
+
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <span class="text-sm font-semibold text-gray-700">Allow Chatting?</span>
+                        <div
+                            class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="allowChat"
+                                class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300 checked:right-0 checked:border-green-400" />
+                            <label
+                                class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </label>
+
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <span class="text-sm font-semibold text-gray-700">Allow Games?</span>
+                        <div
+                            class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="allowGames" checked
+                                class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300 checked:right-0 checked:border-green-400" />
+                            <label
+                                class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex gap-4 mt-8">
+                    <a href="dashboard.html"
+                        class="w-1/3 bg-white border-2 border-gray-200 text-gray-500 font-bold py-3 rounded-xl hover:bg-gray-50 text-center transition-colors flex items-center justify-center">Cancel</a>
+                    <button type="button" onclick="saveChild()"
+                        class="w-2/3 bg-cubby-green hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-green-200 transition-all transform active:scale-95 flex items-center justify-center">
+                        Create Profile <i class="fa-solid fa-check ml-2"></i>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- Toggle Switch CSS Logic -->
+    <style>
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #68D391;
+        }
+
+        .toggle-checkbox:checked+.toggle-label {
+            background-color: #68D391;
+        }
+    </style>
+
+    <!-- Import Logic -->
+    <script src="../js/parent_logic.js"></script>
+</body>
+
+</html>

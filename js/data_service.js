@@ -228,7 +228,9 @@ const DataService = {
             status: 'active',
             firstName: newStaffData.firstName,
             lastName: newStaffData.lastName,
+            middleName: '',
             email: newStaffData.email,
+            faceId: 'manual_override',
             createdAt: new Date().toISOString()
             // No password stored here
         };

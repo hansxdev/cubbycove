@@ -18,22 +18,38 @@ const DataService = {
     // --- AUTHENTICATION METHODS ---
 
     /**
-     * Registers a new Parent Account
+     * Registers a new User (Parent/Staff Claim)
      * returns: Promise<Object> (User Document)
      */
     registerParent: async function (parentData) {
         const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { ID } = Appwrite;
+        const { ID, Query } = Appwrite;
 
         try {
             // 1. Create Identity (Auth Account)
-            // Using email as ID for easier lookup? No, let's use ID.unique() for UserId
             const userId = ID.unique();
             const name = `${parentData.firstName} ${parentData.lastName}`;
 
             await account.create(userId, parentData.email, parentData.password, name);
 
-            // 2. Create Profile Document in 'Users' Collection
+            // 2. Check for Pre-Existing Profile (e.g. Created by Admin)
+            const existingList = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                Query.equal('email', parentData.email)
+            ]);
+
+            if (existingList.documents.length > 0) {
+                // Profile exists! Link to it.
+                // We can't change the Doc ID to match Auth ID now, but our Login Fallback handles this.
+                // We should ensure the profile is active or updated.
+                const existingDoc = existingList.documents[0];
+                console.log("✅ [Appwrite] Account Linked to Existing Profile:", existingDoc.$id);
+
+                // Optional: Update status to active if it was pending? 
+                // Pre-created staff are usually 'active'.
+                return existingDoc;
+            }
+
+            // 3. Create New Profile Document (Default: Parent)
             const userDoc = {
                 role: 'parent',
                 status: 'pending',
@@ -45,11 +61,10 @@ const DataService = {
                 createdAt: new Date().toISOString()
             };
 
-            // We use the SAME ID for the Document as the Auth User for 1:1 mapping
             const doc = await databases.createDocument(
                 DB_ID,
                 COLLECTIONS.USERS,
-                userId,
+                userId, // Try 1:1 mapping
                 userDoc
             );
 
@@ -58,7 +73,7 @@ const DataService = {
 
         } catch (error) {
             console.error("Register Error:", error);
-            throw error; // Re-throw to UI
+            throw error;
         }
     },
 
@@ -242,18 +257,6 @@ const DataService = {
     },
 
     createStaffAccount: async function (creatorEmail, newStaffData) {
-        // NOTE: Creating user accounts requires server-side or Cloud Functions properly.
-        // Doing it client-side means we have to logout the current admin, create account, logout, re-login admin.
-        // OR use Appwrite Teams/Invites (Better).
-        // For THIS Prototype: We will use the 'Client Side Auth Juggling' approach which is hacky but expected for pure client-side demos.
-        // OR: Just create the DB document and let them "Sign Up" later? No, we want to create the auth.
-        // Strategy: We will create the Document directly. The User must separate "Sign Up" themselves using that email?
-        // No, let's try the juggle for now, or just throw error saying "Feature requires Cloud Functions for production".
-
-        // Let's implement the 'Register Logic' but for staff.
-        // ACTUALLY: We can't easily create another user session while logged in.
-        // Alternative: Just create the DB Entry and assume Auth exists? No.
-
         // Valid approach for Starter: Create the DB Document. The Staff member must "Sign Up" themselves on the login page?
         // Or we use an Invite?
         // Let's Stub this to just create the DB Document for now so it shows in the list.

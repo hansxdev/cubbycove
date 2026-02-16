@@ -33,14 +33,20 @@ document.addEventListener('DOMContentLoaded', () => {
     showTab('overview');
 });
 
-function initAssistantPanel() {
+async function initAssistantPanel() {
     // BACK BUTTON GUARD
     window.history.pushState(null, "", window.location.href);
     window.onpopstate = function () {
         window.history.pushState(null, "", window.location.href);
     };
 
-    currentUser = DataService.getCurrentUser();
+    try {
+        currentUser = await DataService.getCurrentUser();
+    } catch (e) {
+        console.error("Auth Check Failed:", e);
+        window.location.href = '../staff_access.html';
+        return;
+    }
 
     // Auth Check
     if (!currentUser || !['assistant', 'admin', 'super_admin'].includes(currentUser.role)) {
@@ -53,6 +59,18 @@ function initAssistantPanel() {
     if (titleEl) {
         titleEl.innerHTML = `Welcome back, <span class="text-cubby-purple">${currentUser.firstName}</span>`;
     }
+
+    // Load Data
+    loadPendingParents();
+    // loadChatReports(); // Not implemented yet
+    // loadPendingVideos(); // Needs async fix too if moved out of window.showTab, but showTab calls it.
+    // However, showTab is sync. loadPendingVideos calls DataService.getVideos which is async.
+    // We should fix loadPendingVideos to handle async awaiting inside.
+
+    // Initial Load - Default to Overview now
+    // showTab('overview') is called in DOMContentLoaded.
+    // We should probably wait for auth before showing tab data? 
+    // But 'overview' is static currently.
 }
 
 function handleLogout() {

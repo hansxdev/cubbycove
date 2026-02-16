@@ -127,8 +127,30 @@ const DataService = {
         const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
         try {
             const sessionUser = await account.get();
-            const doc = await databases.getDocument(DB_ID, COLLECTIONS.USERS, sessionUser.$id);
+            let doc;
+
+            try {
+                // Try fetching by Auth ID
+                doc = await databases.getDocument(DB_ID, COLLECTIONS.USERS, sessionUser.$id);
+            } catch (e) {
+                if (e.code === 404) {
+                    // Fallback: Search by Email
+                    const { Query } = Appwrite;
+                    const list = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                        Query.equal('email', sessionUser.email)
+                    ]);
+
+                    if (list.documents.length > 0) {
+                        doc = list.documents[0];
+                    } else {
+                        return null; // Profile truly missing
+                    }
+                } else {
+                    throw e;
+                }
+            }
             return doc;
+
         } catch (error) {
             return null; // Not logged in
         }

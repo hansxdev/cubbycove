@@ -69,6 +69,14 @@ const DataService = {
         const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
 
         try {
+            // 0. Clean up any existing session just in case
+            try {
+                // If we are already logged in, logout first to avoid "session active" error
+                await account.deleteSession('current');
+            } catch (ignore) {
+                // Fails if no session exists, which is fine
+            }
+
             // 1. Create Session
             await account.createEmailPasswordSession(email, password);
 

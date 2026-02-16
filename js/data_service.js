@@ -81,10 +81,29 @@ const DataService = {
             await account.createEmailPasswordSession(email, password);
 
             // 2. Fetch User Details to Check Status
-            // We need to find the document with this email.
-            // Since we used Auth ID as Doc ID, we can get current account get ID then get Doc.
             const sessionUser = await account.get();
-            const doc = await databases.getDocument(DB_ID, COLLECTIONS.USERS, sessionUser.$id);
+            let doc;
+
+            try {
+                // Try fetching by Auth ID (Preferred 1:1 mapping)
+                doc = await databases.getDocument(DB_ID, COLLECTIONS.USERS, sessionUser.$id);
+            } catch (e) {
+                // If Auth ID doesn't match Doc ID (Legacy or Created via Staff Tool randomly), search by Email
+                if (e.code === 404) {
+                    const { Query } = Appwrite;
+                    const list = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                        Query.equal('email', email)
+                    ]);
+
+                    if (list.documents.length > 0) {
+                        doc = list.documents[0];
+                    } else {
+                        throw new Error("User Profile not found in database.");
+                    }
+                } else {
+                    throw e;
+                }
+            }
 
             // 3. Status Checks
             if (doc.role === 'parent' && doc.status === 'pending') {

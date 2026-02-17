@@ -44,15 +44,37 @@ const DataService = {
 
                 // Check if it's a Staff Role
                 if (['admin', 'assistant', 'creator'].includes(existingDoc.role)) {
+                    // WARNING: Email Verification requires HTTP/HTTPS (not file://)
+                    if (window.location.protocol === 'file:') {
+                        alert("⚠️ Developer Warning: Email Verification cannot be sent from file:// protocol.\nPlease run this site on a local server (e.g., Live Server or http-server).");
+                        console.error("❌ [Appwrite] Verification Failed: Protocol 'file:' is not supported for redirects.");
+                        return existingDoc;
+                    }
+
                     // Send Verification Email
                     // Create session first to satisfy permission requirements for creating verification
                     await account.createEmailPasswordSession(parentData.email, parentData.password);
 
                     // Construct Verification URL
                     const verifyUrl = `${window.location.origin}/verify_email.html`;
-                    await account.createVerification(verifyUrl);
+                    const token = await account.createVerification(verifyUrl);
 
-                    console.log("📧 [Appwrite] Verification Email Sent");
+                    console.log("📧 [Appwrite] Verification Email TRIGGERED");
+
+                    // --- DEMO/DEV MODE HACK ---
+                    // Since specific email delivery (SMTP) is a paid feature, we simulate the email here.
+                    const manualLink = `${verifyUrl}?userId=${token.userId}&secret=${token.secret}&expire=${token.expire}`;
+                    console.log("🔗 [DEV] Manual Verification Link:", manualLink);
+
+                    // Show a custom "Simulated Email" modal/alert
+                    // We use alert because it's blocking and ensures they see it before logout cleanup
+                    setTimeout(() => {
+                        const msg = `[DEVELOPER MODE: Email Simulation]\n\nAppwrite Free Tier limits emails. Click OK to open the verification link new tab.\n\n(This simulates clicking the link in your inbox)`;
+                        if (confirm(msg)) {
+                            window.open(manualLink, '_blank');
+                        }
+                    }, 500);
+                    // --------------------------
 
                     // Logout immediately as they need to verify first
                     await account.deleteSession('current');

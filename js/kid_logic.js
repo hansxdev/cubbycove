@@ -2,9 +2,6 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Sidebar Logic (Shared)
-    if (typeof initSidebar === 'function') {
-        initSidebar();
-    } else {
-        console.warn('sidebar-logic.js not loaded');
-    }
+    // Sidebar logic is self-initializing in sidebar-logic.js
+    // Redundant init removed.
 });

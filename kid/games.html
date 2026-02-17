@@ -72,57 +72,62 @@
 
     <!-- SIDEBAR -->
     <aside id="sidebar"
-        class="fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white overflow-y-auto transform lg:translate-x-0 -translate-x-full transition-transform duration-300 z-40 pb-10 border-r border-gray-100">
+        class="fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white overflow-y-auto transform lg:translate-x-0 -translate-x-full transition-all duration-300 ease-in-out z-40 pb-10 border-r border-gray-100 overflow-x-hidden">
 
         <!-- Main Links -->
         <div class="p-3 space-y-1">
             <a href="home_logged_in.html"
-                class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors">
+                class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors sidebar-link transition-all duration-300">
                 <i class="fa-solid fa-house text-xl w-6 text-center text-cubby-blue"></i>
-                <span>Home</span>
+                <span
+                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Home</span>
             </a>
             <a href="games.html"
-                class="flex items-center gap-4 px-4 py-3 bg-cubby-purple/10 text-cubby-purple rounded-xl font-bold text-lg">
+                class="flex items-center gap-4 px-4 py-3 bg-cubby-purple/10 text-cubby-purple rounded-xl font-bold text-lg sidebar-link transition-all duration-300">
                 <i class="fa-solid fa-gamepad text-xl w-6 text-center"></i>
-                <span>Games</span>
+                <span
+                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Games</span>
             </a>
             <a href="chat.html"
-                class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors">
+                class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors sidebar-link transition-all duration-300">
                 <i class="fa-solid fa-comments text-xl w-6 text-center text-cubby-green"></i>
-                <span>Chat</span>
+                <span
+                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Chat</span>
             </a>
             <a href="#"
-                class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors">
+                class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors sidebar-link transition-all duration-300">
                 <i class="fa-solid fa-heart text-xl w-6 text-center text-cubby-pink"></i>
-                <span>Favorites</span>
+                <span
+                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Favorites</span>
             </a>
         </div>
 
         <hr class="border-gray-200 mx-4 my-2">
 
         <!-- Game Categories -->
-        <div class="p-4">
-            <h3 class="font-extrabold text-gray-400 uppercase text-xs mb-3 ml-1 tracking-wider">Categories</h3>
+        <div class="p-4 sidebar-hide-mini transition-all duration-300 overflow-hidden">
+            <h3 class="font-extrabold text-gray-400 uppercase text-xs mb-3 ml-1 tracking-wider sidebar-header">
+                Categories</h3>
             <div class="space-y-1">
                 <button
-                    class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 font-bold text-gray-700 transition-colors">
+                    class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 font-bold text-gray-700 transition-colors sidebar-link">
                     <span
-                        class="w-6 h-6 rounded bg-yellow-100 text-yellow-600 flex items-center justify-center text-xs"><i
+                        class="w-6 h-6 rounded bg-cubby-yellow/10 text-cubby-yellow flex items-center justify-center text-xs"><i
                             class="fa-solid fa-puzzle-piece"></i></span>
-                    Puzzle
+                    <span class="sidebar-label">Puzzle</span>
                 </button>
                 <button
-                    class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 font-bold text-gray-700 transition-colors">
+                    class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 font-bold text-gray-700 transition-colors sidebar-link">
                     <span class="w-6 h-6 rounded bg-red-100 text-red-600 flex items-center justify-center text-xs"><i
                             class="fa-solid fa-car"></i></span>
-                    Racing
+                    <span class="sidebar-label">Racing</span>
                 </button>
                 <button
-                    class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 font-bold text-gray-700 transition-colors">
+                    class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 font-bold text-gray-700 transition-colors sidebar-link">
                     <span
-                        class="w-6 h-6 rounded bg-green-100 text-green-600 flex items-center justify-center text-xs"><i
+                        class="w-6 h-6 rounded bg-cubby-green/10 text-cubby-green flex items-center justify-center text-xs"><i
                             class="fa-solid fa-graduation-cap"></i></span>
-                    Educational
+                    <span class="sidebar-label">Educational</span>
                 </button>
             </div>
         </div>
@@ -132,7 +137,7 @@
     <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
 
     <!-- MAIN CONTENT -->
-    <main id="main-content" class="lg:ml-64 pt-16 min-h-screen transition-all duration-300">
+    <main id="main-content" class="lg:ml-64 pt-16 min-h-screen transition-all duration-300 ease-in-out">
 
         <!-- Hero Banner (Featured Game) -->
         <div class="p-6 pb-2">
@@ -146,8 +151,8 @@
                     <h2 class="text-3xl md:text-4xl font-extrabold mb-2">Space Explorer 3000</h2>
                     <p class="text-gray-300 text-sm md:text-base max-w-lg mb-4">Blast off into a galaxy of fun! Learn
                         about planets while dodging asteroids.</p>
-                    <button
-                        class="bg-cubby-purple hover:bg-purple-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition-transform transform hover:scale-105 flex items-center gap-2">
+                    <button onclick="playMemoryGame()"
+                        class="bg-cubby-purple hover:bg-cubby-purple/80 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition-transform transform hover:scale-105 flex items-center gap-2">
                         <i class="fa-solid fa-play"></i> Play Now
                     </button>
                 </div>
@@ -160,7 +165,7 @@
             <!-- Game Card 1 -->
             <div
                 class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
-                <div class="aspect-square bg-blue-100 relative overflow-hidden">
+                <div class="aspect-square bg-cubby-sky relative overflow-hidden">
                     <img src="https://img.freepik.com/free-vector/math-background-design_1306-79.jpg"
                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
                     <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center">
@@ -179,8 +184,8 @@
             <!-- Game Card 2 -->
             <div
                 class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
-                <div class="aspect-square bg-green-100 relative overflow-hidden">
-                    <div class="w-full h-full flex items-center justify-center text-4xl text-green-400"><i
+                <div class="aspect-square bg-cubby-green/10 relative overflow-hidden">
+                    <div class="w-full h-full flex items-center justify-center text-4xl text-cubby-green"><i
                             class="fa-solid fa-chess-knight"></i></div>
                     <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center">
                         <div
@@ -217,8 +222,8 @@
             <!-- Game Card 4 -->
             <div
                 class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
-                <div class="aspect-square bg-yellow-100 relative overflow-hidden">
-                    <div class="w-full h-full flex items-center justify-center text-4xl text-yellow-500"><i
+                <div class="aspect-square bg-cubby-yellow/10 relative overflow-hidden">
+                    <div class="w-full h-full flex items-center justify-center text-4xl text-cubby-yellow"><i
                             class="fa-solid fa-cookie-bite"></i></div>
                     <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center">
                         <div
@@ -236,8 +241,8 @@
             <!-- Game Card 5 -->
             <div
                 class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
-                <div class="aspect-square bg-purple-100 relative overflow-hidden">
-                    <div class="w-full h-full flex items-center justify-center text-4xl text-purple-400"><i
+                <div class="aspect-square bg-cubby-purple/10 relative overflow-hidden">
+                    <div class="w-full h-full flex items-center justify-center text-4xl text-cubby-purple"><i
                             class="fa-solid fa-paintbrush"></i></div>
                     <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center">
                         <div

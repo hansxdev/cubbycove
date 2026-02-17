@@ -75,15 +75,14 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
 
-            <div class="flex items-center gap-2 cursor-pointer">
-                <div
-                    class="bg-cubby-blue text-white p-2 rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
-                    <i class="fa-solid fa-shield-cat text-xl"></i>
-                </div>
-                <span class="text-2xl font-extrabold tracking-tight text-cubby-purple hidden sm:block">
-                    Cubby<span class="text-cubby-blue">Cove</span>
-                </span>
-            </div>
+            <a href="index.html"
+                class="flex items-center gap-2 cursor-pointer relative overflow-hidden h-14 w-48 transition-all duration-300"
+                id="logo-container">
+                <img id="logo-long" src="images/longlogo.png" alt="CubbyCove"
+                    class="h-14 absolute left-0 top-0 transition-opacity duration-300 opacity-100 object-contain">
+                <img id="logo-closed" src="images/closedlogo.png" alt="CubbyCove"
+                    class="h-14 absolute left-0 top-0 transition-opacity duration-300 opacity-0 object-contain pointer-events-none">
+            </a>
         </div>
 
         <!-- Center: Search Bar -->
@@ -123,47 +122,52 @@
 
     <!-- SIDEBAR -->
     <aside id="sidebar"
-        class="fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white overflow-y-auto transform lg:translate-x-0 -translate-x-full transition-transform duration-300 z-40 pb-10 border-r border-gray-100">
+        class="fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white overflow-y-auto transform lg:translate-x-0 -translate-x-full transition-all duration-300 ease-in-out z-40 pb-10 border-r border-gray-100 overflow-x-hidden">
 
         <!-- Main Links -->
         <div class="p-3 space-y-1">
             <a href="#"
-                class="flex items-center gap-4 px-4 py-3 bg-cubby-blue/10 text-cubby-blue rounded-xl font-bold text-lg">
+                class="flex items-center gap-4 px-4 py-3 bg-cubby-blue/10 text-cubby-blue rounded-xl font-bold text-lg sidebar-link transition-all duration-300">
                 <i class="fa-solid fa-house text-xl w-6 text-center"></i>
-                <span>Home</span>
+                <span
+                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Home</span>
             </a>
 
             <a href="kid/games.html"
-                class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors">
-                <i class="fa-solid fa-gamepad text-xl w-6 text-center text-cubby-purple"></i>
-                <span>Games</span>
+                class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors sidebar-link transition-all duration-300">
+                <i class="fa-solid fa-gamepad text-xl w-6 text-center text-cubby-orange"></i>
+                <span
+                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Games</span>
             </a>
 
             <!-- Chat (LOCKED) -->
             <button onclick="showLoginModal('Chat with friends')"
-                class="w-full flex items-center gap-4 px-4 py-3 text-gray-400 hover:bg-gray-50 rounded-xl font-bold text-lg transition-colors text-left group">
+                class="w-full flex items-center gap-4 px-4 py-3 text-gray-400 hover:bg-gray-50 rounded-xl font-bold text-lg transition-colors text-left group sidebar-link transition-all duration-300">
                 <div class="relative">
                     <i class="fa-solid fa-comments text-xl w-6 text-center"></i>
                     <i class="fa-solid fa-lock text-[10px] absolute -top-1 -right-1 text-cubby-pink"></i>
                 </div>
-                <span>Chat</span>
+                <span
+                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Chat</span>
             </button>
 
             <!-- Favorites (LOCKED) -->
             <button onclick="showLoginModal('Save your favorites')"
-                class="w-full flex items-center gap-4 px-4 py-3 text-gray-400 hover:bg-gray-50 rounded-xl font-bold text-lg transition-colors text-left group">
+                class="w-full flex items-center gap-4 px-4 py-3 text-gray-400 hover:bg-gray-50 rounded-xl font-bold text-lg transition-colors text-left group sidebar-link transition-all duration-300">
                 <div class="relative">
                     <i class="fa-solid fa-heart text-xl w-6 text-center"></i>
                     <i class="fa-solid fa-lock text-[10px] absolute -top-1 -right-1 text-cubby-pink"></i>
                 </div>
-                <span>Favorites</span>
+                <span
+                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Favorites</span>
             </button>
         </div>
 
         <hr class="border-gray-200 mx-4 my-2">
 
         <!-- Friends (Hidden for Guest) -->
-        <div class="p-4 bg-gray-50 mx-4 rounded-xl text-center mt-2">
+        <div
+            class="p-4 bg-gray-50 mx-4 rounded-xl text-center mt-2 sidebar-promo transition-all duration-300 overflow-hidden">
             <div
                 class="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-2 text-cubby-green shadow-sm">
                 <i class="fa-solid fa-users text-xl"></i>
@@ -177,7 +181,7 @@
         <hr class="border-gray-200 mx-4 my-2">
 
         <!-- Bottom Graphic -->
-        <div class="px-6 mt-4">
+        <div class="px-6 mt-4 sidebar-promo transition-all duration-300 overflow-hidden">
             <div
                 class="bg-gradient-to-br from-cubby-yellow to-orange-300 rounded-2xl p-4 text-white text-center shadow-lg">
                 <i class="fa-solid fa-shield-cat text-3xl mb-2 text-yellow-100"></i>
@@ -190,7 +194,7 @@
     <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
 
     <!-- MAIN CONTENT -->
-    <main id="main-content" class="lg:ml-64 pt-16 min-h-screen transition-all duration-300">
+    <main id="main-content" class="lg:ml-64 pt-16 min-h-screen transition-all duration-300 ease-in-out">
 
         <!-- Filter Chips -->
         <div
@@ -285,7 +289,7 @@
             <!-- Card 4 (Game Promo) -->
             <div class="video-card group cursor-pointer">
                 <div
-                    class="relative w-full aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-cubby-purple to-cubby-pink p-1">
+                    class="relative w-full aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-cubby-blue to-cubby-pink p-1">
                     <div
                         class="w-full h-full bg-white/10 flex flex-col items-center justify-center text-white text-center p-4">
                         <i class="fa-solid fa-gamepad text-5xl mb-2 drop-shadow-md"></i>
@@ -294,12 +298,12 @@
                 </div>
                 <div class="flex gap-3 mt-3">
                     <div class="min-w-[40px]">
-                        <div class="w-9 h-9 rounded-full bg-cubby-purple flex items-center justify-center text-white"><i
+                        <div class="w-9 h-9 rounded-full bg-cubby-blue flex items-center justify-center text-white"><i
                                 class="fa-solid fa-gamepad text-xs"></i></div>
                     </div>
                     <div>
                         <h3
-                            class="font-extrabold text-gray-900 leading-tight mb-1 text-base group-hover:text-cubby-purple transition-colors">
+                            class="font-extrabold text-gray-900 leading-tight mb-1 text-base group-hover:text-cubby-blue transition-colors">
                             Try the new Math Puzzle Game!</h3>
                         <p class="text-sm text-gray-500 font-semibold">CubbyCove Games</p>
                         <span
@@ -370,7 +374,7 @@
 
             <div class="text-center">
                 <div
-                    class="w-20 h-20 bg-cubby-purple text-white rounded-full flex items-center justify-center text-4xl mx-auto mb-4 shadow-lg">
+                    class="w-20 h-20 bg-cubby-blue text-white rounded-full flex items-center justify-center text-4xl mx-auto mb-4 shadow-lg">
                     <i class="fa-solid fa-lock"></i>
                 </div>
                 <h3 id="modal-title" class="text-2xl font-extrabold text-gray-800 mb-2">Want to do more?</h3>

@@ -7,22 +7,142 @@ function initSidebar() {
 
     if (!menuBtn || !sidebar) return;
 
+    // Initialize Logo Paths
+    const logoLong = document.getElementById('logo-long');
+    const logoClosed = document.getElementById('logo-closed');
+
+    if (logoLong && logoClosed) {
+        let imgPath = 'images/';
+        const path = window.location.pathname;
+        if (path.includes('/kid/') || path.includes('/parent/') || path.includes('/staff/') || path.includes('/creator/')) {
+            imgPath = '../images/';
+        }
+        logoLong.src = imgPath + 'longlogo.png';
+        logoClosed.src = imgPath + 'closedlogo.png';
+    }
+
+    function updateLogo(isClosed) {
+        const logoLong = document.getElementById('logo-long');
+        const logoClosed = document.getElementById('logo-closed');
+        const logoContainer = document.getElementById('logo-container');
+
+        if (logoLong && logoClosed && logoContainer) {
+            if (isClosed) {
+                // Show Closed, Hide Long
+                logoLong.classList.add('opacity-0');
+                logoLong.classList.remove('opacity-100');
+
+                logoClosed.classList.add('opacity-100', 'delay-100');
+                logoClosed.classList.remove('opacity-0');
+
+                if (logoContainer) {
+                    logoContainer.classList.remove('w-48');
+                    logoContainer.classList.add('w-14');
+                }
+            } else {
+                // Show Long, Hide Closed
+                logoLong.classList.add('opacity-100', 'delay-100');
+                logoLong.classList.remove('opacity-0');
+
+                logoClosed.classList.add('opacity-0');
+                logoClosed.classList.remove('opacity-100', 'delay-100');
+
+                // Adjust Container Width (approximate width for full logo)
+                if (logoContainer) {
+                    logoContainer.classList.remove('w-14');
+                    logoContainer.classList.add('w-48');
+                }
+            }
+        }
+    }
+
     function toggleMenu() {
         const isDesktop = window.innerWidth >= 1024;
 
         if (isDesktop) {
-            // Desktop: Toggle margin and visibility class
-            const isVisible = sidebar.classList.contains('lg:translate-x-0');
-            if (isVisible) {
-                // Close
-                sidebar.classList.remove('lg:translate-x-0');
-                sidebar.classList.add('-translate-x-full');
-                if (mainContent) mainContent.classList.remove('lg:ml-64');
+            // Desktop: Toggle Width (Mini vs Full)
+            const isFullWidth = sidebar.classList.contains('w-64');
+
+            const labels = sidebar.querySelectorAll('.sidebar-label');
+            const headers = sidebar.querySelectorAll('.sidebar-header');
+            const promos = sidebar.querySelectorAll('.sidebar-promo');
+            const links = sidebar.querySelectorAll('.sidebar-link');
+            const status = sidebar.querySelectorAll('.sidebar-status');
+            const hideMini = sidebar.querySelectorAll('.sidebar-hide-mini');
+
+            if (isFullWidth) {
+                // COLLAPSE
+                sidebar.classList.remove('w-64');
+                sidebar.classList.add('w-20');
+
+                if (mainContent && mainContent.classList.contains('lg:ml-64')) {
+                    mainContent.classList.remove('lg:ml-64');
+                    mainContent.classList.add('lg:ml-20');
+                }
+
+                // Animate Labels Out
+                labels.forEach(el => {
+                    el.classList.add('w-0', 'opacity-0', 'translate-x-[-10px]');
+                });
+
+                // Hide Headers & Promos (Collapse Height)
+                [...headers, ...promos].forEach(el => {
+                    el.classList.add('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0');
+                    // Handle HRs if needed or just let them stay? 
+                    // HRs usually have margin, so we might want to hide them too or give them a class.
+                    // For now, let's just accept HRs might look weird or just hide promos.
+                });
+
+                // Completely hide specific sections (like friends list container)
+                hideMini.forEach(el => {
+                    el.classList.add('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0');
+                });
+
+                // Center Icons by removing gap and padding
+                links.forEach(el => {
+                    el.classList.remove('gap-4', 'px-4');
+                    el.classList.add('justify-center', 'px-0');
+                });
+
+                // Hide status dots
+                status.forEach(el => el.classList.add('opacity-0', 'w-0'));
+
+                updateLogo(true);
             } else {
-                // Open
-                sidebar.classList.add('lg:translate-x-0');
-                sidebar.classList.remove('-translate-x-full');
-                if (mainContent) mainContent.classList.add('lg:ml-64');
+                // EXPAND
+                sidebar.classList.remove('w-20');
+                sidebar.classList.add('w-64');
+
+                if (mainContent && mainContent.classList.contains('lg:ml-20')) {
+                    mainContent.classList.remove('lg:ml-20');
+                    mainContent.classList.add('lg:ml-64');
+                }
+
+                // Animate Labels In
+                labels.forEach(el => {
+                    el.classList.remove('w-0', 'opacity-0', 'translate-x-[-10px]');
+                });
+
+                // Show Headers & Promos
+                [...headers, ...promos].forEach(el => {
+                    el.classList.remove('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0');
+                });
+
+                // Show hidden mini sections
+                hideMini.forEach(el => {
+                    el.classList.remove('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0');
+                });
+
+                // Restore Links
+                links.forEach(el => {
+                    el.classList.remove('justify-center', 'px-0');
+                    el.classList.add('gap-4', 'px-4');
+                });
+
+                // Show status dots
+                status.forEach(el => el.classList.remove('opacity-0', 'w-0'));
+
+                updateLogo(false);
             }
         } else {
             // Mobile: Toggle overlay
@@ -47,17 +167,57 @@ function initSidebar() {
     // Resize Reset
     window.addEventListener('resize', () => {
         if (window.innerWidth >= 1024) {
-            if (!sidebar.classList.contains('lg:translate-x-0')) {
-                sidebar.classList.add('lg:translate-x-0');
-                sidebar.classList.remove('-translate-x-full');
-                if (mainContent) mainContent.classList.add('lg:ml-64');
+            // Desktop Reset: Ensure visible and full width
+            sidebar.classList.remove('-translate-x-full'); // Remove mobile hiding
+
+            // Just ensure it's in a valid state (Full)
+            if (!sidebar.classList.contains('w-64') && !sidebar.classList.contains('w-20')) {
+                sidebar.classList.add('w-64');
             }
+
+            // If we want to force reset to full on resize:
+            /*
+            sidebar.classList.add('w-64');
+            sidebar.classList.remove('w-20');
+            if (mainContent) {
+                mainContent.classList.add('lg:ml-64');
+                mainContent.classList.remove('lg:ml-20');
+            }
+            sidebar.querySelectorAll('.sidebar-label, .sidebar-header, .sidebar-promo, .sidebar-status').forEach(el => el.classList.remove('hidden'));
+            sidebar.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('justify-center'));
+            updateLogo(false);
+            */
+
             if (overlay) overlay.classList.add('hidden');
             body.style.overflow = 'auto';
         } else {
-            sidebar.classList.remove('lg:translate-x-0');
+            // Mobile Reset: Hide sidebar
             sidebar.classList.add('-translate-x-full');
-            if (mainContent) mainContent.classList.remove('lg:ml-64');
+            sidebar.classList.remove('w-20');
+            sidebar.classList.add('w-64');
+
+            // Clean up mini-sidebar artifacts
+            const labels = sidebar.querySelectorAll('.sidebar-label');
+            const headers = sidebar.querySelectorAll('.sidebar-header');
+            const promos = sidebar.querySelectorAll('.sidebar-promo');
+            const links = sidebar.querySelectorAll('.sidebar-link');
+            const status = sidebar.querySelectorAll('.sidebar-status');
+            const hideMini = sidebar.querySelectorAll('.sidebar-hide-mini');
+
+            labels.forEach(el => el.classList.remove('w-0', 'opacity-0', 'translate-x-[-10px]'));
+            [...headers, ...promos].forEach(el => el.classList.remove('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0'));
+            hideMini.forEach(el => el.classList.remove('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0'));
+            links.forEach(el => {
+                el.classList.remove('justify-center', 'px-0');
+                el.classList.add('gap-4', 'px-4');
+            });
+            status.forEach(el => el.classList.remove('opacity-0', 'w-0'));
+
+            if (mainContent) {
+                mainContent.classList.remove('lg:ml-20');
+                mainContent.classList.add('lg:ml-64');
+            }
+
             if (overlay) overlay.classList.add('hidden');
             body.style.overflow = 'auto';
         }

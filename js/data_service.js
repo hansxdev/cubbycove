@@ -26,13 +26,28 @@ const DataService = {
         const { ID, Query } = Appwrite;
 
         try {
-            // 1. Create Identity (Auth Account)
+            // 1. Create Identity (Auth Account) Or Login if Exists
             const userId = ID.unique();
             const name = `${parentData.firstName} ${parentData.lastName}`;
 
-            await account.create(userId, parentData.email, parentData.password, name);
+            try {
+                // Try sending Create request
+                await account.create(userId, parentData.email, parentData.password, name);
+            } catch (authError) {
+                // 1b. If account exists (409), user might be claiming a pre-created staff account
+                if (authError.code === 409) {
+                    console.log("ℹ️ [Appwrite] User already exists in Auth. Checking database link...");
+                    // We proceed to check the database below.
+                    // But first, we MUST establish a session to prove ownership if we want to "Claim" anything
+                    // However, we can't just login without knowing for sure.
+                    // Let's assume for now we just skip creation and check DB.
+                } else {
+                    throw authError; // Rethrow other errors
+                }
+            }
 
             // 2. Check for Pre-Existing Profile (e.g. Created by Admin)
+            // Even if Auth account existed, we need to check the DB profile.
             const existingList = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
                 Query.equal('email', parentData.email)
             ]);
@@ -42,7 +57,16 @@ const DataService = {
                 const existingDoc = existingList.documents[0];
                 console.log("✅ [Appwrite] Account Linked to Existing Profile:", existingDoc.$id);
 
-                // Check if it's a Staff Role
+                // KEY CHECK: Only allow "Claiming" for Staff Roles
+                // Regular parents should see "Account already exists" if they try to register again
+                if (!['admin', 'assistant', 'creator'].includes(existingDoc.role)) {
+                    // Mimic the original 409 error behavior for normal users
+                    const error = new Error("Account with this email already exists.");
+                    error.code = 409;
+                    throw error;
+                }
+
+                // Check if it's a Staff Role (Redundant check but keeps logic clear)
                 if (['admin', 'assistant', 'creator'].includes(existingDoc.role)) {
                     // WARNING: Email Verification requires HTTP/HTTPS (not file://)
                     if (window.location.protocol === 'file:') {
@@ -53,7 +77,26 @@ const DataService = {
 
                     // Send Verification Email
                     // Create session first to satisfy permission requirements for creating verification
-                    await account.createEmailPasswordSession(parentData.email, parentData.password);
+                    try {
+                        // If we just created the account, we don't have a session yet? Wait, account.create doesn't create session automatically?
+                        // No, account.create just creates. 
+                        // So we ALWAYS need to create a session here for verification to work.
+                        await account.createEmailPasswordSession(parentData.email, parentData.password);
+                    } catch (sessionError) {
+                        // If session already active?
+                        console.warn("Session creation note:", sessionError.message);
+                        // Convert "User already has an active session" to success if needed
+                    }
+
+                    // Now we have a session (either new or existing)
+
+                    // Check if already verified to avoid spamming
+                    const me = await account.get();
+                    if (me.emailVerification) {
+                        console.log("ℹ️ Email already verified. Skipping.");
+                        await account.deleteSession('current');
+                        return existingDoc;
+                    }
 
                     // Construct Verification URL
                     const verifyUrl = `${window.location.origin}/verify_email.html`;
@@ -167,8 +210,36 @@ const DataService = {
 
             // ENFORCE EMAIL VERIFICATION FOR STAFF
             if (['admin', 'assistant', 'creator'].includes(doc.role) && !sessionUser.emailVerification) {
+                console.warn("⚠️ Staff Login attempted without Email Verification.");
+
+                // Trigger Verification Email again
+                const verifyUrl = `${window.location.origin}/verify_email.html`;
+                let token;
+                try {
+                    // Note: creating verification requires an active session, which we have.
+                    token = await account.createVerification(verifyUrl);
+                } catch (rateLimitErr) {
+                    console.error("Verification Token Error (Rate Limit?):", rateLimitErr);
+                    // If rate limited, we can't show the link, so just fail.
+                }
+
+                if (token) {
+                    const manualLink = `${verifyUrl}?userId=${token.userId}&secret=${token.secret}&expire=${token.expire}`;
+
+                    // Show Dev Popup
+                    // We can't use window.confirm easily inside this async function if it's called by a form submit that expects a promise?
+                    // But we can verify it works.
+                    setTimeout(() => {
+                        const msg = `[DEVELOPER MODE: Staff Login]\n\nYour email is not verified yet.\nClick OK to open the verification link now.`;
+                        if (confirm(msg)) {
+                            window.open(manualLink, '_blank');
+                        }
+                    }, 500);
+                }
+
+                // We still logout because they are not verified in THIS session yet.
                 await account.deleteSession('current');
-                throw new Error("Please verify your email address to access your staff account.");
+                throw new Error("Please verify your email address to access your staff account. (Check the developer popup!)");
             }
 
             if (doc.role === 'parent' && doc.status === 'pending') {

@@ -8,7 +8,50 @@ let currentStep = 1;
 // Wait for DOM to load
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🚀 Registration Logic Loaded");
+    setupPasswordFeedback();
 });
+
+function setupPasswordFeedback() {
+    const passInput = document.getElementById('password');
+    if (!passInput) return;
+
+    // Requirement Elements
+    const reqs = {
+        length: document.getElementById('req-length'),
+        upper: document.getElementById('req-upper'),
+        lower: document.getElementById('req-lower'),
+        number: document.getElementById('req-number'),
+        special: document.getElementById('req-special')
+    };
+
+    const updateReq = (el, valid) => {
+        if (!el) return;
+        const icon = el.querySelector('i');
+        if (valid) {
+            el.classList.remove('text-gray-500');
+            el.classList.add('text-green-500');
+            if (icon) {
+                icon.className = 'fa-solid fa-check-circle text-[10px] mr-1';
+            }
+        } else {
+            el.classList.remove('text-green-500');
+            el.classList.add('text-gray-500');
+            if (icon) {
+                icon.className = 'fa-regular fa-circle text-[10px] mr-1';
+            }
+        }
+    };
+
+    passInput.addEventListener('input', () => {
+        const val = passInput.value;
+
+        updateReq(reqs.length, val.length >= 8);
+        updateReq(reqs.upper, /[A-Z]/.test(val));
+        updateReq(reqs.lower, /[a-z]/.test(val));
+        updateReq(reqs.number, /\d/.test(val));
+        updateReq(reqs.special, /[!@#$%^&*(),.?":{}|<>]/.test(val));
+    });
+}
 
 // --- NAVIGATION FUNCTIONS ---
 
@@ -74,6 +117,16 @@ function validateStep(step) {
                 clearError(input);
             }
         });
+
+        // 1.5. Check Password Complexity (NEW)
+        if (pass && pass.value) {
+            const result = SecurityUtils.validatePassword(pass.value);
+            if (!result.isValid) {
+                markError(pass);
+                alert(result.error);
+                isValid = false;
+            }
+        }
 
         // 2. Check Password Match
         if (pass && confirmPass && pass.value !== confirmPass.value) {
@@ -168,13 +221,14 @@ function submitRegistration() {
         }
 
     } catch (error) {
-        alert("Registration Failed: " + error.message);
-        // Go back to step 1 if duplicate email
-        if (error.message.includes('email')) {
+        if (error.code === 409 || error.message.includes('email') || error.message.includes('already exists')) {
+            alert("This email is already registered. Please login or use a different email.");
             document.getElementById('step-3').classList.add('hidden');
             document.getElementById('step-1').classList.remove('hidden');
             currentStep = 1;
             updateTracker(1);
+        } else {
+            alert("Registration Failed: " + error.message);
         }
     }
 }

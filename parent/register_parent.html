@@ -16,6 +16,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../js/tailwind-config.js"></script>
+    <script src="../js/security_utils.js"></script>
 
     <!-- Custom Auth Styles -->
     <link rel="stylesheet" href="../css/auth.css">
@@ -114,6 +115,19 @@
                         <!-- ADDED ID: password -->
                         <input type="password" id="password" required
                             class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+
+                        <!-- Password Requirements List -->
+                        <ul id="password-requirements" class="mt-2 text-xs space-y-1 text-gray-500 font-semibold pl-1">
+                            <li id="req-length"><i class="fa-regular fa-circle text-[10px] mr-1"></i> Min 8 characters
+                            </li>
+                            <li id="req-upper"><i class="fa-regular fa-circle text-[10px] mr-1"></i> Uppercase letter
+                            </li>
+                            <li id="req-lower"><i class="fa-regular fa-circle text-[10px] mr-1"></i> Lowercase letter
+                            </li>
+                            <li id="req-number"><i class="fa-regular fa-circle text-[10px] mr-1"></i> Number</li>
+                            <li id="req-special"><i class="fa-regular fa-circle text-[10px] mr-1"></i> Special char
+                                (!@#$...)</li>
+                        </ul>
                     </div>
                     <!-- ADDED: Confirm Password field (Required for logic) -->
                     <div>

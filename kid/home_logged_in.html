@@ -70,9 +70,9 @@
 
             <!-- User Profile (Logged In State) -->
             <div class="flex items-center gap-3 cursor-pointer group">
-                <span class="hidden md:block font-bold text-gray-700 group-hover:text-cubby-blue">Hi, Felix!</span>
+                <span class="hidden md:block font-bold text-gray-700 group-hover:text-cubby-blue">Loading...</span>
                 <div class="relative">
-                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Avatar"
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Guest" alt="Avatar"
                         class="w-10 h-10 rounded-full bg-cubby-blue p-0.5 border-2 border-white shadow-sm transition-transform group-hover:scale-105">
                     <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full">
                     </div>
@@ -187,7 +187,8 @@
                         Safe, Fun, and Educational Content for Kids
                     </h1>
                     <p class="text-lg sm:text-xl font-medium text-white/90 mb-0 max-w-xl">
-                        Discover amazing cartoons, games, and learning adventures! Explore our featured games and entertainment, picked just for you.
+                        Discover amazing cartoons, games, and learning adventures! Explore our featured games and
+                        entertainment, picked just for you.
                     </p>
                 </div>
 
@@ -491,6 +492,11 @@
             </div>
         </div>
     </main>
+
+    <!-- Appwrite & Data -->
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
+    <script src="../js/appwrite_config.js"></script>
+    <script src="../js/data_service.js"></script>
 
     <!-- Import Logic -->
     <script src="../js/sidebar-logic.js"></script>

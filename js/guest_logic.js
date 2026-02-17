@@ -91,3 +91,25 @@ function closeLoginModal() {
 window.showLoginModal = showLoginModal;
 window.closeLoginModal = closeLoginModal;
 window.playVideo = playVideo;
+
+/**
+ * Handles clicks on protected links (Games, etc.)
+ * Checks if user is logged in. If not, shows login modal.
+ */
+window.handleProtectedLink = async function (event, url) {
+    event.preventDefault(); // Stop default navigation
+
+    try {
+        const user = await DataService.getCurrentUser();
+        if (user) {
+            // User is logged in, allow navigation
+            window.location.href = url;
+        } else {
+            // No user, show modal
+            showLoginModal("Sign in to play games!");
+        }
+    } catch (error) {
+        console.error("Auth Check Error:", error);
+        showLoginModal("Sign in to play games!");
+    }
+};

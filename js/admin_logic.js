@@ -184,11 +184,25 @@ async function loadStaffList() {
 async function handleCreateStaff(e) {
     e.preventDefault();
 
+    // 1. Rate Limiting (Throttle)
+    const rateCheck = SecurityUtils.checkRateLimit('staff_create', 15);
+    if (!rateCheck.allowed) {
+        alert(`You are creating staff too quickly. Please wait ${rateCheck.waitTime} seconds.`);
+        return;
+    }
+
     const fname = document.getElementById('staffFname').value;
     const lname = document.getElementById('staffLname').value;
     const email = document.getElementById('staffEmail').value;
     const pass = document.getElementById('staffPass').value;
     const role = document.getElementById('staffRole').value;
+
+    // 2. Validate Password
+    const passCheck = SecurityUtils.validatePassword(pass);
+    if (!passCheck.isValid) {
+        alert(passCheck.error); // Show strict complexity errors
+        return;
+    }
 
     const btn = document.querySelector('#createStaffForm button[type="submit"]');
     const originalText = btn.innerText;
@@ -203,6 +217,9 @@ async function handleCreateStaff(e) {
             password: pass,
             role: role
         });
+
+        // Record Action on Success
+        SecurityUtils.recordAction('staff_create');
 
         alert(`New ${role} created: ${email}`);
         document.getElementById('createStaffForm').reset();

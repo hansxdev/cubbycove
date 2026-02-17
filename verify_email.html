@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification - CubbyCove</title>
+    <link rel="icon" type="image/png" href="images/closedlogo.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/tailwind-config.js"></script>
+
+    <!-- Appwrite -->
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
+    <script src="js/appwrite_config.js"></script>
+    <script src="js/data_service.js"></script>
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
+        <!-- Logo -->
+        <div class="flex justify-center mb-6">
+            <div class="bg-cubby-blue p-3 rounded-full">
+                <i class="fa-solid fa-envelope-circle-check text-4xl text-white"></i>
+            </div>
+        </div>
+
+        <h1 class="text-2xl font-black text-gray-800 mb-2">Email Verification</h1>
+
+        <div id="status-loading" class="mt-4">
+            <i class="fa-solid fa-spinner fa-spin text-cubby-blue text-3xl mb-2"></i>
+            <p class="text-gray-500 font-medium">Verifying your email, please wait...</p>
+        </div>
+
+        <div id="status-success" class="hidden mt-4">
+            <div class="bg-green-100 text-green-600 p-4 rounded-xl mb-4">
+                <i class="fa-solid fa-check-circle text-xl mb-1"></i>
+                <p class="font-bold">Email Verified Successfully!</p>
+            </div>
+            <p class="text-gray-600 text-sm mb-6">Thank you for verifying your identity. You can now access your staff
+                dashboard.</p>
+            <a href="staff_access.html"
+                class="block w-full bg-cubby-purple text-white font-bold py-3 rounded-xl shadow-lg hover:bg-purple-700 transition-colors">
+                Go to Staff Login
+            </a>
+        </div>
+
+        <div id="status-error" class="hidden mt-4">
+            <div class="bg-red-100 text-red-600 p-4 rounded-xl mb-4">
+                <i class="fa-solid fa-circle-exclamation text-xl mb-1"></i>
+                <p class="font-bold">Verification Failed</p>
+            </div>
+            <p id="error-msg" class="text-gray-600 text-sm mb-6">The verification link is invalid or expired.</p>
+            <a href="index.html" class="text-cubby-blue font-bold hover:underline">Return to Home</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const secret = urlParams.get('secret');
+            const userId = urlParams.get('userId');
+
+            if (!secret || !userId) {
+                showError("Invalid verification link.");
+                return;
+            }
+
+            try {
+                const { account } = window.AppwriteService;
+                // Core Appwrite SDK call: updateVerification
+                await account.updateVerification(userId, secret);
+
+                showSuccess();
+            } catch (error) {
+                console.error("Verification Error:", error);
+                showError(error.message || "Verification failed. Please try again.");
+            }
+        });
+
+        function showSuccess() {
+            document.getElementById('status-loading').classList.add('hidden');
+            document.getElementById('status-success').classList.remove('hidden');
+        }
+
+        function showError(msg) {
+            document.getElementById('status-loading').classList.add('hidden');
+            document.getElementById('status-error').classList.remove('hidden');
+            document.getElementById('error-msg').textContent = msg;
+        }
+    </script>
+</body>
+
+</html>

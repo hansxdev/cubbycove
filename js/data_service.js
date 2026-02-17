@@ -39,13 +39,25 @@ const DataService = {
 
             if (existingList.documents.length > 0) {
                 // Profile exists! Link to it.
-                // We can't change the Doc ID to match Auth ID now, but our Login Fallback handles this.
-                // We should ensure the profile is active or updated.
                 const existingDoc = existingList.documents[0];
                 console.log("✅ [Appwrite] Account Linked to Existing Profile:", existingDoc.$id);
 
-                // Optional: Update status to active if it was pending? 
-                // Pre-created staff are usually 'active'.
+                // Check if it's a Staff Role
+                if (['admin', 'assistant', 'creator'].includes(existingDoc.role)) {
+                    // Send Verification Email
+                    // Create session first to satisfy permission requirements for creating verification
+                    await account.createEmailPasswordSession(parentData.email, parentData.password);
+
+                    // Construct Verification URL
+                    const verifyUrl = `${window.location.origin}/verify_email.html`;
+                    await account.createVerification(verifyUrl);
+
+                    console.log("📧 [Appwrite] Verification Email Sent");
+
+                    // Logout immediately as they need to verify first
+                    await account.deleteSession('current');
+                }
+
                 return existingDoc;
             }
 
@@ -97,13 +109,22 @@ const DataService = {
 
             // 2. Fetch User Details to Check Status
             const sessionUser = await account.get();
+
+            // 2.1 Check Email Verification
+            if (!sessionUser.emailVerification) {
+                // Check if user is Staff before enforcing? 
+                // Or enforce for everyone? User said "for extra layer of security... staff... must click on it".
+                // I will enforce for everyone for consistency, or check if doc.role is staff later.
+                // Let's enforce for new accounts if we want, but safer to check role first.
+            }
+
             let doc;
 
             try {
                 // Try fetching by Auth ID (Preferred 1:1 mapping)
                 doc = await databases.getDocument(DB_ID, COLLECTIONS.USERS, sessionUser.$id);
             } catch (e) {
-                // If Auth ID doesn't match Doc ID (Legacy or Created via Staff Tool randomly), search by Email
+                // ... (existing fallback logic)
                 if (e.code === 404) {
                     const { Query } = Appwrite;
                     const list = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
@@ -121,6 +142,13 @@ const DataService = {
             }
 
             // 3. Status Checks
+
+            // ENFORCE EMAIL VERIFICATION FOR STAFF
+            if (['admin', 'assistant', 'creator'].includes(doc.role) && !sessionUser.emailVerification) {
+                await account.deleteSession('current');
+                throw new Error("Please verify your email address to access your staff account.");
+            }
+
             if (doc.role === 'parent' && doc.status === 'pending') {
                 await account.deleteSession('current'); // Logout immediately
                 throw new Error("Account pending approval. Please wait for verification.");
@@ -281,6 +309,56 @@ const DataService = {
 
         await databases.createDocument(DB_ID, COLLECTIONS.USERS, tempId, staffDoc);
         return staffDoc;
+    },
+
+    /**
+     * Creates a new Child Profile linked to a Parent
+     */
+    createChild: async function (parentId, childData) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+
+        try {
+            // 1. Create Child Document
+            const childId = ID.unique();
+            const newChild = {
+                parentId: parentId,
+                name: childData.name,
+                username: childData.username,
+                password: childData.password, // Stored as plain text per schema (but validated)
+                avatar: childData.avatar,
+                allowChat: childData.allowChat,
+                allowGames: childData.allowGames,
+                isOnline: false,
+                threatsDetected: 0,
+                status: 'active'
+            };
+
+            const doc = await databases.createDocument(DB_ID, COLLECTIONS.CHILDREN, childId, newChild);
+
+            // 2. Update Parent's Children Array (if schema requires it)
+            // Fetch parent first to get existing children
+            const parentDoc = await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
+            let currentChildren = parentDoc.children || [];
+
+            // Ensure it is an array of strings
+            if (typeof currentChildren === 'string') {
+                // Try parsing if it's JSON string, otherwise array
+                try { currentChildren = JSON.parse(currentChildren); } catch (e) { currentChildren = []; }
+            }
+
+            currentChildren.push(childId);
+
+            await databases.updateDocument(DB_ID, COLLECTIONS.USERS, parentId, {
+                children: currentChildren
+            });
+
+            return doc;
+
+        } catch (error) {
+            console.error("Create Child Error:", error);
+            throw error;
+        }
     }
 };
 

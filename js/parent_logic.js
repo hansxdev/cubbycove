@@ -164,13 +164,27 @@ function timeAgo(dateString) {
 }
 
 // Function to handle "Create Profile" button click
-function saveChild() {
+// Function to handle "Create Profile" button click
+async function saveChild() {
     const nameInput = document.querySelector('input[placeholder="e.g. Tommy"]');
     const usernameInput = document.querySelector('input[placeholder="e.g. TommyRox123"]');
-    // const passwordInput ... (simplification)
+    const passwordInput = document.getElementById('childPassword');
 
-    const name = nameInput ? nameInput.value : "Child";
-    const username = usernameInput ? usernameInput.value : "kid" + Date.now();
+    const name = nameInput ? nameInput.value.trim() : "";
+    const username = usernameInput ? usernameInput.value.trim() : "";
+    const password = passwordInput ? passwordInput.value : "";
+
+    // Validation
+    if (!name || !username || !password) {
+        alert("Please fill in all fields.");
+        return;
+    }
+
+    const passCheck = SecurityUtils.validatePassword(password);
+    if (!passCheck.isValid) {
+        alert(passCheck.error); // Show strict password rules
+        return;
+    }
 
     // 1. Show loading state
     const btn = document.querySelector('button[onclick="saveChild()"]');
@@ -179,38 +193,33 @@ function saveChild() {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
         btn.disabled = true;
         btn.classList.add('opacity-75');
+    }
 
-        // 2. Add to DataService
-        setTimeout(() => {
-            const user = DataService.getCurrentUser();
-            if (user) {
-                const newChild = {
-                    id: 'child_' + Date.now(),
-                    name: name,
-                    username: username,
-                    avatar: document.querySelector('input[name="avatar"]:checked')?.value || 'Felix',
-                    isOnline: false,
-                    threatsDetected: 0,
-                    screenTimeLogs: [],
-                    activityLogs: [],
-                    status: 'active'
-                };
+    try {
+        const user = await DataService.getCurrentUser();
+        if (!user) throw new Error("Parent not logged in.");
 
-                user.children = user.children || [];
-                user.children.push(newChild);
-                DataService._saveLocalStorage('currentUser', user); // Update session
+        const childData = {
+            name: name,
+            username: username,
+            password: password,
+            avatar: document.querySelector('input[name="avatar"]:checked')?.value || 'Felix',
+            allowChat: document.querySelector('input[name="allowChat"]')?.checked || false,
+            allowGames: document.querySelector('input[name="allowGames"]')?.checked || true
+        };
 
-                // Update User in 'users' array too
-                const allUsers = DataService._getLocalStorage('users') || [];
-                const idx = allUsers.findIndex(u => u.email === user.email);
-                if (idx !== -1) {
-                    allUsers[idx] = user;
-                    DataService._saveLocalStorage('users', allUsers);
-                }
-            }
+        await DataService.createChild(user.$id, childData);
 
-            alert("Child Profile Created Successfully!");
-            window.location.href = 'dashboard.html';
-        }, 1500);
+        alert("Child Profile Created Successfully!");
+        window.location.href = 'dashboard.html';
+
+    } catch (error) {
+        console.error("Save Child Error:", error);
+        alert("Failed to create child profile: " + error.message);
+        if (btn) {
+            btn.innerHTML = '<i class="fa-solid fa-check ml-2"></i> Create Profile'; // Reset (approx)
+            btn.disabled = false;
+            btn.classList.remove('opacity-75');
+        }
     }
 }

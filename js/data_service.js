@@ -26,6 +26,9 @@ const DataService = {
         const { ID, Query } = Appwrite;
 
         try {
+            // 0. Clean Session
+            try { await account.deleteSession('current'); } catch (e) { }
+
             // 1. Create Identity (Auth Account) Or Login if Exists
             const userId = ID.unique();
             const name = `${parentData.firstName} ${parentData.lastName}`;
@@ -33,21 +36,29 @@ const DataService = {
             try {
                 // Try sending Create request
                 await account.create(userId, parentData.email, parentData.password, name);
+
+                // If SUCCESS, we are not logged in yet. Must login to perform DB operations.
+                await account.createEmailPasswordSession(parentData.email, parentData.password);
+
             } catch (authError) {
                 // 1b. If account exists (409), user might be claiming a pre-created staff account
                 if (authError.code === 409) {
-                    console.log("ℹ️ [Appwrite] User already exists in Auth. Checking database link...");
-                    // We proceed to check the database below.
-                    // But first, we MUST establish a session to prove ownership if we want to "Claim" anything
-                    // However, we can't just login without knowing for sure.
-                    // Let's assume for now we just skip creation and check DB.
+                    console.log("ℹ️ [Appwrite] User already exists in Auth. Logging in to check DB link...");
+                    try {
+                        // Login to prove ownership and get read access
+                        await account.createEmailPasswordSession(parentData.email, parentData.password);
+                    } catch (loginError) {
+                        // If password wrong or other login issue
+                        console.error("Login failed during claim:", loginError);
+                        throw new Error("Account with this email already exists.");
+                    }
                 } else {
-                    throw authError; // Rethrow other errors
+                    throw authError;
                 }
             }
 
-            // 2. Check for Pre-Existing Profile (e.g. Created by Admin)
-            // Even if Auth account existed, we need to check the DB profile.
+            // NOW WE ARE LOGGED IN.
+            // 2. Check for Pre-Existing Profile
             const existingList = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
                 Query.equal('email', parentData.email)
             ]);
@@ -146,6 +157,12 @@ const DataService = {
             );
 
             console.log("✅ [Appwrite] Parent Registered:", doc.$id);
+
+            // SECURITY: Logout immediately after registration
+            // The user must wait for Admin Approval (status: 'pending')
+            // They cannot log in until an admin changes their status to 'active'
+            await account.deleteSession('current');
+
             return doc;
 
         } catch (error) {

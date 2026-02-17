@@ -35,24 +35,39 @@ document.addEventListener('DOMContentLoaded', () => {
     showTab('uploads');
 });
 
-function initCreatorStudio() {
-    currentUser = DataService.getCurrentUser();
+async function initCreatorStudio() {
+    // BACK BUTTON GUARD
+    window.history.pushState(null, "", window.location.href);
+    window.onpopstate = function () {
+        window.history.pushState(null, "", window.location.href);
+    };
+
+    try {
+        currentUser = await DataService.getCurrentUser();
+    } catch (e) {
+        console.error("Auth Check Failed:", e);
+        window.location.href = '../staff_access.html';
+        return;
+    }
 
     // Auth Check
     if (!currentUser || !['creator', 'admin', 'super_admin', 'assistant'].includes(currentUser.role)) {
-        // Mock Creator for testing if not logged in properties 
-        // In real app, redirect. But for dev flow, maybe just warn?
-        // window.location.href = '../staff_access.html';
-        console.warn("No creator logged in.");
+        window.location.href = '../staff_access.html';
+        return;
     }
 
     if (currentUser) {
         const titleEl = document.getElementById('page-title');
         // Update header details if elements exist (omitted for brevity)
+        const nameDisplay = document.querySelector('header span.text-sm.font-bold');
+        if (nameDisplay) nameDisplay.innerText = currentUser.firstName;
     }
+
+    // Initial Load
+    loadMyUploads();
 }
 
-function handleUpload(e) {
+async function handleUpload(e) {
     e.preventDefault();
 
     const url = document.getElementById('videoUrl').value;
@@ -64,8 +79,13 @@ function handleUpload(e) {
         return;
     }
 
+    const btn = document.querySelector('#uploadForm button[type="submit"]');
+    const originalText = btn.innerText;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+    btn.disabled = true;
+
     try {
-        DataService.addVideo({
+        await DataService.addVideo({
             url: url,
             title: title,
             category: category,
@@ -74,64 +94,85 @@ function handleUpload(e) {
 
         alert("Video submitted successfully! It is now pending review.");
         document.getElementById('uploadForm').reset();
+        await loadMyUploads();
         showTab('uploads');
     } catch (error) {
         alert("Upload failed: " + error.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
 }
 
-function loadMyUploads() {
+async function loadMyUploads() {
     if (!currentUser) return;
 
     const container = document.getElementById('video-list');
-    const myVideos = DataService.getCreatorVideos(currentUser.email);
+    try {
+        const myVideos = await DataService.getCreatorVideos(currentUser.email);
 
-    container.innerHTML = ''; // Clear stats/mock data that was hardcoded if any
+        container.innerHTML = ''; // Clear stats/mock data
 
-    // Update Top Stats
-    const pendingCount = myVideos.filter(v => v.status === 'pending').length;
-    const liveCount = myVideos.filter(v => v.status === 'approved').length;
+        // Update Top Stats
+        const pendingCount = myVideos.filter(v => v.status === 'pending').length;
+        const liveCount = myVideos.filter(v => v.status === 'approved').length;
 
-    document.getElementById('stat-live').innerText = liveCount;
-    document.getElementById('stat-pending').innerText = pendingCount;
-    // Views mocked for now
+        const statLive = document.getElementById('stat-live');
+        const statPending = document.getElementById('stat-pending');
 
-    // Render List
-    myVideos.forEach(video => {
-        let statusColor = 'bg-yellow-100 text-yellow-700';
-        let statusText = 'Pending Review';
+        if (statLive) statLive.innerText = liveCount;
+        if (statPending) statPending.innerText = pendingCount;
 
-        if (video.status === 'approved') {
-            statusColor = 'bg-green-100 text-green-700';
-            statusText = 'Live';
-        } else if (video.status === 'rejected') {
-            statusColor = 'bg-red-100 text-red-700';
-            statusText = 'Rejected';
+        if (myVideos.length === 0) {
+            container.innerHTML = `<div class="text-center p-8 text-gray-500">No videos uploaded yet.</div>`;
+            return;
         }
 
-        let thumb = "https://placehold.co/400x250/e2e8f0/64748b?text=Video";
-        if (video.url.includes('v=')) {
-            const vidId = video.url.split('v=')[1].split('&')[0];
-            thumb = `https://img.youtube.com/vi/${vidId}/mqdefault.jpg`;
-        } else if (video.url.includes('youtu.be/')) {
-            const vidId = video.url.split('youtu.be/')[1];
-            thumb = `https://img.youtube.com/vi/${vidId}/mqdefault.jpg`;
-        }
+        // Render List
+        myVideos.forEach(video => {
+            let statusColor = 'bg-yellow-100 text-yellow-700';
+            let statusText = 'Pending Review';
 
-        const html = `
-             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex gap-4 items-center dashboard-card">
-                <div class="w-32 h-20 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden relative">
-                    <img src="${thumb}" class="w-full h-full object-cover">
-                </div>
-                <div class="flex-1">
-                    <div class="flex justify-between">
-                        <h4 class="font-bold text-gray-800">${video.title}</h4>
-                        <span class="${statusColor} text-xs font-bold px-2 py-1 rounded">${statusText}</span>
+            if (video.status === 'approved') {
+                statusColor = 'bg-green-100 text-green-700';
+                statusText = 'Live';
+            } else if (video.status === 'rejected') {
+                statusColor = 'bg-red-100 text-red-700';
+                statusText = 'Rejected';
+            }
+
+            let thumb = "https://placehold.co/400x250/e2e8f0/64748b?text=Video";
+            if (video.url.includes('v=')) {
+                // simple parser
+                try {
+                    const vidId = video.url.split('v=')[1].split('&')[0];
+                    thumb = `https://img.youtube.com/vi/${vidId}/mqdefault.jpg`;
+                } catch (e) { }
+            } else if (video.url.includes('youtu.be/')) {
+                try {
+                    const vidId = video.url.split('youtu.be/')[1];
+                    thumb = `https://img.youtube.com/vi/${vidId}/mqdefault.jpg`;
+                } catch (e) { }
+            }
+
+            const html = `
+                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex gap-4 items-center dashboard-card">
+                    <div class="w-32 h-20 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden relative">
+                        <img src="${thumb}" class="w-full h-full object-cover">
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">Uploaded ${new Date(video.uploadedAt).toLocaleString()}</p>
+                    <div class="flex-1">
+                        <div class="flex justify-between">
+                            <h4 class="font-bold text-gray-800">${video.title}</h4>
+                            <span class="${statusColor} text-xs font-bold px-2 py-1 rounded">${statusText}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Uploaded ${new Date(video.uploadedAt).toLocaleString()}</p>
+                    </div>
                 </div>
-            </div>
-        `;
-        container.insertAdjacentHTML('beforeend', html);
-    });
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+    } catch (e) {
+        console.error("Load Videos Error:", e);
+        container.innerHTML = `<div class="text-center p-8 text-red-500">Error loading videos.</div>`;
+    }
 }

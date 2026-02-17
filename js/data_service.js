@@ -120,15 +120,12 @@ const DataService = {
                     const manualLink = `${verifyUrl}?userId=${token.userId}&secret=${token.secret}&expire=${token.expire}`;
                     console.log("🔗 [DEV] Manual Verification Link:", manualLink);
 
-                    // Show a custom "Simulated Email" modal/alert
-                    // We use alert because it's blocking and ensures they see it before logout cleanup
-                    setTimeout(() => {
-                        const msg = `[DEVELOPER MODE: Email Simulation]\n\nAppwrite Free Tier limits emails. Click OK to open the verification link new tab.\n\n(This simulates clicking the link in your inbox)`;
-                        if (confirm(msg)) {
-                            window.open(manualLink, '_blank');
-                        }
-                    }, 500);
-                    // --------------------------
+                    // BLOCKING ALERT (Synchronous)
+                    const msg = `[DEVELOPER MODE: Email Simulation]\n\nAccount Claimed Successfully.\nBut email verification is required for Staff access.\n\nClick OK to open the verification link to ACTIVATE your account.`;
+
+                    if (confirm(msg)) {
+                        window.open(manualLink, '_blank');
+                    }
 
                     // Logout immediately as they need to verify first
                     await account.deleteSession('current');
@@ -242,21 +239,20 @@ const DataService = {
 
                 if (token) {
                     const manualLink = `${verifyUrl}?userId=${token.userId}&secret=${token.secret}&expire=${token.expire}`;
+                    console.log("🔗 [DEV] Manual Verification Link:", manualLink);
 
-                    // Show Dev Popup
-                    // We can't use window.confirm easily inside this async function if it's called by a form submit that expects a promise?
-                    // But we can verify it works.
-                    setTimeout(() => {
-                        const msg = `[DEVELOPER MODE: Staff Login]\n\nYour email is not verified yet.\nClick OK to open the verification link now.`;
-                        if (confirm(msg)) {
-                            window.open(manualLink, '_blank');
-                        }
-                    }, 500);
+                    // BLOCKING ALERT (Synchronous)
+                    // This pauses execution until user clicks OK/Cancel
+                    const msg = `[DEVELOPER MODE: Staff Login Attempt]\n\nYour email is not verified yet.\n\nClick OK to open the verification link in a new tab.\nClick Cancel to just logout.`;
+
+                    if (confirm(msg)) {
+                        window.open(manualLink, '_blank');
+                    }
                 }
 
                 // We still logout because they are not verified in THIS session yet.
                 await account.deleteSession('current');
-                throw new Error("Please verify your email address to access your staff account. (Check the developer popup!)");
+                throw new Error("Please verify your email via the link opened, then login again.");
             }
 
             if (doc.role === 'parent' && doc.status === 'pending') {

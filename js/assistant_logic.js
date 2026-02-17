@@ -9,8 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.showTab = function (tabName) {
         document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
         document.querySelectorAll('nav a').forEach(a => {
-            a.classList.remove('bg-purple-50', 'text-cubby-purple', 'border-cubby-purple');
-            a.classList.add('text-gray-500', 'border-transparent');
+            a.classList.remove('bg-cubby-blue/20', 'text-cubby-blue', 'border-cubby-blue');
+            a.classList.add('text-gray-400', 'border-transparent');
         });
 
         const targetDiv = document.getElementById(`tab-${tabName}`);
@@ -18,8 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (targetDiv) targetDiv.classList.remove('hidden');
         if (targetNav) {
-            targetNav.classList.add('bg-purple-50', 'text-cubby-purple', 'border-cubby-purple');
-            targetNav.classList.remove('text-gray-500', 'border-transparent');
+            targetNav.classList.add('bg-cubby-blue/20', 'text-cubby-blue', 'border-cubby-blue');
+            targetNav.classList.remove('text-gray-400', 'border-transparent');
         }
 
         if (tabName === 'overview') {
@@ -55,9 +55,18 @@ async function initAssistantPanel() {
     }
 
     // Update Header
+    const nameEl = document.getElementById('header-name');
+    const roleEl = document.getElementById('header-role');
+    const avatarEl = document.getElementById('header-avatar');
+
+    if (nameEl) nameEl.innerText = `${currentUser.firstName} ${currentUser.lastName}`;
+    if (roleEl) roleEl.innerText = currentUser.role;
+    if (avatarEl) avatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.firstName}`;
+
+    // Update Welcome Message on Overview
     const titleEl = document.getElementById('page-title');
     if (titleEl) {
-        titleEl.innerHTML = `Welcome back, <span class="text-cubby-purple">${currentUser.firstName}</span>`;
+        titleEl.innerHTML = `Assistant Dashboard`;
     }
 
     // Load Data

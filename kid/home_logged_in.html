@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CubbyCove - Welcome Back!</title>
+    <link rel="icon" type="image/png" href="../images/closedlogo.png">
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -170,128 +171,330 @@
     <!-- MAIN CONTENT -->
     <main id="main-content" class="lg:ml-64 pt-16 min-h-screen transition-all duration-300 ease-in-out">
 
-        <!-- Filter Chips -->
-        <div
-            class="sticky top-16 bg-white/95 backdrop-blur-sm z-20 py-3 border-b border-gray-100 px-4 flex gap-3 overflow-x-auto no-scrollbar">
-            <button
-                class="px-4 py-1.5 bg-black text-white rounded-lg font-bold text-sm whitespace-nowrap hover:opacity-80 transition-opacity">All</button>
-            <button
-                class="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-bold text-sm whitespace-nowrap hover:bg-gray-200 transition-colors">New
-                for You</button>
-            <button
-                class="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-bold text-sm whitespace-nowrap hover:bg-gray-200 transition-colors">Cartoons</button>
-            <button
-                class="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-bold text-sm whitespace-nowrap hover:bg-gray-200 transition-colors">Learning</button>
-            <button
-                class="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-bold text-sm whitespace-nowrap hover:bg-gray-200 transition-colors">Music</button>
-            <button
-                class="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-bold text-sm whitespace-nowrap hover:bg-gray-200 transition-colors">Minecraft</button>
-        </div>
+        <!-- NEW HERO SECTION WITH SLIDER -->
+        <div class="p-6 pb-2">
+            <div
+                class="relative w-full rounded-3xl overflow-hidden shadow-lg bg-gradient-to-r from-cubby-blue to-cubby-pink p-8 sm:p-12 text-white flex flex-col md:flex-row items-center gap-8">
 
-        <!-- Video Grid -->
-        <div
-            class="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-8 gap-x-6">
+                <!-- Left Content -->
+                <div class="relative z-10 flex-1 max-w-2xl">
+                    <div
+                        class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md rounded-full px-4 py-1.5 mb-6 text-sm font-bold border border-white/30">
+                        <i class="fa-solid fa-wand-magic-sparkles text-cubby-yellow"></i>
+                        Welcome to CubbyCove!
+                    </div>
+                    <h1 class="text-4xl sm:text-5xl font-black mb-4 leading-tight">
+                        Safe, Fun, and Educational Content for Kids
+                    </h1>
+                    <p class="text-lg sm:text-xl font-medium text-white/90 mb-0 max-w-xl">
+                        Discover amazing cartoons, games, and learning adventures! Explore our featured games and entertainment, picked just for you.
+                    </p>
+                </div>
 
-            <!-- Card 1 -->
-            <div class="video-card group cursor-pointer">
-                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
-                    <img src="https://img.youtube.com/vi/a1i436o6h1U/maxresdefault.jpg" alt="Thumbnail"
-                        class="absolute inset-0 w-full h-full object-cover">
+                <!-- Right Slider -->
+                <div class="relative z-10 w-full md:w-1/2 max-w-lg aspect-video shrink-0">
                     <div
-                        class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                        12:05</div>
-                    <div
-                        class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center transition-all">
-                        <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center pl-1 shadow-lg">
-                            <i class="fa-solid fa-play text-cubby-blue text-xl"></i>
+                        class="hero-slider relative w-full h-full rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 bg-black/20">
+                        <!-- Slide 1 -->
+                        <div class="slide absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-100">
+                            <img src="https://img.youtube.com/vi/a1i436o6h1U/maxresdefault.jpg" alt="Featured 1"
+                                class="w-full h-full object-cover">
+                            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                                <span
+                                    class="bg-cubby-blue text-white text-xs font-bold px-2 py-0.5 rounded shadow-sm">Educational</span>
+                                <h3 class="text-white font-bold text-sm truncate mt-1">Learn Colors with Balloons!</h3>
+                            </div>
+                        </div>
+                        <!-- Slide 2 -->
+                        <div class="slide absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0">
+                            <img src="https://img.freepik.com/free-vector/space-game-background-neon-landscape-alien-planet_107791-1634.jpg"
+                                alt="Featured 2" class="w-full h-full object-cover">
+                            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                                <span
+                                    class="bg-cubby-purple text-white text-xs font-bold px-2 py-0.5 rounded shadow-sm">Featured
+                                    Game</span>
+                                <h3 class="text-white font-bold text-sm truncate mt-1">Space Explorer 3000</h3>
+                            </div>
+                        </div>
+                        <!-- Slide 3 -->
+                        <div class="slide absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0">
+                            <img src="https://img.youtube.com/vi/34zP6j8t5eQ/maxresdefault.jpg" alt="Featured 3"
+                                class="w-full h-full object-cover">
+                            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                                <span
+                                    class="bg-cubby-green text-white text-xs font-bold px-2 py-0.5 rounded shadow-sm">Science</span>
+                                <h3 class="text-white font-bold text-sm truncate mt-1">Why Do Stars Twinkle?</h3>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="flex gap-3 mt-3">
-                    <div class="min-w-[40px]"><img src="https://api.dicebear.com/7.x/identicon/svg?seed=Math"
-                            class="w-9 h-9 rounded-full bg-gray-100"></div>
-                    <div>
-                        <h3
-                            class="font-extrabold text-gray-900 leading-tight mb-1 line-clamp-2 text-base group-hover:text-cubby-blue transition-colors">
-                            Learn Colors with Balloons! 🎈 Fun Learning for Kids</h3>
-                        <p class="text-sm text-gray-500 font-semibold">FunLearn TV</p>
-                    </div>
+
+                <!-- Decorative Circle -->
+                <div class="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none">
                 </div>
             </div>
+        </div>
 
-            <!-- Card 2 (Recently Added by Creator) -->
-            <div class="video-card group cursor-pointer">
-                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
-                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg" alt="Thumbnail"
-                        class="absolute inset-0 w-full h-full object-cover">
+        <!-- QUICK GAMES SECTION -->
+        <div class="px-6 py-4">
+            <h2 class="flex items-center gap-3 text-2xl font-black text-gray-800 mb-4">
+                <i class="fa-solid fa-gamepad text-gray-700"></i> Quick Games
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <!-- Game 1 -->
+                <a href="games.html" class="block group">
                     <div
-                        class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                        8:30</div>
-                    <span
-                        class="absolute top-2 left-2 bg-cubby-green text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">NEW</span>
-                </div>
-                <div class="flex gap-3 mt-3">
-                    <div class="min-w-[40px]"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=CreatorMike"
-                            class="w-9 h-9 rounded-full bg-gray-100 border border-gray-200"></div>
-                    <div>
-                        <h3
-                            class="font-extrabold text-gray-900 leading-tight mb-1 line-clamp-2 text-base group-hover:text-cubby-blue transition-colors">
-                            Learning Colors with Balloons</h3>
-                        <p class="text-sm text-gray-500 font-semibold">Creator_Mike</p>
+                        class="bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl p-6 text-center text-white shadow-md hover:shadow-xl hover:scale-[1.02] transition-all h-full flex flex-col items-center justify-center min-h-[160px]">
+                        <div
+                            class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center text-3xl mb-3 shadow-sm border-2 border-white/30">
+                            1 2<br>3 4
+                        </div>
+                        <h3 class="font-bold text-xl">Math Adventure</h3>
                     </div>
-                </div>
-            </div>
-
-            <!-- Card 3 -->
-            <div class="video-card group cursor-pointer">
-                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
-                    <img src="https://img.youtube.com/vi/34zP6j8t5eQ/maxresdefault.jpg" alt="Thumbnail"
-                        class="absolute inset-0 w-full h-full object-cover">
+                </a>
+                <!-- Game 2 -->
+                <a href="games.html" class="block group">
                     <div
-                        class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                        8:45</div>
-                </div>
-                <div class="flex gap-3 mt-3">
-                    <div class="min-w-[40px]"><img src="https://api.dicebear.com/7.x/identicon/svg?seed=Sci"
-                            class="w-9 h-9 rounded-full bg-gray-100"></div>
-                    <div>
-                        <h3
-                            class="font-extrabold text-gray-900 leading-tight mb-1 line-clamp-2 text-base group-hover:text-cubby-blue transition-colors">
-                            Why Do Stars Twinkle? | Science for Kids</h3>
-                        <p class="text-sm text-gray-500 font-semibold">SciShow Kids</p>
+                        class="bg-gradient-to-br from-cubby-green to-emerald-500 rounded-2xl p-6 text-center text-white shadow-md hover:shadow-xl hover:scale-[1.02] transition-all h-full flex flex-col items-center justify-center min-h-[160px]">
+                        <div
+                            class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center text-3xl mb-3 shadow-sm border-2 border-white/30">
+                            <i class="fa-solid fa-pen"></i>
+                        </div>
+                        <h3 class="font-bold text-xl">Word Builder</h3>
                     </div>
-                </div>
+                </a>
+                <!-- Game 3 -->
+                <a href="games.html" class="block group">
+                    <div
+                        class="bg-gradient-to-br from-cubby-pink to-rose-500 rounded-2xl p-6 text-center text-white shadow-md hover:shadow-xl hover:scale-[1.02] transition-all h-full flex flex-col items-center justify-center min-h-[160px]">
+                        <div
+                            class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center text-3xl mb-3 shadow-sm border-2 border-white/30">
+                            <i class="fa-solid fa-palette"></i>
+                        </div>
+                        <h3 class="font-bold text-xl">Art Studio</h3>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- FILTER CHIPS (Moved Below Quick Games) -->
+        <div class="px-6 py-2 flex gap-3 overflow-x-auto no-scrollbar pb-4">
+            <button
+                class="px-6 py-2 bg-gray-900 text-white rounded-full font-bold text-sm whitespace-nowrap shadow-md hover:opacity-90 transition-opacity">All</button>
+            <button
+                class="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-full font-bold text-sm whitespace-nowrap shadow-sm hover:bg-gray-50 transition-colors">Cartoons</button>
+            <button
+                class="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-full font-bold text-sm whitespace-nowrap shadow-sm hover:bg-gray-50 transition-colors">Learning</button>
+            <button
+                class="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-full font-bold text-sm whitespace-nowrap shadow-sm hover:bg-gray-50 transition-colors">Music</button>
+            <button
+                class="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-full font-bold text-sm whitespace-nowrap shadow-sm hover:bg-gray-50 transition-colors">Minecraft</button>
+        </div>
+
+        <!-- FEATURED FOR YOU -->
+        <div class="px-6 pt-2">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="flex items-center gap-2 text-2xl font-black text-gray-800">
+                    <i class="fa-solid fa-star text-cubby-yellow"></i> Featured for You
+                </h2>
+                <a href="#" class="text-cubby-blue font-bold text-sm hover:underline">See all <i
+                        class="fa-solid fa-arrow-trend-up text-xs"></i></a>
             </div>
 
-            <!-- Card 4 (Game Promo) -->
-            <div class="video-card group cursor-pointer">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+
+                <!-- Card 1 -->
                 <div
-                    class="relative w-full aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-cubby-blue to-cubby-pink p-1">
-                    <div
-                        class="w-full h-full bg-white/10 flex flex-col items-center justify-center text-white text-center p-4">
-                        <i class="fa-solid fa-gamepad text-5xl mb-2 drop-shadow-md"></i>
-                        <h4 class="font-black text-xl drop-shadow-md">PLAY GAMES</h4>
+                    class="group cursor-pointer bg-white rounded-2xl p-3 shadow-md border-b-4 border-gray-100 hover:shadow-xl hover:scale-[1.02] transition-all">
+                    <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
+                        <img src="https://img.youtube.com/vi/a1i436o6h1U/maxresdefault.jpg" alt="Thumbnail"
+                            class="absolute inset-0 w-full h-full object-cover">
+                        <span
+                            class="absolute top-2 left-2 bg-cubby-blue text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">Educational</span>
+                        <div
+                            class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-2 py-1 rounded-lg">
+                            12:05</div>
+                        <div
+                            class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center transition-all">
+                            <div
+                                class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center pl-1 shadow-lg text-cubby-blue text-xl">
+                                <i class="fa-solid fa-play"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 px-1">
+                        <h3
+                            class="font-extrabold text-gray-800 text-lg leading-tight mb-1 line-clamp-2 group-hover:text-cubby-blue transition-colors">
+                            Learn Colors with Balloons! 🎈 Fun Learning
+                        </h3>
+                        <p class="text-sm text-gray-500 font-bold">FunLearn TV</p>
                     </div>
                 </div>
-                <div class="flex gap-3 mt-3">
-                    <div class="min-w-[40px]">
-                        <div class="w-9 h-9 rounded-full bg-cubby-blue flex items-center justify-center text-white"><i
-                                class="fa-solid fa-gamepad text-xs"></i></div>
+
+                <!-- Card 2 -->
+                <div
+                    class="group cursor-pointer bg-white rounded-2xl p-3 shadow-md border-b-4 border-gray-100 hover:shadow-xl hover:scale-[1.02] transition-all">
+                    <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
+                        <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg" alt="Thumbnail"
+                            class="absolute inset-0 w-full h-full object-cover">
+                        <span
+                            class="absolute top-2 left-2 bg-cubby-blue text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">Popular</span>
+                        <div
+                            class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-2 py-1 rounded-lg">
+                            5:30</div>
+                        <div
+                            class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center transition-all">
+                            <div
+                                class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center pl-1 shadow-lg text-cubby-blue text-xl">
+                                <i class="fa-solid fa-play"></i>
+                            </div>
+                        </div>
                     </div>
-                    <div>
+                    <div class="mt-3 px-1">
                         <h3
-                            class="font-extrabold text-gray-900 leading-tight mb-1 text-base group-hover:text-cubby-blue transition-colors">
-                            Try the new Math Puzzle Game!</h3>
-                        <p class="text-sm text-gray-500 font-semibold">CubbyCove Games</p>
+                            class="font-extrabold text-gray-800 text-lg leading-tight mb-1 line-clamp-2 group-hover:text-cubby-blue transition-colors">
+                            Peppa Pig Full Episodes | The Golden Boots
+                        </h3>
+                        <p class="text-sm text-gray-500 font-bold">Peppa Pig Official</p>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div
+                    class="group cursor-pointer bg-white rounded-2xl p-3 shadow-md border-b-4 border-gray-100 hover:shadow-xl hover:scale-[1.02] transition-all">
+                    <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
+                        <img src="https://img.youtube.com/vi/34zP6j8t5eQ/maxresdefault.jpg" alt="Thumbnail"
+                            class="absolute inset-0 w-full h-full object-cover">
+                        <span
+                            class="absolute top-2 left-2 bg-cubby-blue text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">Science</span>
+                        <div
+                            class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-2 py-1 rounded-lg">
+                            8:45</div>
+                        <div
+                            class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center transition-all">
+                            <div
+                                class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center pl-1 shadow-lg text-cubby-blue text-xl">
+                                <i class="fa-solid fa-play"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 px-1">
+                        <h3
+                            class="font-extrabold text-gray-800 text-lg leading-tight mb-1 line-clamp-2 group-hover:text-cubby-blue transition-colors">
+                            Why Do Stars Twinkle? | Science for Kids
+                        </h3>
+                        <p class="text-sm text-gray-500 font-bold">SciShow Kids</p>
+                    </div>
+                </div>
+
+                <!-- Card 4 -->
+                <div
+                    class="group cursor-pointer bg-white rounded-2xl p-3 shadow-md border-b-4 border-gray-100 hover:shadow-xl hover:scale-[1.02] transition-all">
+                    <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
+                        <img src="https://img.youtube.com/vi/q1xTwwKWc6I/maxresdefault.jpg" alt="Thumbnail"
+                            class="absolute inset-0 w-full h-full object-cover">
+                        <span
+                            class="absolute top-2 left-2 bg-cubby-blue text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">Nature</span>
+                        <div
+                            class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-bold px-2 py-1 rounded-lg">
+                            15:20</div>
+                        <div
+                            class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center transition-all">
+                            <div
+                                class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center pl-1 shadow-lg text-cubby-blue text-xl">
+                                <i class="fa-solid fa-play"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 px-1">
+                        <h3
+                            class="font-extrabold text-gray-800 text-lg leading-tight mb-1 line-clamp-2 group-hover:text-cubby-blue transition-colors">
+                            Virtual Zoo Tour 🦁 See Lions and Tigers!
+                        </h3>
+                        <p class="text-sm text-gray-500 font-bold">Nat Geo Kids</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- CONTINUE WATCHING SECTION -->
+        <div class="px-6 py-6 pb-20">
+            <h2 class="flex items-center gap-2 text-2xl font-black text-gray-800 mb-4">
+                <i class="fa-regular fa-clock text-cubby-pink"></i> Continue Watching
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                <!-- CW Card 1 -->
+                <div
+                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 hover:shadow-lg transition-shadow cursor-pointer">
+                    <div
+                        class="aspect-video bg-cubby-purple/20 rounded-xl relative overflow-hidden flex items-center justify-center">
+                        <i class="fa-solid fa-star text-4xl text-cubby-purple rotate-12"></i>
+                        <!-- Progress Bar -->
+                        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
+                            <div class="h-full bg-cubby-blue w-1/3"></div>
+                        </div>
+                    </div>
+                    <div class="mt-2 px-1">
+                        <h3 class="font-bold text-gray-700 text-sm">Educational Content 1</h3>
+                        <p class="text-xs text-gray-400 mt-1">Continue from 5:30</p>
+                    </div>
+                </div>
+                <!-- CW Card 2 -->
+                <div
+                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 hover:shadow-lg transition-shadow cursor-pointer">
+                    <div
+                        class="aspect-video bg-cubby-pink/20 rounded-xl relative overflow-hidden flex items-center justify-center">
+                        <i class="fa-solid fa-shapes text-4xl text-cubby-pink -rotate-6"></i>
+                        <!-- Progress Bar -->
+                        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
+                            <div class="h-full bg-cubby-blue w-2/3"></div>
+                        </div>
+                    </div>
+                    <div class="mt-2 px-1">
+                        <h3 class="font-bold text-gray-700 text-sm">Educational Content 2</h3>
+                        <p class="text-xs text-gray-400 mt-1">Continue from 8:45</p>
+                    </div>
+                </div>
+                <!-- CW Card 3 -->
+                <div
+                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 hover:shadow-lg transition-shadow cursor-pointer">
+                    <div
+                        class="aspect-video bg-cubby-yellow/20 rounded-xl relative overflow-hidden flex items-center justify-center">
+                        <i class="fa-solid fa-rocket text-4xl text-cubby-yellow"></i>
+                        <!-- Progress Bar -->
+                        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
+                            <div class="h-full bg-cubby-blue w-1/2"></div>
+                        </div>
+                    </div>
+                    <div class="mt-2 px-1">
+                        <h3 class="font-bold text-gray-700 text-sm">Educational Content 3</h3>
+                        <p class="text-xs text-gray-400 mt-1">Continue from 2:15</p>
+                    </div>
+                </div>
+                <!-- CW Card 4 -->
+                <div
+                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 hover:shadow-lg transition-shadow cursor-pointer">
+                    <div
+                        class="aspect-video bg-cubby-green/20 rounded-xl relative overflow-hidden flex items-center justify-center">
+                        <i class="fa-solid fa-leaf text-4xl text-cubby-green rotate-45"></i>
+                        <!-- Progress Bar -->
+                        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
+                            <div class="h-full bg-cubby-blue w-3/4"></div>
+                        </div>
+                    </div>
+                    <div class="mt-2 px-1">
+                        <h3 class="font-bold text-gray-700 text-sm">Educational Content 4</h3>
+                        <p class="text-xs text-gray-400 mt-1">Continue from 10:00</p>
                     </div>
                 </div>
             </div>
-
         </div>
     </main>
 
     <!-- Import Logic -->
     <script src="../js/sidebar-logic.js"></script>
+    <script src="../js/hero_slider.js"></script>
     <script src="../js/kid_logic.js"></script>
 </body>
 

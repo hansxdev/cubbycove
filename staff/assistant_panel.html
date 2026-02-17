@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assistant Panel - CubbyCove</title>
+    <link rel="icon" type="image/png" href="../images/closedlogo.png">
 
     <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -36,32 +37,34 @@
     <div class="flex h-screen overflow-hidden">
 
         <!-- SIDEBAR -->
-        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 transition-all duration-300"
+        <aside
+            class="w-64 bg-cubby-dark text-white border-r border-gray-700 flex flex-col flex-shrink-0 transition-all duration-300"
             id="sidebar">
-            <div class="h-16 flex items-center justify-center border-b border-gray-100 bg-cubby-purple text-white">
-                <i class="fa-solid fa-user-shield text-xl mr-2"></i>
-                <span class="text-lg font-bold tracking-wide">Assistant Panel</span>
+            <div class="h-16 flex items-center justify-center border-b border-gray-700">
+                <i class="fa-solid fa-user-shield text-cubby-blue text-2xl mr-2"></i>
+                <span class="text-xl font-bold tracking-wider">Cubby<span
+                        class="text-cubby-blue">Assistant</span></span>
             </div>
 
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
                 <!-- Overview -->
                 <a href="#" onclick="showTab('overview')" id="nav-overview"
-                    class="flex items-center gap-3 px-4 py-3 bg-purple-50 text-cubby-purple rounded-lg font-bold border-l-4 border-cubby-purple transition-all">
+                    class="flex items-center gap-3 px-4 py-3 bg-cubby-blue/20 text-cubby-blue rounded-lg font-bold border-l-4 border-cubby-blue transition-colors nav-item">
                     <i class="fa-solid fa-gauge-high w-5 text-center"></i> Overview
                 </a>
 
                 <!-- Verification -->
                 <a href="#" onclick="showTab('verification')" id="nav-verification"
-                    class="flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
+                    class="flex items-center justify-between px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg font-semibold border-l-4 border-transparent transition-colors nav-item">
                     <div class="flex items-center gap-3">
                         <i class="fa-solid fa-id-card w-5 text-center"></i> Verification
                     </div>
-                    <span class="bg-cubby-purple text-white text-xs px-2 py-0.5 rounded-full">3</span>
+                    <span class="bg-cubby-blue text-white text-xs px-2 py-0.5 rounded-full">3</span>
                 </a>
 
                 <!-- Chat Reports -->
                 <a href="#" onclick="showTab('moderation')" id="nav-moderation"
-                    class="flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
+                    class="flex items-center justify-between px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg font-semibold border-l-4 border-transparent transition-colors nav-item">
                     <div class="flex items-center gap-3">
                         <i class="fa-solid fa-flag w-5 text-center"></i> Chat Reports
                     </div>
@@ -70,7 +73,7 @@
 
                 <!-- NEW: Content Review -->
                 <a href="#" onclick="showTab('content')" id="nav-content"
-                    class="flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
+                    class="flex items-center justify-between px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg font-semibold border-l-4 border-transparent transition-colors nav-item">
                     <div class="flex items-center gap-3">
                         <i class="fa-solid fa-video w-5 text-center"></i> Video Review
                     </div>
@@ -78,9 +81,9 @@
                 </a>
             </nav>
 
-            <div class="p-4 border-t border-gray-100">
+            <div class="p-4 border-t border-gray-700">
                 <a href="#" onclick="handleLogout()"
-                    class="flex items-center gap-3 text-gray-400 hover:text-red-500 transition-colors font-bold text-sm">
+                    class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors font-bold text-sm">
                     <i class="fa-solid fa-right-from-bracket"></i> Sign Out
                 </a>
             </div>
@@ -89,12 +92,23 @@
         <!-- MAIN CONTENT -->
         <div class="flex-1 flex flex-col overflow-hidden">
 
+            <!-- TOP BAR -->
             <header
                 class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10 border-b border-gray-100">
-                <h2 class="text-lg font-bold text-gray-700" id="page-title">Pending Verifications</h2>
-                <div class="flex items-center gap-2">
-                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    <span class="text-xs font-bold text-gray-500">System Online</span>
+                <button class="text-gray-500 hover:text-gray-700 focus:outline-none lg:hidden">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <h2 class="text-lg font-bold text-gray-700" id="page-title">Pending Tasks</h2>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <img id="header-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Assistant"
+                            class="w-8 h-8 rounded-full bg-gray-200">
+                        <div class="flex flex-col text-right">
+                            <span id="header-name" class="text-sm font-bold text-gray-600">Loading...</span>
+                            <span id="header-role"
+                                class="text-xs text-cubby-blue font-semibold uppercase">Assistant</span>
+                        </div>
+                    </div>
                 </div>
             </header>
 

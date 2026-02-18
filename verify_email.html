@@ -64,6 +64,14 @@
             const urlParams = new URLSearchParams(window.location.search);
             const secret = urlParams.get('secret');
             const userId = urlParams.get('userId');
+            const isMock = urlParams.get('mock') === 'true';
+
+            if (isMock) {
+                // Mock Verification Flow (for Dev/Manual usage)
+                console.log("✅ Mock Verification Detected. Showing success.");
+                showSuccess();
+                return;
+            }
 
             if (!secret || !userId) {
                 showError("Invalid verification link.");

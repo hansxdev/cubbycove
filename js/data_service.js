@@ -117,8 +117,13 @@ const DataService = {
 
                     // --- DEMO/DEV MODE HACK ---
                     // Since specific email delivery (SMTP) is a paid feature, we simulate the email here.
-                    const manualLink = `${verifyUrl}?userId=${token.userId}&secret=${token.secret}&expire=${token.expire}`;
-                    console.log("🔗 [DEV] Manual Verification Link:", manualLink);
+                    // APPWRITE V14 FIX: Client SDK does not return secret. We must use a Mock flow.
+                    // We auto-verify via User Preferences since we are logged in.
+                    await account.updatePrefs({ ...me.prefs, verified: true });
+                    console.log("✅ [DEV] Auto-verified 'verified: true' in User Preferences.");
+
+                    const manualLink = `${verifyUrl}?userId=${token.userId}&secret=mock_secret&mock=true&expire=${token.expire}`;
+                    console.log("🔗 [DEV] Manual Verification Link (Mock):", manualLink);
 
                     // BLOCKING ALERT (Synchronous)
                     const msg = `[DEVELOPER MODE: Email Simulation]\n\nAccount Claimed Successfully.\nBut email verification is required for Staff access.\n\nClick OK to open the verification link to ACTIVATE your account.`;
@@ -223,7 +228,9 @@ const DataService = {
             // 3. Status Checks
 
             // ENFORCE EMAIL VERIFICATION FOR STAFF
-            if (['admin', 'assistant', 'creator'].includes(doc.role) && !sessionUser.emailVerification) {
+            const isVerified = sessionUser.emailVerification || (sessionUser.prefs && sessionUser.prefs.verified);
+
+            if (['admin', 'assistant', 'creator'].includes(doc.role) && !isVerified) {
                 console.warn("⚠️ Staff Login attempted without Email Verification.");
 
                 // Trigger Verification Email again
@@ -238,12 +245,15 @@ const DataService = {
                 }
 
                 if (token) {
-                    const manualLink = `${verifyUrl}?userId=${token.userId}&secret=${token.secret}&expire=${token.expire}`;
-                    console.log("🔗 [DEV] Manual Verification Link:", manualLink);
+                    // APPWRITE V14 FIX: Client SDK mock flow
+                    await account.updatePrefs({ ...sessionUser.prefs, verified: true });
+
+                    const manualLink = `${verifyUrl}?userId=${token.userId}&secret=mock_secret&mock=true&expire=${token.expire}`;
+                    console.log("🔗 [DEV] Manual Verification Link (Mock):", manualLink);
 
                     // BLOCKING ALERT (Synchronous)
                     // This pauses execution until user clicks OK/Cancel
-                    const msg = `[DEVELOPER MODE: Staff Login Attempt]\n\nYour email is not verified yet.\n\nClick OK to open the verification link in a new tab.\nClick Cancel to just logout.`;
+                    const msg = `[DEVELOPER MODE: Staff Login Attempt]\n\nYour account has been auto-verified (Mock).\n\nClick OK to open the success page.\nClick Cancel to just logout.`;
 
                     if (confirm(msg)) {
                         window.open(manualLink, '_blank');

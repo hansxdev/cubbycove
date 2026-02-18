@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tabName === 'overview') loadOverviewStats();
         if (tabName === 'verification') loadPendingParents();
         if (tabName === 'content') loadPendingVideos();
-        // Chat reports todo
+        if (tabName === 'moderation') loadChatReports();
     };
 });
 
@@ -72,21 +72,20 @@ window.handleLogout = handleLogout;
 // --- OVERVIEW STATS ---
 async function loadOverviewStats() {
     try {
-        // Parallel fetch for verify and content stats
-        // We fetch the full lists because we don't have a specific "count" API easily accessible without listing
-        // For production, use limit=1 to save bandwidth if just counting, but getAllUsers gets 100 max anyway.
-
         const allUsers = await DataService.getAllUsers();
         const pendingParentsCount = allUsers.filter(u => u.role === 'parent' && u.status === 'pending').length;
 
         const pendingVideos = await DataService.getVideos('pending');
         const pendingVideosCount = pendingVideos.length;
 
+        const flaggedLogs = await DataService.getThreatLogs('pending');
+        const flaggedCount = flaggedLogs.length;
+
         // Update Dashboard Cards
         updateOverviewCard('Pending Parents', pendingParentsCount);
         updateOverviewCard('Video Review', pendingVideosCount);
+        updateOverviewCard('Chat Reports', flaggedCount);
 
-        // Chat reports not linked yet
     } catch (error) {
         console.error("Error loading stats:", error);
     }
@@ -135,6 +134,20 @@ async function loadPendingParents() {
         updateBadge('verification', pendingParents.length);
 
         pendingParents.forEach(parent => {
+            // Check for valid ID and faceId or use placeholders
+            const faceImage = parent.faceId ?
+                `https://cloud.appwrite.io/v1/storage/buckets/65b12345/files/${parent.faceId}/view?project=69904f4900396667cf4c` :
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${parent.firstName}`;
+
+            // Assuming we stored ID document file ID in a field like 'idDocumentId' or similar. 
+            // DataService.registerParent currently doesn't upload files, it just sets up text data.
+            // So we will use a dedicated placeholder indicating "No Document Uploaded" or check if field exists.
+            const idImage = parent.idDocumentId ?
+                `https://cloud.appwrite.io/v1/storage/buckets/65b12345/files/${parent.idDocumentId}/view?project=69904f4900396667cf4c` :
+                "../images/id_placeholder.jpg"; // You'll need this image or use a generic placeholder service
+
+            const idImageSrc = parent.idDocumentId ? `https://placehold.co/400x250/e2e8f0/64748b?text=ID+Document` : `https://placehold.co/400x250/e2e8f0/64748b?text=No+ID+Uploaded`;
+
             const html = `
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card mb-4" id="user-${parent.$id}">
                     <div class="bg-gray-50 px-6 py-3 border-b border-gray-100 flex justify-between items-center">
@@ -142,16 +155,33 @@ async function loadPendingParents() {
                         <span class="text-xs text-gray-400"><i class="fa-regular fa-envelope"></i> ${parent.email}</span>
                     </div>
                     <div class="p-6">
-                        <div class="flex flex-col md:flex-row gap-8 items-center justify-center">
+                        <div class="flex flex-col md:flex-row gap-8 items-center justify-center mb-6">
+                             <div class="text-center w-full md:w-1/2">
+                                <p class="text-xs font-bold text-gray-400 uppercase mb-2">Uploaded ID</p>
+                                <div class="rounded-lg shadow-inner bg-gray-100 border border-gray-200 w-full h-48 flex items-center justify-center overflow-hidden">
+                                    ${parent.idDocumentId ?
+                    `<img src="${idImage}" class="w-full h-full object-cover">` :
+                    `<div class="text-gray-400 flex flex-col items-center"><i class="fa-solid fa-id-card text-3xl mb-2"></i><span>No ID Uploaded</span></div>`
+                }
+                                </div>
+                            </div>
                             <div class="text-center w-full md:w-1/2">
-                                <p class="text-xs font-bold text-gray-400 uppercase mb-2">Details provided</p>
-                                <div class="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg border border-gray-100 text-left">
-                                    <p class="mb-1"><strong><i class="fa-solid fa-user mr-2"></i>Name:</strong> ${parent.firstName} ${parent.middleName || ''} ${parent.lastName}</p>
-                                    <p class="mb-1"><strong><i class="fa-solid fa-envelope mr-2"></i>Email:</strong> ${parent.email}</p>
-                                    <p class="mb-1"><strong><i class="fa-solid fa-calendar mr-2"></i>Joined:</strong> ${new Date(parent.createdAt).toLocaleDateString()}</p>
+                                <p class="text-xs font-bold text-gray-400 uppercase mb-2">Live Photo / Avatar</p>
+                                <div class="rounded-lg shadow-inner bg-gray-100 border border-gray-200 w-full h-48 flex items-center justify-center overflow-hidden">
+                                     <img src="${faceImage}" class="w-full h-full object-cover">
                                 </div>
                             </div>
                         </div>
+
+                        <div class="text-center w-full mb-6">
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-2">Details provided</p>
+                            <div class="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg border border-gray-100 text-left">
+                                <p class="mb-1"><strong><i class="fa-solid fa-user mr-2"></i>Name:</strong> ${parent.firstName} ${parent.middleName || ''} ${parent.lastName}</p>
+                                <p class="mb-1"><strong><i class="fa-solid fa-envelope mr-2"></i>Email:</strong> ${parent.email}</p>
+                                <p class="mb-1"><strong><i class="fa-solid fa-calendar mr-2"></i>Joined:</strong> ${new Date(parent.createdAt).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+
                         <div class="mt-8 flex gap-4">
                             <button onclick="updateParentStatus('${parent.$id}', 'rejected')" class="flex-1 py-3 border-2 border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-50 transition-colors">
                                 <i class="fa-solid fa-xmark mr-1"></i> Reject
@@ -271,6 +301,79 @@ async function updateVideoStatus(videoId, status) {
     }
 }
 
+// --- CHAT MODERATION ---
+
+async function loadChatReports() {
+    const container = document.getElementById('tab-moderation');
+    if (!container) return;
+
+    container.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cubby-blue text-4xl"></i></div>';
+
+    try {
+        const reports = await DataService.getThreatLogs('pending');
+
+        container.innerHTML = '';
+
+        if (reports.length === 0) {
+            container.innerHTML = `
+                <div class="text-center p-12 bg-white rounded-xl shadow-sm border border-gray-100">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-500 text-2xl">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800">Safe & Sound!</h3>
+                    <p class="text-gray-500">No chat reports or threats pending review.</p>
+                </div>
+            `;
+            updateBadge('moderation', 0);
+            return;
+        }
+
+        updateBadge('moderation', reports.length);
+
+        reports.forEach(report => {
+            const html = `
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 dashboard-card mb-4" id="report-${report.$id}">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="font-bold text-gray-800">Flagged Message</h3>
+                            <p class="text-xs text-gray-500">Reason: <span class="text-red-500 font-bold">${report.reason || 'Keyword Detetced'}</span></p>
+                            <p class="text-xs text-gray-400 mt-1">From: ${report.senderId || 'Unknown'} -> To: ${report.receiverId || 'Global'}</p>
+                        </div>
+                        <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">High Priority</span>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 space-y-3 mb-6">
+                        <div class="flex gap-2 p-2 bg-red-50 border border-red-100 rounded-md">
+                            <span class="text-xs font-bold text-red-500">Message:</span>
+                            <span class="text-xs text-red-700 font-bold">${report.messageContent}</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3">
+                        <button onclick="resolveReport('${report.$id}', 'dismissed')" class="text-sm font-bold text-gray-500 hover:text-gray-700 px-4 py-2">Dismiss</button>
+                        <button onclick="resolveReport('${report.$id}', 'warned')" class="bg-orange-100 text-orange-600 text-sm font-bold px-4 py-2 rounded-lg hover:bg-orange-200">Warn User</button>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+
+    } catch (error) {
+        console.error("Error loading chat reports:", error);
+        container.innerHTML = `<div class="bg-red-50 text-red-500 p-4 rounded-lg">Error loading data: ${error.message}</div>`;
+    }
+}
+
+async function resolveReport(reportId, action) {
+    if (!confirm("Resolve this report as " + action + "?")) return;
+
+    try {
+        await DataService.updateThreatLog(reportId, 'resolved', action);
+        loadChatReports();
+        loadOverviewStats();
+    } catch (e) {
+        alert("Error: " + e.message);
+    }
+}
+
 function updateBadge(tab, count) {
     const badge = document.querySelector(`#nav-${tab} span`);
     if (badge) {
@@ -283,3 +386,4 @@ function updateBadge(tab, count) {
 // Expose globally
 window.updateParentStatus = updateParentStatus;
 window.updateVideoStatus = updateVideoStatus;
+window.resolveReport = resolveReport;

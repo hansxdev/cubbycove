@@ -479,6 +479,33 @@ const DataService = {
             console.error("Create Child Error:", error);
             throw error;
         }
+    },
+    updateThreatLog: async function (logId, status, resolution) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        await databases.updateDocument(DB_ID, COLLECTIONS.THREAT_LOGS, logId, {
+            status: status,
+            resolution: resolution
+        });
+        return true;
+    },
+
+    getThreatLogs: async function (statusFilter = null) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+
+        let queries = [Query.orderDesc('timestamp')];
+        if (statusFilter) {
+            queries.push(Query.equal('status', statusFilter));
+        }
+
+        try {
+            const response = await databases.listDocuments(DB_ID, COLLECTIONS.THREAT_LOGS, queries);
+            return response.documents;
+        } catch (error) {
+            // If collection doesn't exist yet or other error, return empty array to prevent UI break
+            console.warn("Threat Logs fetch error (Collection might be missing):", error);
+            return [];
+        }
     }
 };
 

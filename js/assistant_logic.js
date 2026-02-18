@@ -22,15 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
             targetNav.classList.remove('text-gray-400', 'border-transparent');
         }
 
-        if (tabName === 'overview') {
-            document.getElementById('tab-overview').classList.remove('hidden');
-        }
+        if (tabName === 'overview') loadOverviewStats();
         if (tabName === 'verification') loadPendingParents();
         if (tabName === 'content') loadPendingVideos();
+        // Chat reports todo
     };
-
-    // Initial Load - Default to Overview now
-    showTab('overview');
 });
 
 async function initAssistantPanel() {
@@ -63,23 +59,8 @@ async function initAssistantPanel() {
     if (roleEl) roleEl.innerText = currentUser.role;
     if (avatarEl) avatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.firstName}`;
 
-    // Update Welcome Message on Overview
-    const titleEl = document.getElementById('page-title');
-    if (titleEl) {
-        titleEl.innerHTML = `Assistant Dashboard`;
-    }
-
-    // Load Data
-    loadPendingParents();
-    // loadChatReports(); // Not implemented yet
-    // loadPendingVideos(); // Needs async fix too if moved out of window.showTab, but showTab calls it.
-    // However, showTab is sync. loadPendingVideos calls DataService.getVideos which is async.
-    // We should fix loadPendingVideos to handle async awaiting inside.
-
-    // Initial Load - Default to Overview now
-    // showTab('overview') is called in DOMContentLoaded.
-    // We should probably wait for auth before showing tab data? 
-    // But 'overview' is static currently.
+    // Initial Load
+    loadOverviewStats();
 }
 
 function handleLogout() {
@@ -88,138 +69,205 @@ function handleLogout() {
 }
 window.handleLogout = handleLogout;
 
+// --- OVERVIEW STATS ---
+async function loadOverviewStats() {
+    try {
+        // Parallel fetch for verify and content stats
+        // We fetch the full lists because we don't have a specific "count" API easily accessible without listing
+        // For production, use limit=1 to save bandwidth if just counting, but getAllUsers gets 100 max anyway.
+
+        const allUsers = await DataService.getAllUsers();
+        const pendingParentsCount = allUsers.filter(u => u.role === 'parent' && u.status === 'pending').length;
+
+        const pendingVideos = await DataService.getVideos('pending');
+        const pendingVideosCount = pendingVideos.length;
+
+        // Update Dashboard Cards
+        updateOverviewCard('Pending Parents', pendingParentsCount);
+        updateOverviewCard('Video Review', pendingVideosCount);
+
+        // Chat reports not linked yet
+    } catch (error) {
+        console.error("Error loading stats:", error);
+    }
+}
+
+function updateOverviewCard(title, count) {
+    // Helper to find card by text content (fragile but works for now without IDs on cards)
+    const cardTitles = document.querySelectorAll('.text-xs.font-bold.text-gray-400.uppercase.tracking-widest');
+    cardTitles.forEach(el => {
+        if (el.textContent.includes(title)) {
+            const countEl = el.nextElementSibling; // The h3
+            if (countEl) countEl.innerText = count;
+        }
+    });
+}
+
+
 // --- PARENT VERIFICATION ---
 
-function loadPendingParents() {
+async function loadPendingParents() {
     const container = document.getElementById('tab-verification');
     if (!container) return;
 
-    const allUsers = DataService.getAllUsers();
-    const pendingParents = allUsers.filter(u => u.role === 'parent' && u.status === 'pending');
+    container.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cubby-blue text-4xl"></i></div>';
 
-    container.innerHTML = ''; // Clear mocked data
+    try {
+        const allUsers = await DataService.getAllUsers();
+        const pendingParents = allUsers.filter(u => u.role === 'parent' && u.status === 'pending');
 
-    if (pendingParents.length === 0) {
-        container.innerHTML = `
-            <div class="text-center p-12 bg-white rounded-xl shadow-sm border border-gray-100">
-                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-500 text-2xl">
-                    <i class="fa-solid fa-check"></i>
+        container.innerHTML = '';
+
+        if (pendingParents.length === 0) {
+            container.innerHTML = `
+                <div class="text-center p-12 bg-white rounded-xl shadow-sm border border-gray-100">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-500 text-2xl">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800">All Cleared!</h3>
+                    <p class="text-gray-500">No pending parent registrations.</p>
                 </div>
-                <h3 class="text-lg font-bold text-gray-800">All Cleared!</h3>
-                <p class="text-gray-500">No pending parent registrations.</p>
-            </div>
-        `;
-        return;
-    }
+            `;
+            updateBadge('verification', 0);
+            return;
+        }
 
-    pendingParents.forEach(parent => {
-        const html = `
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card" id="user-${parent.id}">
-                <div class="bg-gray-50 px-6 py-3 border-b border-gray-100 flex justify-between items-center">
-                    <span class="font-bold text-gray-700 text-sm">${parent.firstName} ${parent.lastName}</span>
-                    <span class="text-xs text-gray-400"><i class="fa-regular fa-envelope"></i> ${parent.email}</span>
-                </div>
-                <div class="p-6">
-                    <div class="flex flex-col md:flex-row gap-8 items-center justify-center">
-                        <div class="text-center w-1/2">
-                            <p class="text-xs font-bold text-gray-400 uppercase mb-2">Details provided</p>
-                            <div class="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                                <p><strong>Email:</strong> ${parent.email}</p>
-                                <p><strong>Name:</strong> ${parent.firstName} ${parent.middleName || ''} ${parent.lastName}</p>
-                                <p><strong>Joined:</strong> ${new Date(parent.createdAt).toLocaleDateString()}</p>
+        updateBadge('verification', pendingParents.length);
+
+        pendingParents.forEach(parent => {
+            const html = `
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card mb-4" id="user-${parent.$id}">
+                    <div class="bg-gray-50 px-6 py-3 border-b border-gray-100 flex justify-between items-center">
+                        <span class="font-bold text-gray-700 text-sm">${parent.firstName} ${parent.lastName}</span>
+                        <span class="text-xs text-gray-400"><i class="fa-regular fa-envelope"></i> ${parent.email}</span>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex flex-col md:flex-row gap-8 items-center justify-center">
+                            <div class="text-center w-full md:w-1/2">
+                                <p class="text-xs font-bold text-gray-400 uppercase mb-2">Details provided</p>
+                                <div class="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg border border-gray-100 text-left">
+                                    <p class="mb-1"><strong><i class="fa-solid fa-user mr-2"></i>Name:</strong> ${parent.firstName} ${parent.middleName || ''} ${parent.lastName}</p>
+                                    <p class="mb-1"><strong><i class="fa-solid fa-envelope mr-2"></i>Email:</strong> ${parent.email}</p>
+                                    <p class="mb-1"><strong><i class="fa-solid fa-calendar mr-2"></i>Joined:</strong> ${new Date(parent.createdAt).toLocaleDateString()}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="mt-8 flex gap-4">
-                        <button onclick="updateParentStatus('${parent.email}', 'rejected')" class="flex-1 py-3 border-2 border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-50">Reject</button>
-                        <button onclick="updateParentStatus('${parent.email}', 'active')" class="flex-1 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600">Approve Parent</button>
+                        <div class="mt-8 flex gap-4">
+                            <button onclick="updateParentStatus('${parent.$id}', 'rejected')" class="flex-1 py-3 border-2 border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-50 transition-colors">
+                                <i class="fa-solid fa-xmark mr-1"></i> Reject
+                            </button>
+                            <button onclick="updateParentStatus('${parent.$id}', 'active')" class="flex-1 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-colors">
+                                <i class="fa-solid fa-check mr-1"></i> Approve Parent
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
-        container.insertAdjacentHTML('beforeend', html);
-    });
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        });
 
-    updateBadge('verification', pendingParents.length);
+    } catch (error) {
+        console.error("Error loading parents:", error);
+        container.innerHTML = `<div class="bg-red-50 text-red-500 p-4 rounded-lg">Error loading data: ${error.message}</div>`;
+    }
 }
 
-function updateParentStatus(email, status) {
+async function updateParentStatus(userId, status) {
     if (confirm(`Set status to ${status}?`)) {
-        DataService.updateUserStatus(email, status);
-        loadPendingParents();
+        try {
+            await DataService.updateUserStatus(userId, status);
+            // Reload to refresh list
+            loadPendingParents();
+            loadOverviewStats(); // Update counters
+        } catch (error) {
+            alert("Error updating status: " + error.message);
+        }
     }
 }
 
 // --- VIDEO REVIEW ---
 
-function loadPendingVideos() {
+async function loadPendingVideos() {
     const container = document.getElementById('tab-content');
     if (!container) return;
 
-    const pendingVideos = DataService.getVideos('pending'); // Implement filter in DS if needed or use getAll and filter
+    container.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cubby-blue text-4xl"></i></div>';
 
-    container.innerHTML = '';
+    try {
+        const pendingVideos = await DataService.getVideos('pending');
 
-    if (pendingVideos.length === 0) {
-        container.innerHTML = `
-             <div class="text-center p-12 bg-white rounded-xl shadow-sm border border-gray-100">
-                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-500 text-2xl">
-                    <i class="fa-solid fa-film"></i>
-                </div>
-                <h3 class="text-lg font-bold text-gray-800">All caught up!</h3>
-                <p class="text-gray-500">No videos pending review.</p>
-            </div>
-        `;
-        return;
-    }
+        container.innerHTML = '';
 
-    pendingVideos.forEach(video => {
-        // Extract ID if URL is full
-        let vidId = video.url;
-        if (video.url.includes('v=')) vidId = video.url.split('v=')[1].split('&')[0];
-        else if (video.url.includes('youtu.be/')) vidId = video.url.split('youtu.be/')[1];
-
-        const html = `
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card">
-                <div class="flex flex-col md:flex-row">
-                    <!-- Thumbnail/Embed -->
-                    <div class="w-full md:w-1/3 bg-black relative group h-48 md:h-auto">
-                        <iframe class="w-full h-full" src="https://www.youtube.com/embed/${vidId}" frameborder="0" allowfullscreen></iframe>
+        if (pendingVideos.length === 0) {
+            container.innerHTML = `
+                 <div class="text-center p-12 bg-white rounded-xl shadow-sm border border-gray-100">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-500 text-2xl">
+                        <i class="fa-solid fa-film"></i>
                     </div>
-                    
-                    <!-- Details -->
-                    <div class="p-6 flex-1 flex flex-col justify-between">
-                        <div>
-                            <div class="flex justify-between items-start mb-2">
-                                <h3 class="font-bold text-lg text-gray-800">${video.title}</h3>
-                                <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded">Category: ${video.category}</span>
+                    <h3 class="text-lg font-bold text-gray-800">All caught up!</h3>
+                    <p class="text-gray-500">No videos pending review.</p>
+                </div>
+            `;
+            updateBadge('content', 0);
+            return;
+        }
+
+        updateBadge('content', pendingVideos.length);
+
+        pendingVideos.forEach(video => {
+            // Extract ID if URL is full (Helper)
+            let videoThumbnailId = video.url;
+            if (video.url.includes('v=')) videoThumbnailId = video.url.split('v=')[1].split('&')[0];
+            else if (video.url.includes('youtu.be/')) videoThumbnailId = video.url.split('youtu.be/')[1];
+
+            const html = `
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card mb-4" id="video-${video.$id}">
+                    <div class="flex flex-col md:flex-row">
+                        <!-- Thumbnail/Embed -->
+                        <div class="w-full md:w-1/3 bg-black relative group h-48 md:h-auto">
+                            <iframe class="w-full h-full" src="https://www.youtube.com/embed/${videoThumbnailId}" frameborder="0" allowfullscreen></iframe>
+                        </div>
+                        
+                        <!-- Details -->
+                        <div class="p-6 flex-1 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="font-bold text-lg text-gray-800">${video.title}</h3>
+                                    <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded">Category: ${video.category}</span>
+                                </div>
+                                <p class="text-sm text-gray-600 mb-4">Uploaded by: <span class="text-cubby-purple font-bold">${video.creatorEmail || 'Unknown'}</span></p>
+                                <p class="text-xs text-gray-500">Submitted: ${new Date(video.uploadedAt).toLocaleString()}</p>
                             </div>
-                            <p class="text-sm text-gray-600 mb-4">Uploaded by: <span class="text-cubby-purple font-bold">${video.creatorEmail || 'Unknown'}</span></p>
-                            <p class="text-xs text-gray-500">Submitted: ${new Date(video.uploadedAt).toLocaleString()}</p>
-                        </div>
 
-                        <div class="mt-6 flex gap-3">
-                            <button onclick="updateVideoStatus('${video.id}', 'rejected')" class="px-4 py-2 border border-red-200 text-red-500 font-bold rounded-lg hover:bg-red-50 text-sm">
-                                <i class="fa-solid fa-ban mr-1"></i> Reject
-                            </button>
-                            <button onclick="updateVideoStatus('${video.id}', 'approved')" class="px-4 py-2 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 text-sm shadow-md">
-                                <i class="fa-solid fa-check mr-1"></i> Approve & Publish
-                            </button>
+                            <div class="mt-6 flex gap-3">
+                                <button onclick="updateVideoStatus('${video.$id}', 'rejected')" class="px-4 py-2 border border-red-200 text-red-500 font-bold rounded-lg hover:bg-red-50 text-sm transition-colors">
+                                    <i class="fa-solid fa-ban mr-1"></i> Reject
+                                </button>
+                                <button onclick="updateVideoStatus('${video.$id}', 'approved')" class="px-4 py-2 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 text-sm shadow-md transition-colors">
+                                    <i class="fa-solid fa-check mr-1"></i> Approve & Publish
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
-        container.insertAdjacentHTML('beforeend', html);
-    });
-
-    updateBadge('content', pendingVideos.length);
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+    } catch (error) {
+        console.error("Error loading videos:", error);
+        container.innerHTML = `<div class="bg-red-50 text-red-500 p-4 rounded-lg">Error loading data: ${error.message}</div>`;
+    }
 }
 
-function updateVideoStatus(vidId, status) {
+async function updateVideoStatus(videoId, status) {
     if (confirm(`Check this video as ${status}?`)) {
-        DataService.updateVideoStatus(vidId, status);
-        loadPendingVideos();
+        try {
+            await DataService.updateVideoStatus(videoId, status);
+            loadPendingVideos();
+            loadOverviewStats();
+        } catch (error) {
+            alert("Error updating status: " + error.message);
+        }
     }
 }
 

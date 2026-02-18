@@ -349,7 +349,10 @@ const DataService = {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         const { Query } = Appwrite;
 
-        let queries = [Query.orderDesc('uploadedAt')];
+        let queries = [
+            Query.orderDesc('uploadedAt'),
+            Query.limit(100)
+        ];
         if (statusFilter) {
             queries.push(Query.equal('status', statusFilter));
         }

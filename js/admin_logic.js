@@ -49,7 +49,10 @@ async function initAdminDashboard() {
         }
 
         // 4. Load Initial Data
-        await loadStats();
+        await Promise.all([
+            loadStats(),
+            loadUserList(),
+        ]);
 
         if (currentUser.role === 'super_admin') {
             await loadStaffList();
@@ -64,20 +67,14 @@ async function initAdminDashboard() {
 async function loadStats() {
     try {
         const users = await DataService.getAllUsers();
+        const videos = await DataService.getVideos();
 
         // Calculate Stats
         const totalParents = users.filter(u => u.role === 'parent').length;
-        this_totalKids = 0; // Local var logic fix
-        let totalKids = 0;
+        // const totalKids = users.reduce((acc, u) => acc + (u.children ? u.children.length : 0), 0); // Rough estimate if children field exists
+        const totalKids = 0; // Placeholder until children collection integration
 
-        // Note: Appwrite Document structure might not have 'children' array hydrated yet if it's a relationship. 
-        // For now, assuming direct array or using a separate count if we implement Children collection fetching.
-        // The DataService.getAllUsers() fetches from 'Users' collection.
-        // In refined schema, Children are in 'Children' collection.
-        // So counting 'Children' collection is better.
-        // But DataService.getAllUsers only gets 'Users'.
-        // Let's assume 0 for kids or update DataService to fetch kids count.
-        // TODO: Implement getStats() in DataService for better performance.
+        const totalApprovedVideos = videos.filter(v => v.status === 'approved').length;
 
         // Update UI
         const elParents = document.getElementById('stat-parents');
@@ -85,11 +82,71 @@ async function loadStats() {
         const elContent = document.getElementById('stat-videos');
 
         if (elParents) elParents.innerText = totalParents.toLocaleString();
-        if (elKids) elKids.innerText = "-"; // Placeholder until getting kids collection
-        if (elContent) elContent.innerText = "850"; // Mock for now
+        if (elKids) elKids.innerText = totalKids > 0 ? totalKids : "-";
+        if (elContent) elContent.innerText = totalApprovedVideos.toLocaleString();
 
     } catch (error) {
         console.error("Stats Error:", error);
+    }
+}
+
+async function loadUserList() {
+    const listBody = document.getElementById('user-list-body');
+    if (!listBody) return;
+
+    listBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center"><i class="fa-solid fa-spinner fa-spin text-cubby-blue"></i> Loading users...</td></tr>';
+
+    try {
+        const users = await DataService.getAllUsers();
+        // Filter regular users (parents/kids/banned) - exclude staff from this generic list usually, but let's show all non-staff
+        // Or show all. Let's show parents and any other non-staff roles.
+        const generalUsers = users.filter(u => !['admin', 'super_admin', 'assistant', 'creator'].includes(u.role));
+
+        listBody.innerHTML = '';
+
+        if (generalUsers.length === 0) {
+            listBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No users found.</td></tr>';
+            return;
+        }
+
+        generalUsers.forEach(u => {
+            let roleBadge = `<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-bold">${u.role}</span>`;
+            if (u.role === 'parent') roleBadge = `<span class="bg-purple-100 text-purple-600 px-2 py-0.5 rounded text-xs font-bold">Parent</span>`;
+
+            let statusClass = 'text-green-500';
+            if (u.status === 'banned' || u.status === 'suspended') statusClass = 'text-red-500';
+            else if (u.status === 'pending') statusClass = 'text-yellow-500';
+
+            const html = `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="p-2 font-semibold">${u.firstName} ${u.lastName || ''}</td>
+                    <td class="p-2">${roleBadge}</td>
+                    <td class="p-2"><span class="${statusClass} font-bold text-xs capitalize">${u.status}</span></td>
+                    <td class="p-2 text-right">
+                        ${u.status !== 'banned' ?
+                    `<button onclick="updateUserStatus('${u.$id}', 'banned')" class="text-red-400 hover:text-red-600 p-1" title="Ban User"><i class="fa-solid fa-ban"></i></button>` :
+                    `<button onclick="updateUserStatus('${u.$id}', 'active')" class="text-green-400 hover:text-green-600 p-1" title="Unban"><i class="fa-solid fa-rotate-left"></i></button>`
+                }
+                    </td>
+                </tr>
+            `;
+            listBody.insertAdjacentHTML('beforeend', html);
+        });
+
+    } catch (error) {
+        console.error("Load User List Error:", error);
+        listBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-500">Error loading users.</td></tr>';
+    }
+}
+
+async function updateUserStatus(userId, status) {
+    if (confirm(`Change user status to ${status}?`)) {
+        try {
+            await DataService.updateUserStatus(userId, status);
+            loadUserList(); // Refresh list
+        } catch (error) {
+            alert("Error: " + error.message);
+        }
     }
 }
 
@@ -116,6 +173,7 @@ function switchView(viewName) {
         if (staffSection) staffSection.classList.remove('hidden');
 
         setActiveNavLink('Manage Staff');
+        loadStaffList(); // Ensure list is fresh
     }
 }
 
@@ -126,20 +184,25 @@ function setActiveNavLink(text) {
             link.classList.add('bg-cubby-blue/20', 'text-cubby-blue', 'border-l-4', 'border-cubby-blue');
             link.classList.remove('text-gray-400', 'hover:bg-gray-800');
         } else {
-            if (!link.classList.contains('text-sm')) {
-                link.classList.remove('bg-cubby-blue/20', 'text-cubby-blue', 'border-l-4', 'border-cubby-blue');
-                link.classList.add('text-gray-400', 'hover:bg-gray-800');
+            // Only affect top-level nav items, simplistic check
+            if (!link.id && !link.onclick.toString().includes('switchDashboardMode')) {
+                // checking classes is safer
+                if (link.classList.contains('nav-item')) {
+                    link.classList.remove('bg-cubby-blue/20', 'text-cubby-blue', 'border-l-4', 'border-cubby-blue');
+                    link.classList.add('text-gray-400', 'hover:bg-gray-800');
+                }
             }
         }
     });
 }
 
 function switchDashboardMode(mode) {
-    if (currentUser.role !== 'super_admin') {
-        if (currentUser.role !== mode && currentUser.role !== 'admin') {
-            alert("Restricted: Switch to Power User account to access all views.");
-            return;
-        }
+    // Basic role check
+    if (['super_admin', 'admin'].includes(currentUser.role)) {
+        // Allowed to switch
+    } else if (currentUser.role !== mode) {
+        alert("Restricted access.");
+        return;
     }
 
     if (mode === 'assistant') window.location.href = 'assistant_panel.html';
@@ -162,6 +225,9 @@ async function loadStaffList() {
 
         staff.forEach(s => {
             const isMe = s.email === currentUser.email;
+            let statusClass = 'text-green-500';
+            if (s.status === 'banned') statusClass = 'text-red-500';
+
             const html = `
                 <tr class="border-b border-gray-100 hover:bg-gray-50">
                     <td class="p-2 font-semibold">
@@ -170,14 +236,14 @@ async function loadStaffList() {
                     </td>
                     <td class="p-2"><span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-bold uppercase">${s.role}</span></td>
                     <td class="p-2 text-gray-500">${s.email}</td>
-                    <td class="p-2"><span class="text-green-500 font-bold text-xs">${s.status}</span></td>
+                    <td class="p-2"><span class="${statusClass} font-bold text-xs capitalize">${s.status}</span></td>
                 </tr>
             `;
             listBody.insertAdjacentHTML('beforeend', html);
         });
     } catch (e) {
         console.error("Load Staff Error:", e);
-        listBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-500">Error loading staff list.</td></tr>';
+        // listBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-500">Error loading staff list.</td></tr>';
     }
 }
 
@@ -234,14 +300,53 @@ async function handleCreateStaff(e) {
 }
 
 
+async function handleAddVideo(e) {
+    e.preventDefault();
+    const idInput = document.getElementById('videoId').value;
+    const title = document.getElementById('videoTitle').value;
+    const category = document.querySelector('#addVideoForm select').value;
+
+    if (!idInput || !title) {
+        alert("Please fill in all fields");
+        return;
+    }
+
+    // Parser (simple)
+    let finalId = idInput;
+    if (idInput.includes('v=')) finalId = idInput.split('v=')[1].split('&')[0];
+    else if (idInput.includes('youtu.be/')) finalId = idInput.split('youtu.be/')[1];
+
+    // Normalizing to full URL is best so parsers can rely on standard formats
+    const finalUrl = `https://www.youtube.com/watch?v=${finalId}`;
+
+    try {
+        await DataService.addVideo({
+            title: title,
+            url: finalUrl,
+            category: category,
+            creatorEmail: currentUser.email // Admin as creator
+        });
+        alert("Video added!");
+        document.getElementById('addVideoForm').reset();
+        await loadStats(); // Refresh stats
+    } catch (e) {
+        alert("Error: " + e.message);
+    }
+}
+
+
 // --- EVENT LISTENERS ---
 
 function setupEventListeners() {
     const staffForm = document.getElementById('createStaffForm');
     if (staffForm) staffForm.addEventListener('submit', handleCreateStaff);
+    const videoForm = document.getElementById('addVideoForm');
+    if (videoForm) videoForm.addEventListener('submit', handleAddVideo);
 
+    // Make global for onclick handlers
     window.switchView = switchView;
     window.switchDashboardMode = switchDashboardMode;
+    window.updateUserStatus = updateUserStatus; // Expose for user table
 }
 
 function setupKeyboardShortcuts() {

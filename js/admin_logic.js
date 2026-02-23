@@ -152,48 +152,34 @@ async function updateUserStatus(userId, status) {
 
 // --- VIEW NAVIGATION ---
 
-function switchView(viewName) {
-    const statsRow = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-4');
-    const splitViewRow = document.querySelector('.grid.grid-cols-1.lg\\:grid-cols-2');
-    const staffSection = document.getElementById('staff-section');
-
-    if (viewName === 'dashboard') {
-        if (statsRow) statsRow.classList.remove('hidden');
-        if (splitViewRow) splitViewRow.classList.remove('hidden');
-        if (staffSection) staffSection.classList.add('hidden');
-
-        setActiveNavLink('Dashboard');
-    } else if (viewName === 'staff') {
-        if (currentUser.role !== 'super_admin') {
-            alert("Access Denied: Super Admin only.");
-            return;
-        }
-        if (statsRow) statsRow.classList.add('hidden');
-        if (splitViewRow) splitViewRow.classList.add('hidden');
-        if (staffSection) staffSection.classList.remove('hidden');
-
-        setActiveNavLink('Manage Staff');
-        loadStaffList(); // Ensure list is fresh
+function switchView(tabName) {
+    if (tabName === 'staff' && (!currentUser || currentUser.role !== 'super_admin')) {
+        alert("Access Denied: Super Admin only.");
+        return;
     }
-}
 
-function setActiveNavLink(text) {
-    const links = document.querySelectorAll('nav a');
-    links.forEach(link => {
-        if (link.innerText.includes(text)) {
-            link.classList.add('bg-cubby-blue/20', 'text-cubby-blue', 'border-l-4', 'border-cubby-blue');
-            link.classList.remove('text-gray-400', 'hover:bg-gray-800');
-        } else {
-            // Only affect top-level nav items, simplistic check
-            if (!link.id && !link.onclick.toString().includes('switchDashboardMode')) {
-                // checking classes is safer
-                if (link.classList.contains('nav-item')) {
-                    link.classList.remove('bg-cubby-blue/20', 'text-cubby-blue', 'border-l-4', 'border-cubby-blue');
-                    link.classList.add('text-gray-400', 'hover:bg-gray-800');
-                }
-            }
-        }
+    // Hide all tabs
+    document.querySelectorAll('main > div[id^="tab-"]').forEach(div => div.classList.add('hidden'));
+
+    // Reset all nav
+    document.querySelectorAll('nav a.nav-item').forEach(a => {
+        a.classList.remove('bg-cubby-blue/20', 'text-cubby-blue', 'border-l-4', 'border-cubby-blue');
+        a.classList.add('text-gray-400', 'hover:bg-gray-800', 'hover:text-white', 'border-transparent', 'border-l-4');
     });
+
+    // Show target tab
+    const targetDiv = document.getElementById(`tab-${tabName}`);
+    const targetNav = document.getElementById(`nav-${tabName}`);
+
+    if (targetDiv) targetDiv.classList.remove('hidden');
+    if (targetNav) {
+        targetNav.classList.add('bg-cubby-blue/20', 'text-cubby-blue', 'border-l-4', 'border-cubby-blue');
+        targetNav.classList.remove('text-gray-400', 'hover:bg-gray-800', 'hover:text-white', 'border-transparent');
+    }
+
+    // Refresh data if needed
+    if (tabName === 'staff') loadStaffList();
+    if (tabName === 'users') loadUserList();
 }
 
 function switchDashboardMode(mode) {

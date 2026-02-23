@@ -17,6 +17,24 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("Add Child Form Loaded");
         // No special init needed yet
     }
+
+    // 3. Tab Switching
+    window.showTab = function (tabName) {
+        document.querySelectorAll('main > div[id^="tab-"]').forEach(div => div.classList.add('hidden'));
+        document.querySelectorAll('nav a.nav-item').forEach(a => {
+            a.classList.remove('bg-cubby-purple', 'text-white', 'shadow-md', 'shadow-purple-200', 'scale-105');
+            a.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:shadow-sm');
+        });
+
+        const targetDiv = document.getElementById(`tab-${tabName}`);
+        const targetNav = document.getElementById(`nav-${tabName}`);
+
+        if (targetDiv) targetDiv.classList.remove('hidden');
+        if (targetNav) {
+            targetNav.classList.add('bg-cubby-purple', 'text-white', 'shadow-md', 'shadow-purple-200', 'scale-105');
+            targetNav.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:shadow-sm');
+        }
+    };
 });
 
 /**

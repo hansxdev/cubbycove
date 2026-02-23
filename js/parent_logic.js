@@ -40,8 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Loads and calculates all dashboard statistics and lists
  */
-function loadDashboardData() {
-    const user = DataService.getCurrentUser();
+async function loadDashboardData() {
+    const user = await DataService.getCurrentUser();
     if (!user) return; // Should likely redirect to login
 
     // update Header Profile

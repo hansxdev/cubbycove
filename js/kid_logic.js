@@ -16,8 +16,6 @@ async function checkAuth() {
     try {
         if (typeof DataService === 'undefined') {
             console.error("DataService not loaded. Cannot check auth.");
-            // Determine if we are in a subfolder or root to know where to redirect
-            // Assuming we are in /kid/ folder
             window.location.href = '../index.html';
             return null;
         }
@@ -26,6 +24,20 @@ async function checkAuth() {
         if (!user) {
             console.warn("No active session. Redirecting to guest home.");
             window.location.href = '../index.html';
+            return null;
+        }
+
+        // Role guard: only kids/children may use these pages.
+        // Parents have their own dashboard, staff have theirs.
+        const allowedRoles = ['kid', 'child'];
+        if (!allowedRoles.includes(user.role)) {
+            console.warn(`Role '${user.role}' is not allowed on Kid pages. Redirecting.`);
+            // Redirect parents to parent dashboard, staff to staff portal
+            if (user.role === 'parent') {
+                window.location.href = '../parent/dashboard.html';
+            } else {
+                window.location.href = '../staff_access.html';
+            }
             return null;
         }
 
@@ -71,3 +83,13 @@ function updateHeader(user) {
 if (typeof DataService === 'undefined') {
     console.warn("CRITICAL: DataService.js is missing from this page!");
 }
+
+// Expose a proper logout that deletes the Appwrite session before navigating
+window.handleKidLogout = async function () {
+    try {
+        await DataService.logout();
+    } catch (e) {
+        console.warn("Logout error:", e);
+    }
+    window.location.href = '../index.html';
+};

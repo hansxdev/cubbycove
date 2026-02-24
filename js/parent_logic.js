@@ -4,9 +4,9 @@ let currentScreenTimeMode = 'daily';
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // 1. Dashboard Logic
-    const dashboardTitle = document.querySelector('h1');
-    if (dashboardTitle && dashboardTitle.innerText.includes('Dashboard')) {
+    // 1. Dashboard Logic — detect by a stable unique element
+    const dashboardMain = document.getElementById('tab-overview');
+    if (dashboardMain) {
         console.log("Parent Dashboard Loaded");
         loadDashboardData();
     }
@@ -17,6 +17,16 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("Add Child Form Loaded");
         // No special init needed yet
     }
+
+    // --- Global Parent Logout ---
+    window.handleParentLogout = async function () {
+        try {
+            await DataService.logout();
+        } catch (e) {
+            console.warn("Logout error:", e);
+        }
+        window.location.href = '../index.html';
+    };
 
     // 3. Tab Switching
     window.showTab = function (tabName) {

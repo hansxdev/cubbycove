@@ -179,89 +179,12 @@ document.addEventListener('DOMContentLoaded', () => {
         await checkLoginRequests();
     };
 
-    window.toggleNotifPanel = function () {
-        const panel = document.getElementById('notif-panel');
-        if (panel) panel.classList.toggle('hidden');
-    };
+    // ── All onclick handlers are top-level function declarations below the
+    // DOMContentLoaded block — see bottom of this file. ──────────────────────
 
-    window.openApprovalModal = function (requestId, childUsername, time, deviceInfo) {
-        _currentRequestId = requestId;
-        document.getElementById('modal-child-username').textContent = childUsername;
-        document.getElementById('modal-requested-at').textContent = time;
-        document.getElementById('modal-device').textContent = deviceInfo || 'Unknown Device';
+    // 3. Tab Switching — top-level function below
+    // 4. Sidebar Toggle — top-level function below
 
-        const modal = document.getElementById('approval-modal');
-        if (modal) modal.classList.remove('hidden');
-
-        // Close the notif panel
-        const panel = document.getElementById('notif-panel');
-        if (panel) panel.classList.add('hidden');
-    };
-
-    window.closeApprovalModal = function () {
-        const modal = document.getElementById('approval-modal');
-        if (modal) modal.classList.add('hidden');
-        _currentRequestId = null;
-    };
-
-    window.handleApproveRequest = async function () {
-        if (!_currentRequestId) return;
-        const approveBtn = document.getElementById('approve-btn');
-        const denyBtn = document.getElementById('deny-btn');
-        if (approveBtn) { approveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Approving...'; approveBtn.disabled = true; }
-        if (denyBtn) { denyBtn.disabled = true; }
-
-        try {
-            const child = await DataService.approveLoginRequest(_currentRequestId);
-            window.closeApprovalModal();
-            await checkLoginRequests(); // refresh badge
-            alert(`✅ ${child.name}'s login has been approved!`);
-        } catch (err) {
-            alert('Error approving: ' + err.message);
-            if (approveBtn) { approveBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Approve'; approveBtn.disabled = false; }
-            if (denyBtn) { denyBtn.disabled = false; }
-        }
-    };
-
-    window.handleDenyRequest = async function () {
-        if (!_currentRequestId) return;
-        try {
-            await DataService.denyLoginRequest(_currentRequestId);
-            window.closeApprovalModal();
-            await checkLoginRequests();
-            alert('Login request denied.');
-        } catch (err) {
-            alert('Error denying: ' + err.message);
-        }
-    };
-
-    // Inline approve/deny used by the unread section cards
-    window.inlineApprove = async function (requestId, btn) {
-        if (btn) { btn.textContent = '...'; btn.disabled = true; }
-        try {
-            const child = await DataService.approveLoginRequest(requestId);
-            await checkLoginRequests();
-            alert(`✅ ${child.name}'s login has been approved!`);
-        } catch (err) {
-            alert('Error approving: ' + err.message);
-            if (btn) { btn.textContent = 'Approve'; btn.disabled = false; }
-        }
-    };
-
-    window.inlineDeny = async function (requestId) {
-        try {
-            await DataService.denyLoginRequest(requestId);
-            await checkLoginRequests();
-        } catch (err) {
-            alert('Error denying: ' + err.message);
-        }
-    };
-
-    // 3. Tab Switching — delegated to top-level function below
-    // (window.showTab is a top-level function declaration so it's always available)
-
-    // 4. Sidebar Toggle — delegated to top-level function below
-    // (toggleSidebar is a top-level function declaration so it's always available)
 });
 
 // ── Tab Switching ─────────────────────────────────────────────────────────────
@@ -314,32 +237,100 @@ function toggleSidebar() {
     }
 }
 
+// ── Notification Panel & Approval Modal ──────────────────────────────────────
+// All declared at top level so onclick attrs work before DOMContentLoaded fires.
+
+let _currentRequestId = null; // shared by modal functions
+
+function toggleNotifPanel() {
+    const panel = document.getElementById('notif-panel');
+    if (panel) panel.classList.toggle('hidden');
+}
+
+function openApprovalModal(requestId, childUsername, time, deviceInfo) {
+    _currentRequestId = requestId;
+    const u = document.getElementById('modal-child-username');
+    const t = document.getElementById('modal-requested-at');
+    const d = document.getElementById('modal-device');
+    if (u) u.textContent = childUsername;
+    if (t) t.textContent = time;
+    if (d) d.textContent = deviceInfo || 'Unknown Device';
+    const modal = document.getElementById('approval-modal');
+    if (modal) modal.classList.remove('hidden');
+    const panel = document.getElementById('notif-panel');
+    if (panel) panel.classList.add('hidden');
+}
+
+function closeApprovalModal() {
+    const modal = document.getElementById('approval-modal');
+    if (modal) modal.classList.add('hidden');
+    _currentRequestId = null;
+}
+
+async function handleApproveRequest() {
+    if (!_currentRequestId) return;
+    const approveBtn = document.getElementById('approve-btn');
+    const denyBtn = document.getElementById('deny-btn');
+    if (approveBtn) { approveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Approving...'; approveBtn.disabled = true; }
+    if (denyBtn) { denyBtn.disabled = true; }
+    try {
+        const child = await DataService.approveLoginRequest(_currentRequestId);
+        closeApprovalModal();
+        if (_checkLoginRequestsRef) await _checkLoginRequestsRef();
+        alert('✅ ' + child.name + "'s login has been approved!");
+    } catch (err) {
+        alert('Error approving: ' + err.message);
+        if (approveBtn) { approveBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Approve'; approveBtn.disabled = false; }
+        if (denyBtn) { denyBtn.disabled = false; }
+    }
+}
+
+async function handleDenyRequest() {
+    if (!_currentRequestId) return;
+    try {
+        await DataService.denyLoginRequest(_currentRequestId);
+        closeApprovalModal();
+        if (_checkLoginRequestsRef) await _checkLoginRequestsRef();
+        alert('Login request denied.');
+    } catch (err) {
+        alert('Error denying: ' + err.message);
+    }
+}
+
+async function markNotifRead(notifId, el) {
+    await DataService.markNotificationRead(notifId);
+    const dot = el && el.querySelector('.bg-cubby-blue.rounded-full');
+    if (dot) dot.remove();
+    if (_checkLoginRequestsRef) await _checkLoginRequestsRef();
+}
+
 // ── Inline approve/deny handlers ─────────────────────────────────────────────
-// Defined OUTSIDE DOMContentLoaded so onclick attrs in dynamic HTML always
-// find them, regardless of any async errors inside the listener.
+// Defined at top level so onclick attrs in dynamic HTML always find them.
 
-let _checkLoginRequestsRef = null; // set by parent_logic after polling starts
+let _checkLoginRequestsRef = null; // set by DOMContentLoaded after polling starts
 
-window.inlineApprove = async function (requestId, btn) {
-    if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+async function inlineApprove(requestId, btn) {
+    if (btn) { btn.textContent = '...'; btn.disabled = true; }
     try {
         const child = await DataService.approveLoginRequest(requestId);
         if (_checkLoginRequestsRef) await _checkLoginRequestsRef();
-        alert('✅ ' + child.name + '\'s login has been approved!');
+        alert('✅ ' + child.name + "'s login has been approved!");
     } catch (err) {
         alert('Error approving: ' + err.message);
         if (btn) { btn.textContent = 'Approve'; btn.disabled = false; }
     }
-};
+}
 
-window.inlineDeny = async function (requestId) {
+
+async function inlineDeny(requestId) {
     try {
         await DataService.denyLoginRequest(requestId);
         if (_checkLoginRequestsRef) await _checkLoginRequestsRef();
     } catch (err) {
         alert('Error denying: ' + err.message);
     }
-};
+}
+
 
 /**
  * Loads and calculates all dashboard statistics and lists

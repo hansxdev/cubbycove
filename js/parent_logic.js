@@ -53,57 +53,83 @@ document.addEventListener('DOMContentLoaded', () => {
         const user = await DataService.getCurrentUser();
         if (!user || !user.email) return;
 
-        const [pending, handled] = await Promise.all([
+        const [pending, handled, buddyNotifs] = await Promise.all([
             DataService.getPendingLoginRequests(user.email),
-            DataService.getHandledLoginRequests(user.email)
+            DataService.getHandledLoginRequests(user.email),
+            DataService.getParentNotifications(user.$id, false) // all notifs (read + unread)
         ]);
 
-        // ── 1. Bell badge — count of pending (unread) ──────────────────────────
+        // ── 1. Bell badge — pending logins + unread buddy notifications ─────────
+        const unreadBuddyCount = buddyNotifs.filter(n => !n.isRead).length;
+        const totalBadge = pending.length + unreadBuddyCount;
         const badge = document.getElementById('notif-badge');
         if (badge) {
-            if (pending.length > 0) {
-                badge.textContent = pending.length;
+            if (totalBadge > 0) {
+                badge.textContent = totalBadge;
                 badge.classList.remove('hidden');
             } else {
                 badge.classList.add('hidden');
             }
         }
 
-        // ── 2. Bell panel — shows handled (history) ────────────────────────────
+        // ── 2. Bell panel — login history + buddy notifications ─────────────────
         const notifList = document.getElementById('notif-list');
         if (notifList) {
-            if (handled.length === 0) {
-                notifList.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">No recent activity.</p>';
-            } else {
-                notifList.innerHTML = handled.map(req => {
-                    const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const isApproved = req.status === 'approved';
-                    const statusIcon = isApproved
-                        ? '<i class="fa-solid fa-circle-check text-green-500 text-xs"></i>'
-                        : '<i class="fa-solid fa-circle-xmark text-red-400 text-xs"></i>';
-                    const statusLabel = isApproved ? 'Approved' : 'Denied';
-                    return `
+            // Build login history items
+            const loginItems = handled.map(req => {
+                const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const isApproved = req.status === 'approved';
+                return {
+                    ts: req.requestedAt,
+                    html: `
                         <div class="flex items-center gap-3 px-5 py-3">
                             <div class="w-9 h-9 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center shrink-0">
                                 <i class="fa-solid fa-child-reaching text-sm"></i>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="font-semibold text-gray-700 text-sm truncate">${req.childUsername}</p>
+                                <p class="font-semibold text-gray-700 text-sm truncate">${req.childUsername} — Login ${isApproved ? '✅' : '❌'}</p>
                                 <p class="text-xs text-gray-400">${time}</p>
                             </div>
-                            <span class="flex items-center gap-1 text-xs font-bold ${isApproved ? 'text-green-600' : 'text-red-400'}">
-                                ${statusIcon} ${statusLabel}
-                            </span>
-                        </div>
-                    `;
-                }).join('');
-            }
+                        </div>`
+                };
+            });
+
+            // Build buddy notification items
+            const buddyItems = buddyNotifs.map(notif => {
+                const time = new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const isBuddyReq = notif.type === 'buddy_request';
+                const icon = isBuddyReq ? 'fa-user-plus text-cubby-pink' : 'fa-handshake text-cubby-green';
+                const unreadDot = !notif.isRead ? '<span class="w-2 h-2 bg-cubby-blue rounded-full shrink-0"></span>' : '';
+                return {
+                    ts: notif.createdAt,
+                    html: `
+                        <div class="flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                             onclick="markNotifRead('${notif.$id}', this)">
+                            <div class="w-9 h-9 bg-gray-50 rounded-full flex items-center justify-center shrink-0 border border-gray-100">
+                                <i class="fa-solid ${icon} text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-gray-700 text-sm leading-snug">${notif.message}</p>
+                                <p class="text-xs text-gray-400">${time}</p>
+                            </div>
+                            ${unreadDot}
+                        </div>`
+                };
+            });
+
+            const allItems = [...loginItems, ...buddyItems]
+                .sort((a, b) => new Date(b.ts) - new Date(a.ts))
+                .slice(0, 20);
+
+            notifList.innerHTML = allItems.length > 0
+                ? allItems.map(i => i.html).join('')
+                : '<p class="text-sm text-gray-400 text-center py-8">No recent activity.</p>';
         }
 
-        // ── 3. Unread section — shows pending with inline approve/deny ──────────
+        // ── 3. Unread section — pending login requests with inline approve/deny ──
         const section = document.getElementById('unread-requests-section');
         const unreadList = document.getElementById('unread-requests-list');
-        const unreadBadge = document.getElementById('unread-count-badge');
+        const unreadCountBadge = document.getElementById('unread-count-badge');
 
         if (!section || !unreadList) return;
 
@@ -113,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         section.classList.remove('hidden');
-        if (unreadBadge) unreadBadge.textContent = `${pending.length} new`;
+        if (unreadCountBadge) unreadCountBadge.textContent = `${pending.length} new`;
 
         unreadList.innerHTML = pending.map(req => {
             const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -142,6 +168,16 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }).join('');
     }
+
+    // Mark a buddy notification as read (removes the blue dot)
+    window.markNotifRead = async function (notifId, el) {
+        await DataService.markNotificationRead(notifId);
+        // Remove the blue dot from this item
+        const dot = el?.querySelector('.bg-cubby-blue.rounded-full');
+        if (dot) dot.remove();
+        // Refresh badge count
+        await checkLoginRequests();
+    };
 
     window.toggleNotifPanel = function () {
         const panel = document.getElementById('notif-panel');

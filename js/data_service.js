@@ -531,6 +531,242 @@ const DataService = {
         ──────────────────────────────────────────────────────────────────────── */
     },
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // BUDDIES SYSTEM
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Generate and persist a short kid-friendly ID (e.g. #CC4F2A) for a child
+     * who doesn't have one yet. Returns the existing kidId if already set.
+     */
+    ensureKidId: async function (childId) {
+        const { databases, DB_ID } = this._getServices();
+        // Fetch the child doc
+        const child = await databases.getDocument(DB_ID, 'children', childId);
+        if (child.kidId) return child.kidId;
+
+        // Generate a new 6-char uppercase hex ID
+        const kidId = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0');
+        await databases.updateDocument(DB_ID, 'children', childId, { kidId });
+        return kidId;
+    },
+
+    /**
+     * Search for a child by username OR kidId (used in the Add Buddy search).
+     * Returns the child document or null.
+     */
+    searchChildByUsernameOrKidId: async function (query) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        const q = query.trim();
+
+        try {
+            // Try username first
+            const byUsername = await databases.listDocuments(DB_ID, 'children', [
+                Query.equal('username', q), Query.limit(1)
+            ]);
+            if (byUsername.documents.length > 0) return byUsername.documents[0];
+
+            // Try kidId (starts with #)
+            const byKidId = await databases.listDocuments(DB_ID, 'children', [
+                Query.equal('kidId', q.startsWith('#') ? q : '#' + q), Query.limit(1)
+            ]);
+            if (byKidId.documents.length > 0) return byKidId.documents[0];
+
+            return null;
+        } catch (e) {
+            console.warn('searchChild error:', e.message);
+            return null;
+        }
+    },
+
+    /**
+     * Send a buddy request from the current kid to another child.
+     * Also notifies the target child's parent.
+     */
+    sendBuddyRequest: async function (fromChild, toChild) {
+        const { databases, DB_ID } = this._getServices();
+        const { ID, Query } = Appwrite;
+
+        // Prevent self-add
+        if (fromChild.$id === toChild.$id) throw new Error("You can't add yourself as a buddy!");
+
+        // Check for existing request in either direction
+        const existing = await databases.listDocuments(DB_ID, 'buddies', [
+            Query.equal('fromChildId', fromChild.$id),
+            Query.equal('toChildId', toChild.$id)
+        ]);
+        if (existing.documents.length > 0) throw new Error('You already sent a buddy request to this kid!');
+
+        const reverseExisting = await databases.listDocuments(DB_ID, 'buddies', [
+            Query.equal('fromChildId', toChild.$id),
+            Query.equal('toChildId', fromChild.$id)
+        ]);
+        if (reverseExisting.documents.length > 0) throw new Error('This kid already sent you a buddy request! Check your requests.');
+
+        const now = new Date().toISOString();
+        const doc = await databases.createDocument(DB_ID, 'buddies', ID.unique(), {
+            fromChildId: fromChild.$id,
+            toChildId: toChild.$id,
+            fromUsername: fromChild.username || fromChild.name,
+            toUsername: toChild.username || toChild.name,
+            fromKidId: fromChild.kidId || '',
+            toKidId: toChild.kidId || '',
+            status: 'pending',
+            createdAt: now,
+            updatedAt: now
+        });
+
+        // Notify target child's parent
+        if (toChild.parentId) {
+            await this._createParentNotification(toChild.parentId, {
+                type: 'buddy_request',
+                childId: toChild.$id,
+                buddyId: fromChild.$id,
+                message: `${fromChild.username || fromChild.name} sent a buddy request to your child ${toChild.username || toChild.name}.`
+            });
+        }
+
+        return doc;
+    },
+
+    /**
+     * Get accepted buddies for a child.
+     */
+    getBuddies: async function (childId) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const [sent, received] = await Promise.all([
+                databases.listDocuments(DB_ID, 'buddies', [
+                    Query.equal('fromChildId', childId),
+                    Query.equal('status', 'accepted')
+                ]),
+                databases.listDocuments(DB_ID, 'buddies', [
+                    Query.equal('toChildId', childId),
+                    Query.equal('status', 'accepted')
+                ])
+            ]);
+            // Flatten into a unified list
+            const buddies = [
+                ...sent.documents.map(d => ({ buddyDocId: d.$id, childId: d.toChildId, username: d.toUsername, kidId: d.toKidId })),
+                ...received.documents.map(d => ({ buddyDocId: d.$id, childId: d.fromChildId, username: d.fromUsername, kidId: d.fromKidId }))
+            ];
+            return buddies;
+        } catch (e) {
+            console.warn('getBuddies error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Get incoming pending buddy requests for a child.
+     */
+    getIncomingBuddyRequests: async function (childId) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, 'buddies', [
+                Query.equal('toChildId', childId),
+                Query.equal('status', 'pending'),
+                Query.orderDesc('createdAt')
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('getIncomingBuddyRequests error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Accept a buddy request. Notifies both parents.
+     */
+    acceptBuddyRequest: async function (buddyDocId, acceptingChild) {
+        const { databases, DB_ID } = this._getServices();
+        const doc = await databases.getDocument(DB_ID, 'buddies', buddyDocId);
+
+        await databases.updateDocument(DB_ID, 'buddies', buddyDocId, {
+            status: 'accepted',
+            updatedAt: new Date().toISOString()
+        });
+
+        // Notify the accepting child's parent
+        if (acceptingChild.parentId) {
+            await this._createParentNotification(acceptingChild.parentId, {
+                type: 'buddy_accepted',
+                childId: acceptingChild.$id,
+                buddyId: doc.fromChildId,
+                message: `Your child ${acceptingChild.username || acceptingChild.name} accepted a buddy request from ${doc.fromUsername}.`
+            });
+        }
+
+        return doc;
+    },
+
+    /**
+     * Decline a buddy request.
+     */
+    declineBuddyRequest: async function (buddyDocId) {
+        const { databases, DB_ID } = this._getServices();
+        await databases.updateDocument(DB_ID, 'buddies', buddyDocId, {
+            status: 'declined',
+            updatedAt: new Date().toISOString()
+        });
+    },
+
+    /**
+     * Get unread parent notifications.
+     */
+    getParentNotifications: async function (parentId, unreadOnly = true) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const queries = [
+                Query.equal('parentId', parentId),
+                Query.orderDesc('createdAt'),
+                Query.limit(30)
+            ];
+            if (unreadOnly) queries.push(Query.equal('isRead', false));
+
+            const result = await databases.listDocuments(DB_ID, 'parent_notifications', queries);
+            return result.documents;
+        } catch (e) {
+            console.warn('getParentNotifications error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Mark a parent notification as read.
+     */
+    markNotificationRead: async function (notifId) {
+        const { databases, DB_ID } = this._getServices();
+        try {
+            await databases.updateDocument(DB_ID, 'parent_notifications', notifId, { isRead: true });
+        } catch (e) {
+            console.warn('markNotificationRead error:', e.message);
+        }
+    },
+
+    /** Internal helper — create a parent notification document. */
+    _createParentNotification: async function (parentId, data) {
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+        try {
+            await databases.createDocument(DB_ID, 'parent_notifications', ID.unique(), {
+                parentId,
+                type: data.type,
+                message: data.message,
+                childId: data.childId || '',
+                buddyId: data.buddyId || '',
+                isRead: false,
+                createdAt: new Date().toISOString()
+            });
+        } catch (e) {
+            console.warn('_createParentNotification error:', e.message);
+        }
+    },
+
     // --- VIDEO CONTENT METHODS ---
 
     addVideo: async function (videoData) {

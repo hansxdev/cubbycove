@@ -70,7 +70,8 @@
             <!-- TOP BAR -->
             <header
                 class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10 border-b border-gray-100">
-                <button class="text-gray-500 hover:text-gray-700 focus:outline-none lg:hidden">
+                <button onclick="toggleSidebar()" id="sidebar-toggle-btn"
+                    class="text-gray-500 hover:text-cubby-purple focus:outline-none transition-colors p-1 rounded-lg hover:bg-gray-100">
                     <i class="fa-solid fa-bars text-xl"></i>
                 </button>
                 <h2 class="text-lg font-bold text-gray-700" id="page-title">Dashboard Overview</h2>
@@ -83,17 +84,20 @@
                             class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white hidden flex items-center justify-center">0</span>
                     </button>
 
-                    <!-- Notification Dropdown Panel -->
+                    <!-- Notification History Panel — fixed so parent overflow-hidden never clips it -->
                     <div id="notif-panel"
-                        class="hidden absolute top-16 right-4 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                        class="hidden fixed top-16 right-4 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[9998] overflow-hidden">
                         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                            <h3 class="font-bold text-gray-800">Login Requests</h3>
+                            <div>
+                                <h3 class="font-bold text-gray-800">Recent Activity</h3>
+                                <p class="text-xs text-gray-400">Handled login requests</p>
+                            </div>
                             <button onclick="toggleNotifPanel()" class="text-gray-400 hover:text-gray-600">
                                 <i class="fa-solid fa-times"></i>
                             </button>
                         </div>
                         <div id="notif-list" class="max-h-80 overflow-y-auto divide-y divide-gray-50">
-                            <p class="text-sm text-gray-400 text-center py-8">No pending requests.</p>
+                            <p class="text-sm text-gray-400 text-center py-8">No recent activity.</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3 border-l pl-4 border-gray-200">
@@ -145,6 +149,26 @@
                             </div>
                             <h3 id="stat-active-profiles" class="text-2xl font-extrabold text-gray-800">0</h3>
                             <p class="text-sm text-gray-500">Active Child Profiles</p>
+                        </div>
+                    </div>
+
+                    <!-- UNREAD LOGIN REQUESTS — visible section, only shown when there are pending requests -->
+                    <div id="unread-requests-section" class="hidden">
+                        <div class="bg-white rounded-2xl shadow-sm border-2 border-orange-200 p-6">
+                            <div class="flex items-center gap-3 mb-5">
+                                <div
+                                    class="w-9 h-9 bg-orange-100 text-orange-500 rounded-xl flex items-center justify-center animate-pulse">
+                                    <i class="fa-solid fa-bell-ring"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="font-extrabold text-gray-800">New Login Requests</h3>
+                                    <p class="text-xs text-gray-400">Your child is waiting for permission to log in</p>
+                                </div>
+                                <span id="unread-count-badge"
+                                    class="text-xs font-bold bg-orange-500 text-white px-2.5 py-1 rounded-full">0
+                                    new</span>
+                            </div>
+                            <div id="unread-requests-list" class="space-y-3"></div>
                         </div>
                     </div>
 

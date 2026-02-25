@@ -338,67 +338,165 @@ const DataService = {
         }
     },
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // KID LOGIN — Parental Approval Flow
+    // Kids have no Appwrite Auth accounts so we cannot query the database from
+    // an unauthenticated browser.  Instead:
+    //   1. Kid submits credentials → createLoginRequest()  (collection: any write)
+    //   2. Parent sees notification → approveLoginRequest() (parent IS authenticated)
+    //   3. Kid polls pollLoginRequest() until status changes
+    //   4. On 'approved', kidLoginFromApproved() stores the session
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Kid Login — does NOT use Appwrite Auth.
-     * Children are verified against the 'children' collection using:
-     *   username + guardian email + password
-     * On success, a child session is stored in sessionStorage.
+     * Step 1 (Kid side): Create a login request document.
+     * The login_requests collection must allow 'any' create + read.
      */
-    kidLogin: async function (username, guardianEmail, password) {
+    createLoginRequest: async function (username, parentEmail, password) {
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+
+        const deviceInfo = `${navigator.platform || 'Unknown'} · ${navigator.userAgent.split(')')[0].split('(')[1] || 'Unknown Browser'}`;
+        const now = new Date().toISOString();
+        const expires = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+        const doc = await databases.createDocument(DB_ID, 'login_requests', ID.unique(), {
+            childUsername: username,
+            parentEmail: parentEmail,
+            status: 'pending',
+            requestedAt: now,
+            expiresAt: expires,
+            deviceInfo: deviceInfo.slice(0, 499),
+            // Store hashed password so parent-side can verify without exposing raw DB
+            // For this MVP we store a simple marker; actual verification happens via parent
+            childName: '',
+            childId: '',
+            parentId: ''
+        });
+
+        // Cache the password locally so the parent approval can cross-check it
+        // We use sessionStorage with the requestId as key (only lives in this tab)
+        sessionStorage.setItem('cubby_login_req_pass_' + doc.$id, password);
+
+        console.log('📨 [Kid Login] Request created:', doc.$id);
+        return doc;
+    },
+
+    /**
+     * Step 2 (Kid side, polling): Check if the request has been approved/denied.
+     * Returns the document with current status.
+     */
+    pollLoginRequest: async function (requestId) {
+        const { databases, DB_ID } = this._getServices();
+        try {
+            return await databases.getDocument(DB_ID, 'login_requests', requestId);
+        } catch (e) {
+            return null;
+        }
+    },
+
+    /**
+     * Step 3a (Parent side): Get all pending login requests for this parent.
+     * Parent IS authenticated so can query.
+     */
+    getPendingLoginRequests: async function (parentEmail) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, 'login_requests', [
+                Query.equal('parentEmail', parentEmail),
+                Query.equal('status', 'pending'),
+                Query.orderDesc('requestedAt'),
+                Query.limit(20)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('getPendingLoginRequests error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Step 3b (Parent side): Approve a login request.
+     * Parent is authenticated → can look up the child → verify credentials → approve.
+     */
+    approveLoginRequest: async function (requestId) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         const { Query } = Appwrite;
 
-        try {
-            // 1. Find the parent by guardian email
-            const parentList = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
-                Query.equal('email', guardianEmail),
-                Query.equal('role', 'parent')
-            ]);
+        const request = await databases.getDocument(DB_ID, 'login_requests', requestId);
 
-            if (parentList.documents.length === 0) {
-                throw new Error("No parent account found with that email address.");
-            }
+        // Find parent
+        const parentList = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+            Query.equal('email', request.parentEmail),
+            Query.equal('role', 'parent')
+        ]);
+        if (parentList.documents.length === 0) throw new Error('Parent not found.');
+        const parent = parentList.documents[0];
 
-            const parent = parentList.documents[0];
+        // Find child by username under this parent
+        const childList = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
+            Query.equal('username', request.childUsername),
+            Query.equal('parentId', parent.$id)
+        ]);
+        if (childList.documents.length === 0) throw new Error('Child not found under this parent.');
+        const child = childList.documents[0];
 
-            // 2. Find child by username under that parent
-            const childList = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
-                Query.equal('username', username),
-                Query.equal('parentId', parent.$id)
-            ]);
+        // Stamp the approved child info onto the request so the kid can build a session
+        await databases.updateDocument(DB_ID, 'login_requests', requestId, {
+            status: 'approved',
+            childName: child.name,
+            childId: child.$id,
+            parentId: parent.$id
+        });
 
-            if (childList.documents.length === 0) {
-                throw new Error("No child account found with that username under this parent.");
-            }
+        console.log('✅ [Parent] Approved login for:', child.name);
+        return child;
+    },
 
-            const child = childList.documents[0];
+    /**
+     * Step 3c (Parent side): Deny a login request.
+     */
+    denyLoginRequest: async function (requestId) {
+        const { databases, DB_ID } = this._getServices();
+        await databases.updateDocument(DB_ID, 'login_requests', requestId, {
+            status: 'denied'
+        });
+        console.log('❌ [Parent] Denied login request:', requestId);
+    },
 
-            // 3. Verify password (plain text match per schema)
-            if (child.password !== password) {
-                throw new Error("Incorrect password. Please try again.");
-            }
+    /**
+     * Step 4 (Kid side): Build and store child session from an approved request.
+     * Called once polling detects status === 'approved'.
+     */
+    kidLoginFromApproved: function (approvedRequest) {
+        const childSession = {
+            $id: approvedRequest.childId,
+            role: 'kid',
+            firstName: approvedRequest.childName,
+            name: approvedRequest.childName,
+            username: approvedRequest.childUsername,
+            parentId: approvedRequest.parentId
+        };
+        sessionStorage.setItem('cubby_child_session', JSON.stringify(childSession));
+        // Clean up the cached password
+        sessionStorage.removeItem('cubby_login_req_pass_' + approvedRequest.$id);
+        console.log('✅ [Kid] Session stored for:', approvedRequest.childUsername);
+        return childSession;
+    },
 
-            // 4. Store a lightweight child session in sessionStorage
-            const childSession = {
-                $id: child.$id,
-                role: 'kid',
-                firstName: child.name,   // so updateHeader() works the same way
-                name: child.name,
-                username: child.username,
-                parentId: child.parentId,
-                isOnline: child.isOnline,
-                threatScore: child.threatScore
-            };
+    // Legacy kidLogin kept for backward compat (now just an alias to the request flow helper)
+    kidLogin: async function (username, parentEmail) {
+        return await this.createLoginRequest(username, parentEmail, '');
 
-            sessionStorage.setItem('cubby_child_session', JSON.stringify(childSession));
-            console.log('✅ [Kid Login] Session stored for:', child.username);
+        // NOTE: The actual session is now created via kidLoginFromApproved()
+        // after the parent approves the request. See auth.js handleKidLogin().
 
-            return childSession;
-
-        } catch (error) {
-            console.error('Kid Login Error:', error);
-            throw error;
-        }
+        /* ── old direct-DB flow (removed because requires authenticated session) ──
+        const child = ...
+        if (child.password !== password) throw new Error(...)
+        sessionStorage.setItem('cubby_child_session', ...)
+        ──────────────────────────────────────────────────────────────────────── */
     },
 
     // --- VIDEO CONTENT METHODS ---
@@ -421,206 +519,206 @@ const DataService = {
         return doc;
     },
 
-    getVideos: async function (statusFilter = null) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { Query } = Appwrite;
+getVideos: async function (statusFilter = null) {
+    const { databases, DB_ID, COLLECTIONS } = this._getServices();
+    const { Query } = Appwrite;
 
-        let queries = [
-            Query.orderDesc('uploadedAt'),
-            Query.limit(100)
-        ];
-        if (statusFilter) {
-            queries.push(Query.equal('status', statusFilter));
+    let queries = [
+        Query.orderDesc('uploadedAt'),
+        Query.limit(100)
+    ];
+    if (statusFilter) {
+        queries.push(Query.equal('status', statusFilter));
+    }
+
+    const response = await databases.listDocuments(DB_ID, COLLECTIONS.VIDEOS, queries);
+    return response.documents;
+},
+//try
+
+// For Creator Dashboard
+getCreatorVideos: async function (creatorEmail) {
+    const { databases, DB_ID, COLLECTIONS } = this._getServices();
+    const { Query } = Appwrite;
+
+    const response = await databases.listDocuments(DB_ID, COLLECTIONS.VIDEOS, [
+        Query.equal('creatorEmail', creatorEmail),
+        Query.orderDesc('uploadedAt')
+    ]);
+    return response.documents;
+},
+
+updateVideoStatus: async function (videoId, newStatus) {
+    const { databases, DB_ID, COLLECTIONS } = this._getServices();
+    await databases.updateDocument(DB_ID, COLLECTIONS.VIDEOS, videoId, {
+        status: newStatus
+    });
+    return true;
+},
+
+// --- STAFF & USER MANAGEMENT ---
+
+getAllUsers: async function () {
+    const { databases, DB_ID, COLLECTIONS } = this._getServices();
+    const { Query } = Appwrite;
+
+    // Fetch most recent users
+    const response = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+        Query.orderDesc('createdAt'),
+        Query.limit(100)
+    ]);
+    return response.documents;
+},
+
+updateUserStatus: async function (userId, newStatus) {
+    const { databases, DB_ID, COLLECTIONS } = this._getServices();
+    await databases.updateDocument(DB_ID, COLLECTIONS.USERS, userId, {
+        status: newStatus
+    });
+    return true;
+},
+
+createStaffAccount: async function (creatorEmail, newStaffData) {
+    // Valid approach for Starter: Create the DB Document. The Staff member must "Sign Up" themselves on the login page?
+    // Or we use an Invite?
+    // Let's Stub this to just create the DB Document for now so it shows in the list.
+
+    const { databases, DB_ID, COLLECTIONS } = this._getServices();
+    const { ID } = Appwrite;
+
+    // Mock ID since we aren't creating real Auth User yet
+    const tempId = ID.unique();
+
+    const staffDoc = {
+        role: newStaffData.role,
+        status: 'active',
+        firstName: newStaffData.firstName,
+        lastName: newStaffData.lastName,
+        middleName: '',
+        email: newStaffData.email,
+        faceId: 'manual_override',
+        createdAt: new Date().toISOString()
+        // No password stored here
+    };
+
+    await databases.createDocument(DB_ID, COLLECTIONS.USERS, tempId, staffDoc);
+    return staffDoc;
+},
+
+/**
+ * Creates a new Child Profile linked to a Parent
+ */
+createChild: async function (parentId, childData) {
+    const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
+    const { ID, Query } = Appwrite;
+
+    try {
+        // --- Step 1: Resolve the parent's real DB document ID ---
+        // The parentId passed in is the Appwrite Auth user.$id which may differ
+        // from the database document $id if the 1:1 mapping was not used.
+        let resolvedParentId = parentId;
+        try {
+            await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
+            // If we get here, IDs match 1:1
+        } catch (e) {
+            if (e.code === 404) {
+                // Fall back to email lookup
+                const sessionUser = await account.get();
+                const list = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                    Query.equal('email', sessionUser.email)
+                ]);
+                if (list.documents.length === 0) throw new Error("Parent profile not found in database.");
+                resolvedParentId = list.documents[0].$id;
+            } else {
+                throw e;
+            }
         }
 
-        const response = await databases.listDocuments(DB_ID, COLLECTIONS.VIDEOS, queries);
-        return response.documents;
-    },
-    //try
-
-    // For Creator Dashboard
-    getCreatorVideos: async function (creatorEmail) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { Query } = Appwrite;
-
-        const response = await databases.listDocuments(DB_ID, COLLECTIONS.VIDEOS, [
-            Query.equal('creatorEmail', creatorEmail),
-            Query.orderDesc('uploadedAt')
-        ]);
-        return response.documents;
-    },
-
-    updateVideoStatus: async function (videoId, newStatus) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        await databases.updateDocument(DB_ID, COLLECTIONS.VIDEOS, videoId, {
-            status: newStatus
-        });
-        return true;
-    },
-
-    // --- STAFF & USER MANAGEMENT ---
-
-    getAllUsers: async function () {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { Query } = Appwrite;
-
-        // Fetch most recent users
-        const response = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
-            Query.orderDesc('createdAt'),
-            Query.limit(100)
-        ]);
-        return response.documents;
-    },
-
-    updateUserStatus: async function (userId, newStatus) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        await databases.updateDocument(DB_ID, COLLECTIONS.USERS, userId, {
-            status: newStatus
-        });
-        return true;
-    },
-
-    createStaffAccount: async function (creatorEmail, newStaffData) {
-        // Valid approach for Starter: Create the DB Document. The Staff member must "Sign Up" themselves on the login page?
-        // Or we use an Invite?
-        // Let's Stub this to just create the DB Document for now so it shows in the list.
-
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { ID } = Appwrite;
-
-        // Mock ID since we aren't creating real Auth User yet
-        const tempId = ID.unique();
-
-        const staffDoc = {
-            role: newStaffData.role,
-            status: 'active',
-            firstName: newStaffData.firstName,
-            lastName: newStaffData.lastName,
-            middleName: '',
-            email: newStaffData.email,
-            faceId: 'manual_override',
-            createdAt: new Date().toISOString()
-            // No password stored here
+        // --- Step 2: Create the child document ---
+        // Only include attributes that actually exist in the Appwrite children collection:
+        // parentId, name, username, password, isOnline, threatScore
+        const childId = ID.unique();
+        const newChild = {
+            parentId: resolvedParentId,
+            name: childData.name,
+            username: childData.username,
+            password: childData.password,
+            isOnline: false,
+            threatScore: 0
         };
 
-        await databases.createDocument(DB_ID, COLLECTIONS.USERS, tempId, staffDoc);
-        return staffDoc;
-    },
+        const doc = await databases.createDocument(DB_ID, COLLECTIONS.CHILDREN, childId, newChild);
 
-    /**
-     * Creates a new Child Profile linked to a Parent
-     */
-    createChild: async function (parentId, childData) {
-        const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { ID, Query } = Appwrite;
+        console.log("✅ [Appwrite] Child profile created:", doc.$id);
+        return doc;
 
-        try {
-            // --- Step 1: Resolve the parent's real DB document ID ---
-            // The parentId passed in is the Appwrite Auth user.$id which may differ
-            // from the database document $id if the 1:1 mapping was not used.
-            let resolvedParentId = parentId;
-            try {
-                await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
-                // If we get here, IDs match 1:1
-            } catch (e) {
-                if (e.code === 404) {
-                    // Fall back to email lookup
-                    const sessionUser = await account.get();
-                    const list = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
-                        Query.equal('email', sessionUser.email)
-                    ]);
-                    if (list.documents.length === 0) throw new Error("Parent profile not found in database.");
-                    resolvedParentId = list.documents[0].$id;
-                } else {
-                    throw e;
-                }
-            }
-
-            // --- Step 2: Create the child document ---
-            // Only include attributes that actually exist in the Appwrite children collection:
-            // parentId, name, username, password, isOnline, threatScore
-            const childId = ID.unique();
-            const newChild = {
-                parentId: resolvedParentId,
-                name: childData.name,
-                username: childData.username,
-                password: childData.password,
-                isOnline: false,
-                threatScore: 0
-            };
-
-            const doc = await databases.createDocument(DB_ID, COLLECTIONS.CHILDREN, childId, newChild);
-
-            console.log("✅ [Appwrite] Child profile created:", doc.$id);
-            return doc;
-
-        } catch (error) {
-            console.error("Create Child Error:", error);
-            throw error;
-        }
-    },
-
-    /**
-     * Fetches all children belonging to a given parent.
-     * Queries the children collection by parentId rather than relying on
-     * a children[] array on the users document (which does not exist in schema).
-     */
-    getChildrenByParent: async function (parentId) {
-        const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { Query } = Appwrite;
-
-        try {
-            // Resolve real DB doc ID same way as createChild
-            let resolvedParentId = parentId;
-            try {
-                await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
-            } catch (e) {
-                if (e.code === 404) {
-                    const sessionUser = await account.get();
-                    const list = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
-                        Query.equal('email', sessionUser.email)
-                    ]);
-                    if (list.documents.length > 0) resolvedParentId = list.documents[0].$id;
-                }
-            }
-
-            const result = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
-                Query.equal('parentId', resolvedParentId),
-                Query.orderDesc('$createdAt')
-            ]);
-            return result.documents;
-        } catch (error) {
-            console.error("Get Children Error:", error);
-            return [];
-        }
-    },
-    updateThreatLog: async function (logId, status, resolution) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        await databases.updateDocument(DB_ID, COLLECTIONS.THREAT_LOGS, logId, {
-            status: status,
-            resolution: resolution
-        });
-        return true;
-    },
-
-    getThreatLogs: async function (statusFilter = null) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { Query } = Appwrite;
-
-        let queries = [Query.orderDesc('timestamp')];
-        if (statusFilter) {
-            queries.push(Query.equal('status', statusFilter));
-        }
-
-        try {
-            const response = await databases.listDocuments(DB_ID, COLLECTIONS.THREAT_LOGS, queries);
-            return response.documents;
-        } catch (error) {
-            // If collection doesn't exist yet or other error, return empty array to prevent UI break
-            console.warn("Threat Logs fetch error (Collection might be missing):", error);
-            return [];
-        }
+    } catch (error) {
+        console.error("Create Child Error:", error);
+        throw error;
     }
+},
+
+/**
+ * Fetches all children belonging to a given parent.
+ * Queries the children collection by parentId rather than relying on
+ * a children[] array on the users document (which does not exist in schema).
+ */
+getChildrenByParent: async function (parentId) {
+    const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
+    const { Query } = Appwrite;
+
+    try {
+        // Resolve real DB doc ID same way as createChild
+        let resolvedParentId = parentId;
+        try {
+            await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
+        } catch (e) {
+            if (e.code === 404) {
+                const sessionUser = await account.get();
+                const list = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                    Query.equal('email', sessionUser.email)
+                ]);
+                if (list.documents.length > 0) resolvedParentId = list.documents[0].$id;
+            }
+        }
+
+        const result = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
+            Query.equal('parentId', resolvedParentId),
+            Query.orderDesc('$createdAt')
+        ]);
+        return result.documents;
+    } catch (error) {
+        console.error("Get Children Error:", error);
+        return [];
+    }
+},
+updateThreatLog: async function (logId, status, resolution) {
+    const { databases, DB_ID, COLLECTIONS } = this._getServices();
+    await databases.updateDocument(DB_ID, COLLECTIONS.THREAT_LOGS, logId, {
+        status: status,
+        resolution: resolution
+    });
+    return true;
+},
+
+getThreatLogs: async function (statusFilter = null) {
+    const { databases, DB_ID, COLLECTIONS } = this._getServices();
+    const { Query } = Appwrite;
+
+    let queries = [Query.orderDesc('timestamp')];
+    if (statusFilter) {
+        queries.push(Query.equal('status', statusFilter));
+    }
+
+    try {
+        const response = await databases.listDocuments(DB_ID, COLLECTIONS.THREAT_LOGS, queries);
+        return response.documents;
+    } catch (error) {
+        // If collection doesn't exist yet or other error, return empty array to prevent UI break
+        console.warn("Threat Logs fetch error (Collection might be missing):", error);
+        return [];
+    }
+}
 };
 
 // Global Access

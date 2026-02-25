@@ -20,12 +20,130 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Global Parent Logout ---
     window.handleParentLogout = async function () {
+        stopNotifPolling();
         try {
             await DataService.logout();
         } catch (e) {
             console.warn("Logout error:", e);
         }
         window.location.href = '../index.html';
+    };
+
+    // --- Start notification polling when on the dashboard ---
+    if (dashboardMain) {
+        startNotifPolling();
+    }
+
+    // ── Notification Panel ───────────────────────────────────────────────────
+
+    let _currentRequestId = null;
+    let _notifPollInterval = null;
+
+    function startNotifPolling() {
+        checkLoginRequests(); // run once immediately
+        _notifPollInterval = setInterval(checkLoginRequests, 10000); // then every 10s
+    }
+
+    function stopNotifPolling() {
+        clearInterval(_notifPollInterval);
+    }
+
+    async function checkLoginRequests() {
+        const user = await DataService.getCurrentUser();
+        if (!user || !user.email) return;
+
+        const requests = await DataService.getPendingLoginRequests(user.email);
+
+        const badge = document.getElementById('notif-badge');
+        const list = document.getElementById('notif-list');
+
+        if (!badge || !list) return;
+
+        if (requests.length === 0) {
+            badge.classList.add('hidden');
+            list.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">No pending requests.</p>';
+            return;
+        }
+
+        // Show badge with count
+        badge.textContent = requests.length;
+        badge.classList.remove('hidden');
+
+        // Render list items
+        list.innerHTML = requests.map(req => {
+            const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return `
+                <div class="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                     onclick="openApprovalModal('${req.$id}', '${req.childUsername}', '${time}', ${JSON.stringify(req.deviceInfo || 'Unknown')})">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-cubby-blue/10 text-cubby-blue rounded-full flex items-center justify-center">
+                            <i class="fa-solid fa-child-reaching"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-gray-800 text-sm">${req.childUsername} wants to log in</p>
+                            <p class="text-xs text-gray-400">${time}</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+                </div>
+            `;
+        }).join('');
+    }
+
+    window.toggleNotifPanel = function () {
+        const panel = document.getElementById('notif-panel');
+        if (panel) panel.classList.toggle('hidden');
+    };
+
+    window.openApprovalModal = function (requestId, childUsername, time, deviceInfo) {
+        _currentRequestId = requestId;
+        document.getElementById('modal-child-username').textContent = childUsername;
+        document.getElementById('modal-requested-at').textContent = time;
+        document.getElementById('modal-device').textContent = deviceInfo || 'Unknown Device';
+
+        const modal = document.getElementById('approval-modal');
+        if (modal) modal.classList.remove('hidden');
+
+        // Close the notif panel
+        const panel = document.getElementById('notif-panel');
+        if (panel) panel.classList.add('hidden');
+    };
+
+    window.closeApprovalModal = function () {
+        const modal = document.getElementById('approval-modal');
+        if (modal) modal.classList.add('hidden');
+        _currentRequestId = null;
+    };
+
+    window.handleApproveRequest = async function () {
+        if (!_currentRequestId) return;
+        const approveBtn = document.getElementById('approve-btn');
+        const denyBtn = document.getElementById('deny-btn');
+        if (approveBtn) { approveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Approving...'; approveBtn.disabled = true; }
+        if (denyBtn) { denyBtn.disabled = true; }
+
+        try {
+            const child = await DataService.approveLoginRequest(_currentRequestId);
+            window.closeApprovalModal();
+            await checkLoginRequests(); // refresh badge
+            alert(`✅ ${child.name}'s login has been approved!`);
+        } catch (err) {
+            alert('Error approving: ' + err.message);
+            if (approveBtn) { approveBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Approve'; approveBtn.disabled = false; }
+            if (denyBtn) { denyBtn.disabled = false; }
+        }
+    };
+
+    window.handleDenyRequest = async function () {
+        if (!_currentRequestId) return;
+        try {
+            await DataService.denyLoginRequest(_currentRequestId);
+            window.closeApprovalModal();
+            await checkLoginRequests();
+            alert('Login request denied.');
+        } catch (err) {
+            alert('Error denying: ' + err.message);
+        }
     };
 
     // 3. Tab Switching

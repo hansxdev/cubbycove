@@ -75,11 +75,27 @@
                 </button>
                 <h2 class="text-lg font-bold text-gray-700" id="page-title">Dashboard Overview</h2>
                 <div class="flex items-center gap-4">
-                    <button class="relative p-2 text-gray-400 hover:text-cubby-purple transition-colors">
+                    <!-- Notification Bell -->
+                    <button id="notif-bell-btn" onclick="toggleNotifPanel()"
+                        class="relative p-2 text-gray-400 hover:text-cubby-purple transition-colors">
                         <i class="fa-solid fa-bell text-xl"></i>
-                        <span
-                            class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                        <span id="notif-badge"
+                            class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white hidden flex items-center justify-center">0</span>
                     </button>
+
+                    <!-- Notification Dropdown Panel -->
+                    <div id="notif-panel"
+                        class="hidden absolute top-16 right-4 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                            <h3 class="font-bold text-gray-800">Login Requests</h3>
+                            <button onclick="toggleNotifPanel()" class="text-gray-400 hover:text-gray-600">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="notif-list" class="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                            <p class="text-sm text-gray-400 text-center py-8">No pending requests.</p>
+                        </div>
+                    </div>
                     <div class="flex items-center gap-3 border-l pl-4 border-gray-200">
                         <div class="text-right hidden sm:block">
                             <p id="userName" class="text-sm font-bold text-gray-700">Guest Parent</p>
@@ -238,6 +254,51 @@
                 </div>
 
             </main>
+        </div>
+    </div>
+
+    <!-- CHILD LOGIN APPROVAL MODAL -->
+    <div id="approval-modal"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
+            <button onclick="closeApprovalModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">
+                <i class="fa-solid fa-times"></i>
+            </button>
+            <div class="text-center mb-6">
+                <div
+                    class="w-16 h-16 bg-cubby-blue/10 text-cubby-blue rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                    <i class="fa-solid fa-child-reaching"></i>
+                </div>
+                <h3 class="text-xl font-extrabold text-gray-800 mb-1">Login Request</h3>
+                <p class="text-sm text-gray-500">Your child wants to log in. Approve to let them in.</p>
+            </div>
+
+            <div class="bg-gray-50 rounded-2xl p-5 space-y-3 mb-6 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-500 font-semibold">Child Username</span>
+                    <span id="modal-child-username" class="font-bold text-gray-800">—</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 font-semibold">Requested At</span>
+                    <span id="modal-requested-at" class="font-bold text-gray-800">—</span>
+                </div>
+                <div class="flex justify-between items-start gap-4">
+                    <span class="text-gray-500 font-semibold shrink-0">Device</span>
+                    <span id="modal-device" class="font-bold text-gray-800 text-right text-xs break-all">—</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="deny-btn" onclick="handleDenyRequest()"
+                    class="flex-1 py-3 border-2 border-red-200 text-red-500 font-bold rounded-xl hover:bg-red-50 transition-all">
+                    <i class="fa-solid fa-times mr-1"></i> Deny
+                </button>
+                <button id="approve-btn" onclick="handleApproveRequest()"
+                    class="flex-1 py-3 bg-cubby-blue hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-md">
+                    <i class="fa-solid fa-check mr-1"></i> Approve
+                </button>
+            </div>
         </div>
     </div>
 

@@ -61,7 +61,7 @@ async function handleParentLogin() {
     }
 }
 
-// 3. Kid Login Function
+// 3. Kid Login Function — Parental Approval Flow
 async function handleKidLogin() {
     const username = document.getElementById('kidUsername')?.value?.trim();
     const guardianEmail = document.getElementById('guardianEmail')?.value?.trim();
@@ -73,22 +73,91 @@ async function handleKidLogin() {
     }
 
     const btn = document.querySelector('#form-kid button[type="submit"]');
-    const originalText = btn ? btn.innerHTML : "LET'S PLAY! 🚀";
-    if (btn) {
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking...';
-        btn.disabled = true;
+    const form = document.getElementById('form-kid');
+    const originalHTML = form ? form.innerHTML : '';
+
+    // Show "waiting for approval" screen inside the form area
+    if (form) {
+        form.innerHTML = `
+            <div class="text-center py-6 space-y-6" id="waiting-screen">
+                <div class="w-20 h-20 bg-cubby-blue/10 rounded-full flex items-center justify-center mx-auto animate-pulse">
+                    <i class="fa-solid fa-shield-halved text-cubby-blue text-4xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-extrabold text-gray-800 mb-1">Waiting for Parent Approval</h3>
+                    <p class="text-sm text-gray-500">A notification has been sent to your parent.<br>Ask them to check their dashboard!</p>
+                </div>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-700 font-semibold">
+                    <i class="fa-solid fa-clock mr-2"></i> Request expires in <span id="req-countdown">5:00</span>
+                </div>
+                <button onclick="cancelKidLogin()" class="text-xs text-gray-400 hover:text-red-500 underline transition-colors">
+                    Cancel request
+                </button>
+            </div>
+        `;
     }
 
+    let request;
     try {
-        await DataService.kidLogin(username, guardianEmail, password);
-        window.location.href = 'kid/home_logged_in.html';
-    } catch (error) {
-        alert(error.message || 'Login failed. Please try again.');
-        if (btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
+        request = await DataService.createLoginRequest(username, guardianEmail, password);
+    } catch (err) {
+        if (form) form.innerHTML = originalHTML;
+        alert('Could not send login request: ' + err.message);
+        return;
     }
+
+    // Countdown timer (5 min)
+    const expiresAt = new Date(request.expiresAt).getTime();
+    const countdownEl = () => document.getElementById('req-countdown');
+    const timerInterval = setInterval(() => {
+        const remaining = Math.max(0, expiresAt - Date.now());
+        const m = Math.floor(remaining / 60000);
+        const s = Math.floor((remaining % 60000) / 1000);
+        if (countdownEl()) countdownEl().textContent = `${m}:${s.toString().padStart(2, '0')}`;
+        if (remaining === 0) clearInterval(timerInterval);
+    }, 1000);
+
+    // Poll every 3 seconds
+    window._kidLoginPollStopped = false;
+    window.cancelKidLogin = function () {
+        window._kidLoginPollStopped = true;
+        clearInterval(timerInterval);
+        if (form) form.innerHTML = originalHTML;
+    };
+
+    const poll = async () => {
+        if (window._kidLoginPollStopped) return;
+
+        const updated = await DataService.pollLoginRequest(request.$id);
+        if (!updated) return; // network error, try again next tick
+
+        if (updated.status === 'approved') {
+            clearInterval(timerInterval);
+            DataService.kidLoginFromApproved(updated);
+            window.location.href = 'kid/home_logged_in.html';
+            return;
+        }
+
+        if (updated.status === 'denied') {
+            clearInterval(timerInterval);
+            if (form) form.innerHTML = originalHTML;
+            alert('Your parent denied this login request. Please ask them to try again.');
+            return;
+        }
+
+        // Check expiry
+        if (new Date(updated.expiresAt).getTime() < Date.now()) {
+            clearInterval(timerInterval);
+            if (form) form.innerHTML = originalHTML;
+            alert('Login request expired after 5 minutes. Please try again.');
+            return;
+        }
+
+        // Still pending — poll again in 3s
+        setTimeout(poll, 3000);
+    };
+
+    setTimeout(poll, 3000); // start first poll after 3s
 }
 
 // 4. Staff Login Handler (Async)

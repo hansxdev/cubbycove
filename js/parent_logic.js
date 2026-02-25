@@ -257,63 +257,62 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 3. Tab Switching
-    window.showTab = function (tabName) {
-        document.querySelectorAll('main > div[id^="tab-"]').forEach(div => div.classList.add('hidden'));
-        document.querySelectorAll('nav a.nav-item').forEach(a => {
-            a.classList.remove('bg-cubby-purple', 'text-white', 'shadow-md', 'shadow-purple-200', 'scale-105');
-            a.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:shadow-sm');
-        });
+    // 3. Tab Switching — delegated to top-level function below
+    // (window.showTab is a top-level function declaration so it's always available)
 
-        const targetDiv = document.getElementById(`tab-${tabName}`);
-        const targetNav = document.getElementById(`nav-${tabName}`);
-
-        if (targetDiv) targetDiv.classList.remove('hidden');
-        if (targetNav) {
-            targetNav.classList.add('bg-cubby-purple', 'text-white', 'shadow-md', 'shadow-purple-200', 'scale-105');
-            targetNav.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:shadow-sm');
-        }
-    };
-
-    // 4. Sidebar Toggle — collapses sidebar to icon-only rail
-    let _sidebarCollapsed = false;
-
-    window.toggleSidebar = function () {
-        const sidebar = document.getElementById('sidebar');
-        const btn = document.getElementById('sidebar-toggle-btn');
-        if (!sidebar) return;
-
-        _sidebarCollapsed = !_sidebarCollapsed;
-
-        if (_sidebarCollapsed) {
-            sidebar.classList.replace('w-64', 'w-16');
-
-            // Hide all text labels (wrapped in .nav-label in HTML)
-            sidebar.querySelectorAll('.nav-label').forEach(el => el.classList.add('hidden'));
-
-            // Center nav links & logout button
-            sidebar.querySelectorAll('.nav-item, div.p-4 button').forEach(el => {
-                el.classList.remove('gap-3', 'px-4');
-                el.classList.add('justify-center', 'px-0');
-            });
-
-            if (btn) btn.querySelector('i').className = 'fa-solid fa-chevron-right text-xl';
-        } else {
-            sidebar.classList.replace('w-16', 'w-64');
-
-            // Restore text labels
-            sidebar.querySelectorAll('.nav-label').forEach(el => el.classList.remove('hidden'));
-
-            // Restore spacing
-            sidebar.querySelectorAll('.nav-item, div.p-4 button').forEach(el => {
-                el.classList.add('gap-3', 'px-4');
-                el.classList.remove('justify-center', 'px-0');
-            });
-
-            if (btn) btn.querySelector('i').className = 'fa-solid fa-bars text-xl';
-        }
-    };
+    // 4. Sidebar Toggle — delegated to top-level function below
+    // (toggleSidebar is a top-level function declaration so it's always available)
 });
+
+// ── Tab Switching ─────────────────────────────────────────────────────────────
+function showTab(tabName) {
+    const titles = { overview: 'Dashboard Overview', kids: 'My Kids', activity: 'Activity Log', settings: 'Settings' };
+    const titleEl = document.getElementById('page-title');
+    if (titleEl && titles[tabName]) titleEl.textContent = titles[tabName];
+
+    document.querySelectorAll('main > div[id^="tab-"]').forEach(div => div.classList.add('hidden'));
+    document.querySelectorAll('nav a.nav-item').forEach(a => {
+        a.classList.remove('bg-cubby-purple', 'text-white', 'shadow-md', 'shadow-purple-200', 'scale-105');
+        a.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:shadow-sm');
+    });
+
+    const targetDiv = document.getElementById('tab-' + tabName);
+    const targetNav = document.getElementById('nav-' + tabName);
+    if (targetDiv) targetDiv.classList.remove('hidden');
+    if (targetNav) {
+        targetNav.classList.add('bg-cubby-purple', 'text-white', 'shadow-md', 'shadow-purple-200', 'scale-105');
+        targetNav.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:shadow-sm');
+    }
+}
+
+// ── Sidebar Toggle ────────────────────────────────────────────────────────────
+let _sidebarCollapsed = false;
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const btn = document.getElementById('sidebar-toggle-btn');
+    if (!sidebar) return;
+
+    _sidebarCollapsed = !_sidebarCollapsed;
+
+    if (_sidebarCollapsed) {
+        sidebar.classList.replace('w-64', 'w-16');
+        sidebar.querySelectorAll('.nav-label').forEach(el => el.classList.add('hidden'));
+        sidebar.querySelectorAll('.nav-item, div.p-4 button').forEach(el => {
+            el.classList.remove('gap-3', 'px-4');
+            el.classList.add('justify-center', 'px-0');
+        });
+        if (btn) btn.querySelector('i').className = 'fa-solid fa-chevron-right text-xl';
+    } else {
+        sidebar.classList.replace('w-16', 'w-64');
+        sidebar.querySelectorAll('.nav-label').forEach(el => el.classList.remove('hidden'));
+        sidebar.querySelectorAll('.nav-item, div.p-4 button').forEach(el => {
+            el.classList.add('gap-3', 'px-4');
+            el.classList.remove('justify-center', 'px-0');
+        });
+        if (btn) btn.querySelector('i').className = 'fa-solid fa-bars text-xl';
+    }
+}
 
 // ── Inline approve/deny handlers ─────────────────────────────────────────────
 // Defined OUTSIDE DOMContentLoaded so onclick attrs in dynamic HTML always

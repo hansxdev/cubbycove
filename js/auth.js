@@ -61,11 +61,34 @@ async function handleParentLogin() {
     }
 }
 
-// 3. Kid Login Function (Still Mocked or Todo)
-function handleKidLogin() {
-    const user = document.getElementById('kidUsername') ? document.getElementById('kidUsername').value : null;
-    // TODO: Implement Kid Login in DataService
-    alert("Kid login is currently under development. Please use Parent login to manage kids.");
+// 3. Kid Login Function
+async function handleKidLogin() {
+    const username = document.getElementById('kidUsername')?.value?.trim();
+    const guardianEmail = document.getElementById('guardianEmail')?.value?.trim();
+    const password = document.getElementById('kidPassword')?.value;
+
+    if (!username || !guardianEmail || !password) {
+        alert("Please fill in your username, parent's email, and your password.");
+        return;
+    }
+
+    const btn = document.querySelector('#form-kid button[type="submit"]');
+    const originalText = btn ? btn.innerHTML : "LET'S PLAY! 🚀";
+    if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking...';
+        btn.disabled = true;
+    }
+
+    try {
+        await DataService.kidLogin(username, guardianEmail, password);
+        window.location.href = 'kid/home_logged_in.html';
+    } catch (error) {
+        alert(error.message || 'Login failed. Please try again.');
+        if (btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
 }
 
 // 4. Staff Login Handler (Async)

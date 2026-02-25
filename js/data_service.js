@@ -283,6 +283,17 @@ const DataService = {
     },
 
     getCurrentUser: async function () {
+        // --- 1. Check for a child session first (kids log in via sessionStorage) ---
+        const childSession = sessionStorage.getItem('cubby_child_session');
+        if (childSession) {
+            try {
+                return JSON.parse(childSession);
+            } catch (e) {
+                sessionStorage.removeItem('cubby_child_session'); // Corrupted, clear it
+            }
+        }
+
+        // --- 2. Fall back to Appwrite session (parents, staff) ---
         const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
         try {
             const sessionUser = await account.get();
@@ -316,12 +327,77 @@ const DataService = {
     },
 
     logout: async function () {
+        // Always clear child session
+        sessionStorage.removeItem('cubby_child_session');
+
         const { account } = this._getServices();
         try {
             await account.deleteSession('current');
-            // Redirect happens in UI
         } catch (error) {
             console.warn("Logout failed (maybe already logged out)", error);
+        }
+    },
+
+    /**
+     * Kid Login — does NOT use Appwrite Auth.
+     * Children are verified against the 'children' collection using:
+     *   username + guardian email + password
+     * On success, a child session is stored in sessionStorage.
+     */
+    kidLogin: async function (username, guardianEmail, password) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+
+        try {
+            // 1. Find the parent by guardian email
+            const parentList = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                Query.equal('email', guardianEmail),
+                Query.equal('role', 'parent')
+            ]);
+
+            if (parentList.documents.length === 0) {
+                throw new Error("No parent account found with that email address.");
+            }
+
+            const parent = parentList.documents[0];
+
+            // 2. Find child by username under that parent
+            const childList = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
+                Query.equal('username', username),
+                Query.equal('parentId', parent.$id)
+            ]);
+
+            if (childList.documents.length === 0) {
+                throw new Error("No child account found with that username under this parent.");
+            }
+
+            const child = childList.documents[0];
+
+            // 3. Verify password (plain text match per schema)
+            if (child.password !== password) {
+                throw new Error("Incorrect password. Please try again.");
+            }
+
+            // 4. Store a lightweight child session in sessionStorage
+            const childSession = {
+                $id: child.$id,
+                role: 'kid',
+                firstName: child.name,   // so updateHeader() works the same way
+                name: child.name,
+                username: child.username,
+                parentId: child.parentId,
+                isOnline: child.isOnline,
+                threatScore: child.threatScore
+            };
+
+            sessionStorage.setItem('cubby_child_session', JSON.stringify(childSession));
+            console.log('✅ [Kid Login] Session stored for:', child.username);
+
+            return childSession;
+
+        } catch (error) {
+            console.error('Kid Login Error:', error);
+            throw error;
         }
     },
 

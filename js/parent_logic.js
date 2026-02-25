@@ -64,7 +64,7 @@ async function loadDashboardData() {
     }
 
     // --- 1. Render Stats & Kids ---
-    renderKidsAndStats(user);
+    await renderKidsAndStats(user);
 
     // --- 2. Render Activity ---
     renderActivityLogs(user);
@@ -73,28 +73,31 @@ async function loadDashboardData() {
     changeTimeMode('daily'); // Default
 }
 
-function renderKidsAndStats(user) {
+async function renderKidsAndStats(user) {
     const kidsListEl = document.getElementById('kids-list-container');
     const activeStatEl = document.getElementById('stat-active-profiles');
     const riskStatEl = document.getElementById('stat-risk-detected');
 
-    if (!user.children || user.children.length === 0) {
+    // Query children from the database by parentId
+    const children = await DataService.getChildrenByParent(user.$id);
+
+    if (!children || children.length === 0) {
         // KEEP EMPTY STATE (Already in HTML)
         if (activeStatEl) activeStatEl.innerText = "0";
         if (riskStatEl) riskStatEl.innerText = "Safe";
         return;
     }
 
-    // Clear Empty Details
+    // Clear Empty State
     if (kidsListEl) kidsListEl.innerHTML = '';
 
     let activeCount = 0;
     let totalThreats = 0;
 
-    user.children.forEach(child => {
+    children.forEach(child => {
         // Count Stats
         if (child.isOnline) activeCount++;
-        if (child.threatsDetected) totalThreats += child.threatsDetected;
+        if (child.threatScore) totalThreats += child.threatScore;
 
         // Render Card
         const statusColor = child.isOnline ? 'bg-green-500' : 'bg-gray-400';
@@ -103,7 +106,7 @@ function renderKidsAndStats(user) {
 
         const html = `
             <div class="flex items-center p-4 bg-gray-50 rounded-xl border ${borderClass} hover:border-cubby-purple transition-colors cursor-pointer group">
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${child.avatar || child.name}"
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(child.username || child.name)}"
                     class="w-12 h-12 rounded-full bg-white border-2 border-white shadow-sm mr-4">
                 <div class="flex-1">
                     <h4 class="font-bold text-gray-800 group-hover:text-cubby-purple transition-colors">${child.name}</h4>
@@ -163,17 +166,10 @@ function changeTimeMode(mode) {
     });
 
     // Calculate Screen Time based on Mode (Mock Logic)
-    // In real app, we filter user.screenTimeLogs based on date range
     let timeText = "0m";
-    if (mode === 'daily') timeText = "45m"; // Mock for Demo
-    if (mode === 'weekly') timeText = "5h 12m"; // Mock for Demo
-    if (mode === 'monthly') timeText = "22h"; // Mock for Demo
-
-    // Allow overriding if no kids
-    const user = DataService.getCurrentUser();
-    if (!user || !user.children || user.children.length === 0) {
-        timeText = "0m";
-    }
+    if (mode === 'daily') timeText = "45m";
+    if (mode === 'weekly') timeText = "5h 12m";
+    if (mode === 'monthly') timeText = "22h";
 
     const statEl = document.getElementById('stat-screen-time');
     if (statEl) statEl.innerText = timeText;

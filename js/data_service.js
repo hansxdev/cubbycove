@@ -435,49 +435,87 @@ const DataService = {
      * Creates a new Child Profile linked to a Parent
      */
     createChild: async function (parentId, childData) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { ID } = Appwrite;
+        const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID, Query } = Appwrite;
 
         try {
-            // 1. Create Child Document
+            // --- Step 1: Resolve the parent's real DB document ID ---
+            // The parentId passed in is the Appwrite Auth user.$id which may differ
+            // from the database document $id if the 1:1 mapping was not used.
+            let resolvedParentId = parentId;
+            try {
+                await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
+                // If we get here, IDs match 1:1
+            } catch (e) {
+                if (e.code === 404) {
+                    // Fall back to email lookup
+                    const sessionUser = await account.get();
+                    const list = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                        Query.equal('email', sessionUser.email)
+                    ]);
+                    if (list.documents.length === 0) throw new Error("Parent profile not found in database.");
+                    resolvedParentId = list.documents[0].$id;
+                } else {
+                    throw e;
+                }
+            }
+
+            // --- Step 2: Create the child document ---
+            // Only include attributes that actually exist in the Appwrite children collection:
+            // parentId, name, username, password, isOnline, threatScore
             const childId = ID.unique();
             const newChild = {
-                parentId: parentId,
+                parentId: resolvedParentId,
                 name: childData.name,
                 username: childData.username,
-                password: childData.password, // Stored as plain text per schema (but validated)
-                avatar: childData.avatar,
-                allowChat: childData.allowChat,
-                allowGames: childData.allowGames,
+                password: childData.password,
                 isOnline: false,
-                threatsDetected: 0,
-                status: 'active'
+                threatScore: 0
             };
 
             const doc = await databases.createDocument(DB_ID, COLLECTIONS.CHILDREN, childId, newChild);
 
-            // 2. Update Parent's Children Array (if schema requires it)
-            // Fetch parent first to get existing children
-            const parentDoc = await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
-            let currentChildren = parentDoc.children || [];
-
-            // Ensure it is an array of strings
-            if (typeof currentChildren === 'string') {
-                // Try parsing if it's JSON string, otherwise array
-                try { currentChildren = JSON.parse(currentChildren); } catch (e) { currentChildren = []; }
-            }
-
-            currentChildren.push(childId);
-
-            await databases.updateDocument(DB_ID, COLLECTIONS.USERS, parentId, {
-                children: currentChildren
-            });
-
+            console.log("✅ [Appwrite] Child profile created:", doc.$id);
             return doc;
 
         } catch (error) {
             console.error("Create Child Error:", error);
             throw error;
+        }
+    },
+
+    /**
+     * Fetches all children belonging to a given parent.
+     * Queries the children collection by parentId rather than relying on
+     * a children[] array on the users document (which does not exist in schema).
+     */
+    getChildrenByParent: async function (parentId) {
+        const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+
+        try {
+            // Resolve real DB doc ID same way as createChild
+            let resolvedParentId = parentId;
+            try {
+                await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
+            } catch (e) {
+                if (e.code === 404) {
+                    const sessionUser = await account.get();
+                    const list = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                        Query.equal('email', sessionUser.email)
+                    ]);
+                    if (list.documents.length > 0) resolvedParentId = list.documents[0].$id;
+                }
+            }
+
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
+                Query.equal('parentId', resolvedParentId),
+                Query.orderDesc('$createdAt')
+            ]);
+            return result.documents;
+        } catch (error) {
+            console.error("Get Children Error:", error);
+            return [];
         }
     },
     updateThreatLog: async function (logId, status, resolution) {

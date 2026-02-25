@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Start notification polling when on the dashboard ---
     if (dashboardMain) {
         startNotifPolling();
+        _checkLoginRequestsRef = checkLoginRequests; // expose for inline buttons
     }
 
     // ── Notification Panel ───────────────────────────────────────────────────
@@ -238,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 4. Sidebar Toggle
+    // 4. Sidebar Toggle — collapses sidebar to icon-only rail
     let _sidebarCollapsed = false;
 
     window.toggleSidebar = function () {
@@ -249,62 +250,61 @@ document.addEventListener('DOMContentLoaded', () => {
         _sidebarCollapsed = !_sidebarCollapsed;
 
         if (_sidebarCollapsed) {
-            // Collapse to icon-only rail (w-16)
-            sidebar.classList.remove('w-64');
-            sidebar.classList.add('w-16');
+            sidebar.classList.replace('w-64', 'w-16');
 
-            // Hide text labels inside nav links
-            sidebar.querySelectorAll('nav a span, nav a').forEach(el => {
-                if (el.tagName === 'A') {
-                    el.classList.remove('gap-3', 'px-4');
-                    el.classList.add('justify-center', 'px-0');
-                }
+            // Hide all text labels (wrapped in .nav-label in HTML)
+            sidebar.querySelectorAll('.nav-label').forEach(el => el.classList.add('hidden'));
+
+            // Center nav links & logout button
+            sidebar.querySelectorAll('.nav-item, div.p-4 button').forEach(el => {
+                el.classList.remove('gap-3', 'px-4');
+                el.classList.add('justify-center', 'px-0');
             });
-            sidebar.querySelectorAll('nav a > :not(i)').forEach(el => el.classList.add('hidden'));
 
-            // Hide logo text
-            const logoText = sidebar.querySelector('span.text-xl');
-            if (logoText) logoText.classList.add('hidden');
-
-            // Hide logout text
-            const logoutText = sidebar.querySelector('button > :not(i)');
-            if (logoutText) logoutText.classList.add('hidden');
-            const logoutBtn = sidebar.querySelector('div.p-4 button');
-            if (logoutBtn) {
-                logoutBtn.classList.remove('gap-3');
-                logoutBtn.classList.add('justify-center');
-            }
-
-            // Swap icon
             if (btn) btn.querySelector('i').className = 'fa-solid fa-chevron-right text-xl';
-
         } else {
-            // Expand back to full width
-            sidebar.classList.add('w-64');
-            sidebar.classList.remove('w-16');
+            sidebar.classList.replace('w-16', 'w-64');
 
-            sidebar.querySelectorAll('nav a').forEach(el => {
+            // Restore text labels
+            sidebar.querySelectorAll('.nav-label').forEach(el => el.classList.remove('hidden'));
+
+            // Restore spacing
+            sidebar.querySelectorAll('.nav-item, div.p-4 button').forEach(el => {
                 el.classList.add('gap-3', 'px-4');
                 el.classList.remove('justify-center', 'px-0');
             });
-            sidebar.querySelectorAll('nav a > :not(i)').forEach(el => el.classList.remove('hidden'));
 
-            const logoText = sidebar.querySelector('span.text-xl');
-            if (logoText) logoText.classList.remove('hidden');
-
-            const logoutText = sidebar.querySelector('div.p-4 button > :not(i)');
-            if (logoutText) logoutText.classList.remove('hidden');
-            const logoutBtn = sidebar.querySelector('div.p-4 button');
-            if (logoutBtn) {
-                logoutBtn.classList.add('gap-3');
-                logoutBtn.classList.remove('justify-center');
-            }
-
-            // Restore icon
             if (btn) btn.querySelector('i').className = 'fa-solid fa-bars text-xl';
         }
     };
 });
+
+// ── Inline approve/deny handlers ─────────────────────────────────────────────
+// Defined OUTSIDE DOMContentLoaded so onclick attrs in dynamic HTML always
+// find them, regardless of any async errors inside the listener.
+
+let _checkLoginRequestsRef = null; // set by parent_logic after polling starts
+
+window.inlineApprove = async function (requestId, btn) {
+    if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+    try {
+        const child = await DataService.approveLoginRequest(requestId);
+        if (_checkLoginRequestsRef) await _checkLoginRequestsRef();
+        alert('✅ ' + child.name + '\'s login has been approved!');
+    } catch (err) {
+        alert('Error approving: ' + err.message);
+        if (btn) { btn.textContent = 'Approve'; btn.disabled = false; }
+    }
+};
+
+window.inlineDeny = async function (requestId) {
+    try {
+        await DataService.denyLoginRequest(requestId);
+        if (_checkLoginRequestsRef) await _checkLoginRequestsRef();
+    } catch (err) {
+        alert('Error denying: ' + err.message);
+    }
+};
 
 /**
  * Loads and calculates all dashboard statistics and lists

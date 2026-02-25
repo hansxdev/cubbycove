@@ -28,12 +28,12 @@
         <!-- SIDEBAR NAVIGATION -->
         <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 transition-all duration-300"
             id="sidebar">
-            <div class="h-16 flex items-center justify-center border-b border-gray-100">
+            <div class="h-16 flex items-center justify-center border-b border-gray-100 overflow-hidden">
                 <div class="flex items-center gap-2">
-                    <div class="bg-cubby-purple text-white p-1.5 rounded-lg">
+                    <div class="bg-cubby-purple text-white p-1.5 rounded-lg flex-shrink-0">
                         <i class="fa-solid fa-shield-cat text-lg"></i>
                     </div>
-                    <span class="text-xl font-extrabold text-gray-800">Parent<span
+                    <span class="nav-label text-xl font-extrabold text-gray-800 whitespace-nowrap">Parent<span
                             class="text-cubby-purple">Hub</span></span>
                 </div>
             </div>
@@ -41,26 +41,31 @@
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
                 <a href="#" onclick="showTab('overview')" id="nav-overview"
                     class="nav-item flex items-center gap-3 px-4 py-3 bg-cubby-purple text-white rounded-xl font-bold shadow-md shadow-purple-200 transform scale-105 transition-all">
-                    <i class="fa-solid fa-chart-pie w-6 text-center"></i> Overview
+                    <i class="fa-solid fa-chart-pie w-6 text-center"></i>
+                    <span class="nav-label">Overview</span>
                 </a>
                 <a href="#" onclick="showTab('kids')" id="nav-kids"
                     class="nav-item flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:shadow-sm rounded-xl font-semibold transition-all">
-                    <i class="fa-solid fa-users w-6 text-center"></i> My Kids
+                    <i class="fa-solid fa-users w-6 text-center"></i>
+                    <span class="nav-label">My Kids</span>
                 </a>
                 <a href="#" onclick="showTab('activity')" id="nav-activity"
                     class="nav-item flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:shadow-sm rounded-xl font-semibold transition-all">
-                    <i class="fa-solid fa-clock-rotate-left w-6 text-center"></i> Activity Log
+                    <i class="fa-solid fa-clock-rotate-left w-6 text-center"></i>
+                    <span class="nav-label">Activity Log</span>
                 </a>
                 <a href="#" onclick="showTab('settings')" id="nav-settings"
                     class="nav-item flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:shadow-sm rounded-xl font-semibold transition-all">
-                    <i class="fa-solid fa-sliders w-6 text-center"></i> Settings
+                    <i class="fa-solid fa-sliders w-6 text-center"></i>
+                    <span class="nav-label">Settings</span>
                 </a>
             </nav>
 
             <div class="p-4 border-t border-gray-100 mt-4">
                 <button onclick="handleParentLogout()"
                     class="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl font-semibold transition-all">
-                    <i class="fa-solid fa-right-from-bracket w-6 text-center"></i> Log Out
+                    <i class="fa-solid fa-right-from-bracket w-6 text-center"></i>
+                    <span class="nav-label">Log Out</span>
                 </button>
             </div>
         </aside>

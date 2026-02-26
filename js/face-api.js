@@ -11,11 +11,11 @@ const uploadPlaceholder = document.getElementById('upload-placeholder');
 const uploadPreview = document.getElementById('upload-preview');
 
 if (idUpload) {
-    idUpload.addEventListener('change', function(e) {
+    idUpload.addEventListener('change', function (e) {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 if (previewImg) previewImg.src = e.target.result;
                 if (uploadPlaceholder) uploadPlaceholder.classList.add('hidden');
                 if (uploadPreview) uploadPreview.classList.remove('hidden');
@@ -49,20 +49,19 @@ function captureFace() {
     if (!captureBtn) return;
 
     // Visual Feedback
-    const originalText = captureBtn.innerHTML;
     captureBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
     captureBtn.disabled = true;
 
-    // Simulate AI Processing
+    // Small delay so the user sees the spinner, then submit
+    // NOTE: We do NOT stop the webcam here — the stream must stay alive
+    // so captureWebcamBlob() can draw the current frame onto the canvas.
+    // The webcam will be stopped inside submitRegistration() after the
+    // frame has been captured.
     setTimeout(() => {
-        stopWebcam();
-        
-        // Call the main registration submit function
         if (typeof window.submitRegistration === 'function') {
             window.submitRegistration();
         } else {
             alert("Error: Logic file not connected.");
         }
-
-    }, 1500); 
+    }, 500);
 }

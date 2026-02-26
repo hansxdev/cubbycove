@@ -113,8 +113,14 @@
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Create Password</label>
                         <!-- ADDED ID: password -->
-                        <input type="password" id="password" required
-                            class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+                        <div class="relative">
+                            <input type="password" id="password" required
+                                class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+                            <button type="button" onclick="togglePassword('password', 'reg-eye-1')"
+                                class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-cubby-blue transition-colors">
+                                <i id="reg-eye-1" class="fa-regular fa-eye text-sm"></i>
+                            </button>
+                        </div>
 
                         <!-- Password Requirements List -->
                         <ul id="password-requirements" class="mt-2 text-xs space-y-1 text-gray-500 font-semibold pl-1">
@@ -132,8 +138,14 @@
                     <!-- ADDED: Confirm Password field (Required for logic) -->
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Confirm Password</label>
-                        <input type="password" id="confirmPassword" required
-                            class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+                        <div class="relative">
+                            <input type="password" id="confirmPassword" required
+                                class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+                            <button type="button" onclick="togglePassword('confirmPassword', 'reg-eye-2')"
+                                class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-cubby-blue transition-colors">
+                                <i id="reg-eye-2" class="fa-regular fa-eye text-sm"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <button type="button" onclick="nextStep(2)"
@@ -230,6 +242,22 @@
     <script src="../js/face-api.js"></script>
     <script src="../js/password_toggle.js"></script>
     <script src="../js/register_logic.js"></script>
+    <script>
+        function togglePassword(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (!input || !icon) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    </script>
 </body>
 
 </html>

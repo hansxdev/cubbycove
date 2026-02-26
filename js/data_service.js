@@ -148,6 +148,7 @@ const DataService = {
                 lastName: parentData.lastName,
                 email: parentData.email,
                 faceId: parentData.faceId || null,
+                idDocumentId: parentData.idDocumentId || null,
                 createdAt: new Date().toISOString()
             };
 

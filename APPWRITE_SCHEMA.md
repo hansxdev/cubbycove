@@ -23,7 +23,9 @@ Stores additional user information linked to the Appwrite Auth Account.
 | `firstName` | String | Yes | User's first name. |
 | `middleName` | String | No | User's middle name. |
 | `lastName` | String | Yes | User's last name. |
-| `faceId` | String | No | JSON string/ID of the face descriptor. |
+| `email` | String | Yes | User's email address. |
+| `faceId` | String | No | Appwrite Storage file ID of the face selfie captured during registration. |
+| `idDocumentId` | String | No | Appwrite Storage file ID of the uploaded government ID document. |
 | `children` | String[] | No | Array of Child IDs linked to this parent. |
 | `createdAt` | Datetime | Yes | Account creation timestamp. |
 
@@ -81,7 +83,19 @@ Logs for check-in/check-out events.
 ---
 
 ### 3. Storage Buckets
-* Unchanged from previous version *
+
+#### Bucket: `parent_docs`
+Stores uploaded images from the parent registration flow.
+
+| Setting | Value |
+| :--- | :--- |
+| **Bucket ID** | `parent_docs` (set as `BUCKET_PARENT_DOCS` in `appwrite_config.js`) |
+| **Allowed File Types** | `image/jpeg`, `image/png`, `image/webp` |
+| **Max File Size** | 5 MB |
+| **Permissions** | `create`: `any` (so unlogged-in registrants can upload); `read`: `users` (so logged-in staff can view) |
+
+> ⚠️ **Required Setup**: You must create this bucket in your Appwrite Console → Storage → Create Bucket.
+> Use the bucket ID `parent_docs` (or update the `BUCKET_PARENT_DOCS` constant in `appwrite_config.js` to match).
 
 ### 4. Logic & Functions
 - `onUserCreate`: Trigger to create a `Users` document.

@@ -847,6 +847,48 @@ const DataService = {
         return true;
     },
 
+    /**
+     * Deletes the ID document and face selfie files from Appwrite Storage
+     * after a parent has been verified (approved or rejected).
+     * Also clears the file ID fields in the user's database record.
+     */
+    cleanupParentVerificationFiles: async function (userId) {
+        const { storage, databases, DB_ID, COLLECTIONS, BUCKET_PARENT_DOCS } = this._getServices();
+        const bucketId = BUCKET_PARENT_DOCS || 'parent_docs';
+
+        try {
+            // 1. Fetch the user document to get the stored file IDs
+            const user = await databases.getDocument(DB_ID, COLLECTIONS.USERS, userId);
+
+            const filesToDelete = [];
+            if (user.faceId && !user.faceId.startsWith('mock_')) {
+                filesToDelete.push(user.faceId);
+            }
+            if (user.idDocumentId) {
+                filesToDelete.push(user.idDocumentId);
+            }
+
+            // 2. Delete files from Storage (individually, ignore errors if already gone)
+            await Promise.allSettled(
+                filesToDelete.map(fileId => storage.deleteFile(bucketId, fileId))
+            );
+
+            console.log(`🗑️ [Storage] Deleted ${filesToDelete.length} verification file(s) for user ${userId}`);
+
+            // 3. Clear the file ID fields in the database (avoid dead references)
+            await databases.updateDocument(DB_ID, COLLECTIONS.USERS, userId, {
+                faceId: null,
+                idDocumentId: null
+            });
+
+            console.log('✅ [DB] Cleared faceId and idDocumentId from user record.');
+
+        } catch (err) {
+            // Non-fatal: log but don't throw — the status update already succeeded
+            console.warn('⚠️ [Cleanup] Could not fully clean up verification files:', err.message);
+        }
+    },
+
     createStaffAccount: async function (creatorEmail, newStaffData) {
         // Valid approach for Starter: Create the DB Document. The Staff member must "Sign Up" themselves on the login page?
         // Or we use an Invite?

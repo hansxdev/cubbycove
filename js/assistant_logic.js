@@ -210,12 +210,18 @@ async function loadPendingParents() {
 }
 
 async function updateParentStatus(userId, status) {
-    if (confirm(`Set status to ${status}?`)) {
+    const action = status === 'active' ? 'Approve' : 'Reject';
+    if (confirm(`${action} this parent? Their verification photos will be deleted after.`)) {
         try {
+            // 1. Update the status (approve or reject)
             await DataService.updateUserStatus(userId, status);
-            // Reload to refresh list
+
+            // 2. Delete their ID photo & face selfie from Storage (frees up space + protects privacy)
+            await DataService.cleanupParentVerificationFiles(userId);
+
+            // 3. Reload UI
             loadPendingParents();
-            loadOverviewStats(); // Update counters
+            loadOverviewStats();
         } catch (error) {
             alert("Error updating status: " + error.message);
         }

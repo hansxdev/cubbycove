@@ -270,6 +270,10 @@ const DataService = {
                 await account.deleteSession('current'); // Logout immediately
                 throw new Error("Account pending approval. Please wait for verification.");
             }
+            if (doc.role === 'parent' && doc.status === 'rejected') {
+                await account.deleteSession('current');
+                throw new Error("Your registration was not approved. Please contact support if you believe this is an error.");
+            }
             if (doc.status === 'suspended' || doc.status === 'banned') {
                 await account.deleteSession('current');
                 throw new Error("Account suspended. Contact support.");

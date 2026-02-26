@@ -258,8 +258,10 @@ async function submitRegistration() {
         }
 
         // --- Capture & Upload Face Selfie ---
+        // Stop the webcam AFTER capturing the frame (stream must be alive for canvas draw)
         let faceId = null;
         const faceBlob = await captureWebcamBlob();
+        if (typeof stopWebcam === 'function') stopWebcam();
         if (faceBlob) {
             console.log('📤 Uploading face capture...');
             faceId = await uploadFileToStorage(faceBlob, BUCKET_ID);

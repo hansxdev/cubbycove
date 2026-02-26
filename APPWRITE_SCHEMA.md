@@ -1,102 +1,153 @@
-# Appwrite Database Schema Template
+# Appwrite Database Schema (Current)
 
-This document serves as the single source of truth for the Appwrite database structure. It has been updated to reflect the active variables used in the codebase (currently persisting to `localStorage` via `DataService.js`) and the frontend forms.
+This document reflects the current Appwrite schema used by the website code.
 
 ## Project: CubbyCove
 
-### 1. Authentication (Appwrite Auth)
-All users (Parents, Staff) will use Appwrite Authentication.
-- **Provider**: Email/Password
-- **Additional**: FaceID (Custom auth flow logic stored in `Users` collection)
+## 1. Database
+- Database ID: use the `DB_ID` configured in `js/appwrite_config.js`.
 
----
+## 2. Collections
 
-### 2. Database: `CubbyCoveDB`
+### `users`
+Profile records for parents and staff.
 
-#### Collection: `Users` (Profile Data)
-Stores additional user information linked to the Appwrite Auth Account.
+| Attribute | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `role` | String | Yes | `super_admin`, `admin`, `assistant`, `creator`, `parent`, `kid` (kid role used in session flow) |
+| `status` | String | Yes | Common values: `pending`, `active`, `banned`, `suspended` |
+| `firstName` | String | Yes |  |
+| `middleName` | String | No |  |
+| `lastName` | String | Yes |  |
+| `email` | String | Yes | Queried frequently |
+| `faceId` | String | No | Face data/file id depending on flow |
+| `idDocumentId` | String | No | Appwrite Storage file id |
+| `createdAt` | String (ISO datetime) | No | Used for sorting |
 
-| Attribute | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `role` | String | Yes | Enum: `super_admin`, `admin`, `assistant`, `creator`, `parent`. |
-| `status` | String | Yes | Enum: `pending`, `active`, `suspended`. Default: `pending` on registration. |
-| `firstName` | String | Yes | User's first name. |
-| `middleName` | String | No | User's middle name. |
-| `lastName` | String | Yes | User's last name. |
-| `email` | String | Yes | User's email address. |
-| `faceId` | String | No | Appwrite Storage file ID of the face selfie captured during registration. |
-| `idDocumentId` | String | No | Appwrite Storage file ID of the uploaded government ID document. |
-| `children` | String[] | No | Array of Child IDs linked to this parent. |
-| `createdAt` | Datetime | Yes | Account creation timestamp. |
+### `children`
+Child profiles linked to a parent.
 
-#### Collection: `Children`
-Stores profiles of children registered by parents.
+| Attribute | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `parentId` | String | Yes | Links to `users.$id` |
+| `name` | String | Yes | Display name |
+| `username` | String | Yes | Used for child login lookup |
+| `password` | String | Yes | Current implementation stores plain password |
+| `isOnline` | Boolean | No | Default `false` |
+| `threatScore` | Integer | No | Default `0` |
+| `kidId` | String | No | Buddy lookup id |
 
-| Attribute | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `parentId` | String | Yes | Relationship: `Users` collection (The parent). |
-| `name` | String | Yes | Child's Display Name. |
-| `username` | String | Yes | Unique username for child login. |
-| `password` | String | Yes | Simple password for child login. |
-| `avatar` | String | Yes | Avatar seed string. |
-| `allowChat` | Boolean | Yes | Permission setting. |
-| `allowGames` | Boolean | Yes | Permission setting. |
-| `isOnline` | Boolean | Yes | Real-time status. Default: `false`. |
-| `threatsDetected` | Integer | Yes | Counter for harmful messages/interactions. Default: `0`. |
-| `screenTimeLogs` | JSON | No | Logs screen time. Format: `[{ "date": "2023-10-27", "minutes": 45 }]` |
-| `activityLogs` | JSON | No | History of actions. Format: `[{ "action": "Played Math Game", "timestamp": "...", "link": "/games/math" }]` |
-| `status` | String | Yes | Enum: `active`, `inactive`. |
+### `videos`
+Creator/admin video library records.
 
-#### Collection: `Videos` (Content Library)
-Stores video content metadata, approval status, and creator details.
+| Attribute | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `title` | String | Yes |  |
+| `url` | String | Yes | YouTube URL or ID |
+| `category` | String | Yes |  |
+| `creatorEmail` | String | Yes | Used in creator dashboard filter |
+| `status` | String | Yes | `pending`, `approved`, `rejected` |
+| `views` | Integer | No | Default `0` |
+| `uploadedAt` | String (ISO datetime) | No | Used for sorting |
 
-| Attribute | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `title` | String | Yes | Video Title. |
-| `url` | String | Yes | YouTube URL or ID. |
-| `category` | String | Yes | Enum: `Learning`, `Gaming`, `Music`, `Cartoons`, `Vlog`. |
-| `creatorEmail` | String | Yes | Email of the creator who uploaded it. |
-| `status` | String | Yes | Enum: `pending`, `approved`, `rejected`. Default: `pending`. |
-| `views` | Integer | Yes | View count. Default: `0`. |
-| `uploadedAt` | Datetime | Yes | Timestamp of submission. |
+### `threat_logs`
+Threat moderation records.
 
-#### Collection: `ThreatLogs` (New)
-Detailed logs of detected threats for review.
+| Attribute | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `childId` | String | Yes |  |
+| `content` | String | Yes | Threat content payload |
+| `timestamp` | String (ISO datetime) | Yes | Used by threat log list sorting |
+| `status` | String | Yes | Updated by moderation flow |
+| `resolution` | String | No | Moderator/parent note |
+| `resolved` | Boolean | No | Legacy field still safe to keep |
 
-| Attribute | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `childId` | String | Yes | The child involved. |
-| `content` | String | Yes | The blocked message or action. |
-| `timestamp` | Datetime | Yes | Time of detection. |
-| `resolved` | Boolean | Yes | Whether parent reviewed it. |
+### `login_requests`
+Kid-to-parent approval login flow.
 
-#### Collection: `AccessLogs`
-Logs for check-in/check-out events.
+| Attribute | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `childUsername` | String | Yes |  |
+| `parentEmail` | String | Yes | Queried by parent |
+| `status` | String | Yes | `pending`, `approved`, `denied` |
+| `requestedAt` | String (ISO datetime) | Yes |  |
+| `deviceInfo` | String | No | Device/user-agent snippet |
+| `expiresAt` | String (ISO datetime) | No | Request expiry |
+| `childName` | String | No | Filled on approval |
+| `childId` | String | No | Filled on approval |
+| `parentId` | String | No | Filled on approval |
 
-| Attribute | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `userId` | String | Yes | Who performed the action. |
-| `childId` | String | Only if Check-In | The child being dropped off/picked up. |
-| `action` | String | Yes | Enum: `check_in`, `check_out`, `visit`. |
-| `timestamp` | Datetime | Yes | Time of event. |
+### `buddies`
+Buddy requests and accepted buddy links.
 
----
+| Attribute | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `fromChildId` | String | Yes |  |
+| `toChildId` | String | Yes |  |
+| `fromUsername` | String | Yes |  |
+| `toUsername` | String | Yes |  |
+| `fromKidId` | String | No |  |
+| `toKidId` | String | No |  |
+| `status` | String | Yes | `pending`, `accepted`, `declined` |
+| `createdAt` | String (ISO datetime) | Yes |  |
+| `updatedAt` | String (ISO datetime) | No |  |
 
-### 3. Storage Buckets
+### `parent_notifications`
+Parent notification feed for buddy events.
 
-#### Bucket: `parent_docs`
-Stores uploaded images from the parent registration flow.
+| Attribute | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `parentId` | String | Yes | Queried by parent |
+| `type` | String | Yes | `buddy_request`, `buddy_accepted`, etc. |
+| `message` | String | Yes |  |
+| `childId` | String | No |  |
+| `buddyId` | String | No |  |
+| `isRead` | Boolean | No | Default `false` |
+| `createdAt` | String (ISO datetime) | Yes | Used for sorting |
 
-| Setting | Value |
-| :--- | :--- |
-| **Bucket ID** | `parent_docs` (set as `BUCKET_PARENT_DOCS` in `appwrite_config.js`) |
-| **Allowed File Types** | `image/jpeg`, `image/png`, `image/webp` |
-| **Max File Size** | 5 MB |
-| **Permissions** | `create`: `any` (so unlogged-in registrants can upload); `read`: `users` (so logged-in staff can view) |
+## 3. Recommended Indexes
 
-> ⚠️ **Required Setup**: You must create this bucket in your Appwrite Console → Storage → Create Bucket.
-> Use the bucket ID `parent_docs` (or update the `BUCKET_PARENT_DOCS` constant in `appwrite_config.js` to match).
+### `users`
+- `idx_email` on `email`
+- `idx_role` on `role`
+- `idx_createdAt` on `createdAt`
 
-### 4. Logic & Functions
-- `onUserCreate`: Trigger to create a `Users` document.
-- `monitorScreenTime`: Scheduled function to aggregate daily logs (Future).
+### `children`
+- `idx_username` on `username`
+- `idx_parentId` on `parentId`
+- `idx_kidId` on `kidId`
+
+### `videos`
+- `idx_creatorEmail` on `creatorEmail`
+- `idx_status` on `status`
+- `idx_uploadedAt` on `uploadedAt`
+
+### `threat_logs`
+- `idx_timestamp` on `timestamp`
+- `idx_status` on `status`
+- `idx_childId` on `childId`
+
+### `login_requests`
+- `idx_parentEmail` on `parentEmail`
+- `idx_status` on `status`
+- `idx_requestedAt` on `requestedAt`
+
+### `buddies`
+- `idx_fromChildId` on `fromChildId`
+- `idx_toChildId` on `toChildId`
+- `idx_status` on `status`
+- `idx_createdAt` on `createdAt`
+
+### `parent_notifications`
+- `idx_parentId` on `parentId`
+- `idx_isRead` on `isRead`
+- `idx_createdAt` on `createdAt`
+
+## 4. Storage
+
+### Bucket: `parent_docs`
+Used for parent verification uploads (ID document and selfie/face files).
+
+## 5. Notes
+- `access_logs` exists in config constants but is not actively used by current app logic.
+- The old schema fields like `children[]`, `avatar`, `allowChat`, `allowGames`, and JSON activity arrays are not used by current Appwrite-backed flows.

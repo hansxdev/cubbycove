@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Global Parent Logout ---
     window.handleParentLogout = async function () {
+        stopNotifPolling();
         try {
             await DataService.logout();
         } catch (e) {
@@ -28,24 +29,308 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '../index.html';
     };
 
-    // 3. Tab Switching
-    window.showTab = function (tabName) {
-        document.querySelectorAll('main > div[id^="tab-"]').forEach(div => div.classList.add('hidden'));
-        document.querySelectorAll('nav a.nav-item').forEach(a => {
-            a.classList.remove('bg-cubby-purple', 'text-white', 'shadow-md', 'shadow-purple-200', 'scale-105');
-            a.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:shadow-sm');
-        });
+    // --- Start notification polling when on the dashboard ---
+    if (dashboardMain) {
+        startNotifPolling();
+        _checkLoginRequestsRef = checkLoginRequests; // expose for inline buttons
+    }
 
-        const targetDiv = document.getElementById(`tab-${tabName}`);
-        const targetNav = document.getElementById(`nav-${tabName}`);
+    // ── Notification Panel ───────────────────────────────────────────────────
 
-        if (targetDiv) targetDiv.classList.remove('hidden');
-        if (targetNav) {
-            targetNav.classList.add('bg-cubby-purple', 'text-white', 'shadow-md', 'shadow-purple-200', 'scale-105');
-            targetNav.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:shadow-sm');
+    let _currentRequestId = null;
+    let _notifPollInterval = null;
+
+    function startNotifPolling() {
+        checkLoginRequests(); // run once immediately
+        _notifPollInterval = setInterval(checkLoginRequests, 10000); // then every 10s
+    }
+
+    function stopNotifPolling() {
+        clearInterval(_notifPollInterval);
+    }
+
+    async function checkLoginRequests() {
+        const user = await DataService.getCurrentUser();
+        if (!user || !user.email) return;
+
+        const [pending, handled, buddyNotifs] = await Promise.all([
+            DataService.getPendingLoginRequests(user.email),
+            DataService.getHandledLoginRequests(user.email),
+            DataService.getParentNotifications(user.$id, false) // all notifs (read + unread)
+        ]);
+
+        // ── 1. Bell badge — pending logins + unread buddy notifications ─────────
+        const unreadBuddyCount = buddyNotifs.filter(n => !n.isRead).length;
+        const totalBadge = pending.length + unreadBuddyCount;
+        const badge = document.getElementById('notif-badge');
+        if (badge) {
+            if (totalBadge > 0) {
+                badge.textContent = totalBadge;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
         }
+
+        // ── 2. Bell panel — login history + buddy notifications ─────────────────
+        const notifList = document.getElementById('notif-list');
+        if (notifList) {
+            // Build login history items
+            const loginItems = handled.map(req => {
+                const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const isApproved = req.status === 'approved';
+                return {
+                    ts: req.requestedAt,
+                    html: `
+                        <div class="flex items-center gap-3 px-5 py-3">
+                            <div class="w-9 h-9 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-child-reaching text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-gray-700 text-sm truncate">${req.childUsername} — Login ${isApproved ? '✅' : '❌'}</p>
+                                <p class="text-xs text-gray-400">${time}</p>
+                            </div>
+                        </div>`
+                };
+            });
+
+            // Build buddy notification items
+            const buddyItems = buddyNotifs.map(notif => {
+                const time = new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const isBuddyReq = notif.type === 'buddy_request';
+                const icon = isBuddyReq ? 'fa-user-plus text-cubby-pink' : 'fa-handshake text-cubby-green';
+                const unreadDot = !notif.isRead ? '<span class="w-2 h-2 bg-cubby-blue rounded-full shrink-0"></span>' : '';
+                return {
+                    ts: notif.createdAt,
+                    html: `
+                        <div class="flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                             onclick="markNotifRead('${notif.$id}', this)">
+                            <div class="w-9 h-9 bg-gray-50 rounded-full flex items-center justify-center shrink-0 border border-gray-100">
+                                <i class="fa-solid ${icon} text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-gray-700 text-sm leading-snug">${notif.message}</p>
+                                <p class="text-xs text-gray-400">${time}</p>
+                            </div>
+                            ${unreadDot}
+                        </div>`
+                };
+            });
+
+            const allItems = [...loginItems, ...buddyItems]
+                .sort((a, b) => new Date(b.ts) - new Date(a.ts))
+                .slice(0, 20);
+
+            notifList.innerHTML = allItems.length > 0
+                ? allItems.map(i => i.html).join('')
+                : '<p class="text-sm text-gray-400 text-center py-8">No recent activity.</p>';
+        }
+
+        // ── 3. Unread section — pending login requests with inline approve/deny ──
+        const section = document.getElementById('unread-requests-section');
+        const unreadList = document.getElementById('unread-requests-list');
+        const unreadCountBadge = document.getElementById('unread-count-badge');
+
+        if (!section || !unreadList) return;
+
+        if (pending.length === 0) {
+            section.classList.add('hidden');
+            return;
+        }
+
+        section.classList.remove('hidden');
+        if (unreadCountBadge) unreadCountBadge.textContent = `${pending.length} new`;
+
+        unreadList.innerHTML = pending.map(req => {
+            const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const device = (req.deviceInfo || 'Unknown Device').slice(0, 60);
+            return `
+                <div class="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-xl p-4 gap-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(req.childUsername)}"
+                            class="w-10 h-10 rounded-full bg-white border border-orange-200 shrink-0">
+                        <div class="min-w-0">
+                            <p class="font-bold text-gray-800 text-sm">${req.childUsername}</p>
+                            <p class="text-xs text-gray-400">${time} · ${device}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 shrink-0">
+                        <button onclick="inlineDeny('${req.$id}')"
+                            class="px-3 py-1.5 text-xs font-bold border-2 border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-all">
+                            Deny
+                        </button>
+                        <button onclick="inlineApprove('${req.$id}', this)"
+                            class="px-3 py-1.5 text-xs font-bold bg-cubby-blue text-white rounded-lg hover:bg-blue-500 transition-all shadow-sm">
+                            Approve
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Mark a buddy notification as read (removes the blue dot)
+    window.markNotifRead = async function (notifId, el) {
+        await DataService.markNotificationRead(notifId);
+        // Remove the blue dot from this item
+        const dot = el?.querySelector('.bg-cubby-blue.rounded-full');
+        if (dot) dot.remove();
+        // Refresh badge count
+        await checkLoginRequests();
     };
+
+    // ── All onclick handlers are top-level function declarations below the
+    // DOMContentLoaded block — see bottom of this file. ──────────────────────
+
+    // 3. Tab Switching — top-level function below
+    // 4. Sidebar Toggle — top-level function below
+
 });
+
+// ── Tab Switching ─────────────────────────────────────────────────────────────
+function showTab(tabName) {
+    const titles = { overview: 'Dashboard Overview', kids: 'My Kids', activity: 'Activity Log', settings: 'Settings' };
+    const titleEl = document.getElementById('page-title');
+    if (titleEl && titles[tabName]) titleEl.textContent = titles[tabName];
+
+    document.querySelectorAll('main > div[id^="tab-"]').forEach(div => div.classList.add('hidden'));
+    document.querySelectorAll('nav a.nav-item').forEach(a => {
+        a.classList.remove('bg-cubby-purple', 'text-white', 'shadow-md', 'shadow-purple-200', 'scale-105');
+        a.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:shadow-sm');
+    });
+
+    const targetDiv = document.getElementById('tab-' + tabName);
+    const targetNav = document.getElementById('nav-' + tabName);
+    if (targetDiv) targetDiv.classList.remove('hidden');
+    if (targetNav) {
+        targetNav.classList.add('bg-cubby-purple', 'text-white', 'shadow-md', 'shadow-purple-200', 'scale-105');
+        targetNav.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:shadow-sm');
+    }
+}
+
+// ── Sidebar Toggle ────────────────────────────────────────────────────────────
+let _sidebarCollapsed = false;
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const btn = document.getElementById('sidebar-toggle-btn');
+    if (!sidebar) return;
+
+    _sidebarCollapsed = !_sidebarCollapsed;
+
+    if (_sidebarCollapsed) {
+        sidebar.classList.replace('w-64', 'w-16');
+        sidebar.querySelectorAll('.nav-label').forEach(el => el.classList.add('hidden'));
+        sidebar.querySelectorAll('.nav-item, div.p-4 button').forEach(el => {
+            el.classList.remove('gap-3', 'px-4');
+            el.classList.add('justify-center', 'px-0');
+        });
+        if (btn) btn.querySelector('i').className = 'fa-solid fa-chevron-right text-xl';
+    } else {
+        sidebar.classList.replace('w-16', 'w-64');
+        sidebar.querySelectorAll('.nav-label').forEach(el => el.classList.remove('hidden'));
+        sidebar.querySelectorAll('.nav-item, div.p-4 button').forEach(el => {
+            el.classList.add('gap-3', 'px-4');
+            el.classList.remove('justify-center', 'px-0');
+        });
+        if (btn) btn.querySelector('i').className = 'fa-solid fa-bars text-xl';
+    }
+}
+
+// ── Notification Panel & Approval Modal ──────────────────────────────────────
+// All declared at top level so onclick attrs work before DOMContentLoaded fires.
+
+let _currentRequestId = null; // shared by modal functions
+
+function toggleNotifPanel() {
+    const panel = document.getElementById('notif-panel');
+    if (panel) panel.classList.toggle('hidden');
+}
+
+function openApprovalModal(requestId, childUsername, time, deviceInfo) {
+    _currentRequestId = requestId;
+    const u = document.getElementById('modal-child-username');
+    const t = document.getElementById('modal-requested-at');
+    const d = document.getElementById('modal-device');
+    if (u) u.textContent = childUsername;
+    if (t) t.textContent = time;
+    if (d) d.textContent = deviceInfo || 'Unknown Device';
+    const modal = document.getElementById('approval-modal');
+    if (modal) modal.classList.remove('hidden');
+    const panel = document.getElementById('notif-panel');
+    if (panel) panel.classList.add('hidden');
+}
+
+function closeApprovalModal() {
+    const modal = document.getElementById('approval-modal');
+    if (modal) modal.classList.add('hidden');
+    _currentRequestId = null;
+}
+
+async function handleApproveRequest() {
+    if (!_currentRequestId) return;
+    const approveBtn = document.getElementById('approve-btn');
+    const denyBtn = document.getElementById('deny-btn');
+    if (approveBtn) { approveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Approving...'; approveBtn.disabled = true; }
+    if (denyBtn) { denyBtn.disabled = true; }
+    try {
+        const child = await DataService.approveLoginRequest(_currentRequestId);
+        closeApprovalModal();
+        if (_checkLoginRequestsRef) await _checkLoginRequestsRef();
+        alert('✅ ' + child.name + "'s login has been approved!");
+    } catch (err) {
+        alert('Error approving: ' + err.message);
+        if (approveBtn) { approveBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Approve'; approveBtn.disabled = false; }
+        if (denyBtn) { denyBtn.disabled = false; }
+    }
+}
+
+async function handleDenyRequest() {
+    if (!_currentRequestId) return;
+    try {
+        await DataService.denyLoginRequest(_currentRequestId);
+        closeApprovalModal();
+        if (_checkLoginRequestsRef) await _checkLoginRequestsRef();
+        alert('Login request denied.');
+    } catch (err) {
+        alert('Error denying: ' + err.message);
+    }
+}
+
+async function markNotifRead(notifId, el) {
+    await DataService.markNotificationRead(notifId);
+    const dot = el && el.querySelector('.bg-cubby-blue.rounded-full');
+    if (dot) dot.remove();
+    if (_checkLoginRequestsRef) await _checkLoginRequestsRef();
+}
+
+// ── Inline approve/deny handlers ─────────────────────────────────────────────
+// Defined at top level so onclick attrs in dynamic HTML always find them.
+
+let _checkLoginRequestsRef = null; // set by DOMContentLoaded after polling starts
+
+async function inlineApprove(requestId, btn) {
+    if (btn) { btn.textContent = '...'; btn.disabled = true; }
+    try {
+        const child = await DataService.approveLoginRequest(requestId);
+        if (_checkLoginRequestsRef) await _checkLoginRequestsRef();
+        alert('✅ ' + child.name + "'s login has been approved!");
+    } catch (err) {
+        alert('Error approving: ' + err.message);
+        if (btn) { btn.textContent = 'Approve'; btn.disabled = false; }
+    }
+}
+
+
+async function inlineDeny(requestId) {
+    try {
+        await DataService.denyLoginRequest(requestId);
+        if (_checkLoginRequestsRef) await _checkLoginRequestsRef();
+    } catch (err) {
+        alert('Error denying: ' + err.message);
+    }
+}
+
 
 /**
  * Loads and calculates all dashboard statistics and lists

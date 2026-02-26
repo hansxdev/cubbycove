@@ -191,26 +191,98 @@ function updateTracker(step) {
 
 // --- SUBMISSION ---
 
+/**
+ * Uploads a file (File object) to an Appwrite Storage bucket.
+ * Returns the file document ID, or null on failure.
+ */
+async function uploadFileToStorage(file, bucketId) {
+    try {
+        const { storage } = window.AppwriteService;
+        const { ID } = Appwrite;
+        const result = await storage.createFile(bucketId, ID.unique(), file);
+        return result.$id;
+    } catch (err) {
+        console.warn('File upload failed:', err.message);
+        return null;
+    }
+}
+
+/**
+ * Captures the current webcam frame to a Blob (JPEG).
+ * Returns a File object or null.
+ */
+function captureWebcamBlob() {
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('canvas');
+    if (!video || !canvas) return null;
+
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    // Mirror to match what the user sees
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    return new Promise(resolve => {
+        canvas.toBlob(blob => {
+            if (!blob) return resolve(null);
+            resolve(new File([blob], 'face_capture.jpg', { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.85);
+    });
+}
+
 // Called by face-api.js after successful capture
-// Called by face-api.js after successful capture
-function submitRegistration() {
+async function submitRegistration() {
     const fname = document.getElementById('firstName')?.value || '';
     const mname = document.getElementById('middleName')?.value || '';
     const lname = document.getElementById('lastName')?.value || '';
 
-    // 1. Gather Data
-    const formData = {
-        firstName: fname.trim(),
-        middleName: mname.trim(),
-        lastName: lname.trim(),
-        email: document.getElementById('email')?.value,
-        password: document.getElementById('password')?.value,
-        faceId: 'mock_face_id_' + Date.now()
-    };
+    // Show a loading indicator on the capture button (already set by face-api.js)
+    const captureBtn = document.getElementById('capture-btn');
+
+    // Bucket ID for storing parent verification images
+    // IMPORTANT: Create a bucket called 'parent_docs' in your Appwrite project
+    // and paste its ID here (or use a constant from appwrite_config.js).
+    const BUCKET_ID = window.AppwriteService?.BUCKET_PARENT_DOCS || 'parent_docs';
 
     try {
-        // 2. Call the Service Layer
-        DataService.registerParent(formData);
+        // --- Upload ID Document ---
+        let idDocumentId = null;
+        const idUploadInput = document.getElementById('id-upload');
+        if (idUploadInput && idUploadInput.files && idUploadInput.files[0]) {
+            console.log('📤 Uploading ID document...');
+            idDocumentId = await uploadFileToStorage(idUploadInput.files[0], BUCKET_ID);
+            console.log('✅ ID Document uploaded:', idDocumentId);
+        }
+
+        // --- Capture & Upload Face Selfie ---
+        let faceId = null;
+        const faceBlob = await captureWebcamBlob();
+        if (faceBlob) {
+            console.log('📤 Uploading face capture...');
+            faceId = await uploadFileToStorage(faceBlob, BUCKET_ID);
+            console.log('✅ Face capture uploaded:', faceId);
+        }
+
+        // Fallback: use a timestamp-based mock ID if uploads failed
+        // (so registration still works even without a storage bucket)
+        if (!faceId) faceId = 'mock_face_id_' + Date.now();
+
+        // 1. Gather Data
+        const formData = {
+            firstName: fname.trim(),
+            middleName: mname.trim(),
+            lastName: lname.trim(),
+            email: document.getElementById('email')?.value,
+            password: document.getElementById('password')?.value,
+            faceId: faceId,
+            idDocumentId: idDocumentId
+        };
+
+        // 2. Call the Service Layer (MUST await — it's async!)
+        await DataService.registerParent(formData);
 
         // 3. Show Success UI
         document.getElementById('step-3').classList.add('hidden');
@@ -221,7 +293,12 @@ function submitRegistration() {
         }
 
     } catch (error) {
-        if (error.code === 409 || error.message.includes('email') || error.message.includes('already exists')) {
+        console.error('Registration error:', error);
+        if (captureBtn) {
+            captureBtn.innerHTML = '<i class="fa-solid fa-camera mr-2"></i> Capture Face';
+            captureBtn.disabled = false;
+        }
+        if (error.code === 409 || (error.message && (error.message.includes('email') || error.message.includes('already exists')))) {
             alert("This email is already registered. Please login or use a different email.");
             document.getElementById('step-3').classList.add('hidden');
             document.getElementById('step-1').classList.remove('hidden');

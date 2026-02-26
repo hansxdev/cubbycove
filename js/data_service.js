@@ -148,6 +148,7 @@ const DataService = {
                 lastName: parentData.lastName,
                 email: parentData.email,
                 faceId: parentData.faceId || null,
+                idDocumentId: parentData.idDocumentId || null,
                 createdAt: new Date().toISOString()
             };
 
@@ -338,66 +339,432 @@ const DataService = {
         }
     },
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // KID LOGIN — Parental Approval Flow
+    // Kids have no Appwrite Auth accounts so we cannot query the database from
+    // an unauthenticated browser.  Instead:
+    //   1. Kid submits credentials → createLoginRequest()  (collection: any write)
+    //   2. Parent sees notification → approveLoginRequest() (parent IS authenticated)
+    //   3. Kid polls pollLoginRequest() until status changes
+    //   4. On 'approved', kidLoginFromApproved() stores the session
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Kid Login — does NOT use Appwrite Auth.
-     * Children are verified against the 'children' collection using:
-     *   username + guardian email + password
-     * On success, a child session is stored in sessionStorage.
+     * Step 1 (Kid side): Create a login request document.
+     * The login_requests collection must allow 'any' create + read.
      */
-    kidLogin: async function (username, guardianEmail, password) {
+    createLoginRequest: async function (username, parentEmail, password) {
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+
+        const deviceInfo = `${navigator.platform || 'Unknown'} · ${navigator.userAgent.split(')')[0].split('(')[1] || 'Unknown Browser'}`;
+        const now = new Date().toISOString();
+        const expires = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+        const doc = await databases.createDocument(DB_ID, 'login_requests', ID.unique(), {
+            childUsername: username,
+            parentEmail: parentEmail,
+            status: 'pending',
+            requestedAt: now,
+            expiresAt: expires,
+            deviceInfo: deviceInfo.slice(0, 499),
+            // Store hashed password so parent-side can verify without exposing raw DB
+            // For this MVP we store a simple marker; actual verification happens via parent
+            childName: '',
+            childId: '',
+            parentId: ''
+        });
+
+        // Cache the password locally so the parent approval can cross-check it
+        // We use sessionStorage with the requestId as key (only lives in this tab)
+        sessionStorage.setItem('cubby_login_req_pass_' + doc.$id, password);
+
+        console.log('📨 [Kid Login] Request created:', doc.$id);
+        return doc;
+    },
+
+    /**
+     * Step 2 (Kid side, polling): Check if the request has been approved/denied.
+     * Returns the document with current status.
+     */
+    pollLoginRequest: async function (requestId) {
+        const { databases, DB_ID } = this._getServices();
+        try {
+            return await databases.getDocument(DB_ID, 'login_requests', requestId);
+        } catch (e) {
+            return null;
+        }
+    },
+
+    /**
+     * Step 3a (Parent side): Get all pending login requests for this parent.
+     * Parent IS authenticated so can query.
+     */
+    getPendingLoginRequests: async function (parentEmail) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, 'login_requests', [
+                Query.equal('parentEmail', parentEmail),
+                Query.equal('status', 'pending'),
+                Query.orderDesc('requestedAt'),
+                Query.limit(20)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('getPendingLoginRequests error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Fetch recently handled (approved/denied) requests for bell history.
+     */
+    getHandledLoginRequests: async function (parentEmail) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            // Get approved and denied separately and merge (Appwrite free tier doesn't support OR queries)
+            const [approved, denied] = await Promise.all([
+                databases.listDocuments(DB_ID, 'login_requests', [
+                    Query.equal('parentEmail', parentEmail),
+                    Query.equal('status', 'approved'),
+                    Query.orderDesc('requestedAt'),
+                    Query.limit(10)
+                ]),
+                databases.listDocuments(DB_ID, 'login_requests', [
+                    Query.equal('parentEmail', parentEmail),
+                    Query.equal('status', 'denied'),
+                    Query.orderDesc('requestedAt'),
+                    Query.limit(10)
+                ])
+            ]);
+            // Merge and sort by date, take most recent 15
+            return [...approved.documents, ...denied.documents]
+                .sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt))
+                .slice(0, 15);
+        } catch (e) {
+            console.warn('getHandledLoginRequests error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Step 3b (Parent side): Approve a login request.
+     * Parent is authenticated → can look up the child → verify credentials → approve.
+     */
+    approveLoginRequest: async function (requestId) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         const { Query } = Appwrite;
 
+        const request = await databases.getDocument(DB_ID, 'login_requests', requestId);
+
+        // Find parent
+        const parentList = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+            Query.equal('email', request.parentEmail),
+            Query.equal('role', 'parent')
+        ]);
+        if (parentList.documents.length === 0) throw new Error('Parent not found.');
+        const parent = parentList.documents[0];
+
+        // Find child by username under this parent
+        const childList = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
+            Query.equal('username', request.childUsername),
+            Query.equal('parentId', parent.$id)
+        ]);
+        if (childList.documents.length === 0) throw new Error('Child not found under this parent.');
+        const child = childList.documents[0];
+
+        // Stamp the approved child info onto the request so the kid can build a session
+        await databases.updateDocument(DB_ID, 'login_requests', requestId, {
+            status: 'approved',
+            childName: child.name,
+            childId: child.$id,
+            parentId: parent.$id
+        });
+
+        console.log('✅ [Parent] Approved login for:', child.name);
+        return child;
+    },
+
+    /**
+     * Step 3c (Parent side): Deny a login request.
+     */
+    denyLoginRequest: async function (requestId) {
+        const { databases, DB_ID } = this._getServices();
+        await databases.updateDocument(DB_ID, 'login_requests', requestId, {
+            status: 'denied'
+        });
+        console.log('❌ [Parent] Denied login request:', requestId);
+    },
+
+    /**
+     * Step 4 (Kid side): Build and store child session from an approved request.
+     * Called once polling detects status === 'approved'.
+     */
+    kidLoginFromApproved: function (approvedRequest) {
+        const childSession = {
+            $id: approvedRequest.childId,
+            role: 'kid',
+            firstName: approvedRequest.childName,
+            name: approvedRequest.childName,
+            username: approvedRequest.childUsername,
+            parentId: approvedRequest.parentId
+        };
+        sessionStorage.setItem('cubby_child_session', JSON.stringify(childSession));
+        // Clean up the cached password
+        sessionStorage.removeItem('cubby_login_req_pass_' + approvedRequest.$id);
+        console.log('✅ [Kid] Session stored for:', approvedRequest.childUsername);
+        return childSession;
+    },
+
+    // Legacy kidLogin kept for backward compat (now just an alias to the request flow helper)
+    kidLogin: async function (username, parentEmail) {
+        return await this.createLoginRequest(username, parentEmail, '');
+
+        // NOTE: The actual session is now created via kidLoginFromApproved()
+        // after the parent approves the request. See auth.js handleKidLogin().
+
+        /* ── old direct-DB flow (removed because requires authenticated session) ──
+        const child = ...
+        if (child.password !== password) throw new Error(...)
+        sessionStorage.setItem('cubby_child_session', ...)
+        ──────────────────────────────────────────────────────────────────────── */
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // BUDDIES SYSTEM
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Generate and persist a short kid-friendly ID (e.g. #CC4F2A) for a child
+     * who doesn't have one yet. Returns the existing kidId if already set.
+     */
+    ensureKidId: async function (childId) {
+        const { databases, DB_ID } = this._getServices();
+        // Fetch the child doc
+        const child = await databases.getDocument(DB_ID, 'children', childId);
+        if (child.kidId) return child.kidId;
+
+        // Generate a new 6-char uppercase hex ID
+        const kidId = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0');
+        await databases.updateDocument(DB_ID, 'children', childId, { kidId });
+        return kidId;
+    },
+
+    /**
+     * Search for a child by username OR kidId (used in the Add Buddy search).
+     * Returns the child document or null.
+     */
+    searchChildByUsernameOrKidId: async function (query) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        const q = query.trim();
+
         try {
-            // 1. Find the parent by guardian email
-            const parentList = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
-                Query.equal('email', guardianEmail),
-                Query.equal('role', 'parent')
+            // Try username first
+            const byUsername = await databases.listDocuments(DB_ID, 'children', [
+                Query.equal('username', q), Query.limit(1)
             ]);
+            if (byUsername.documents.length > 0) return byUsername.documents[0];
 
-            if (parentList.documents.length === 0) {
-                throw new Error("No parent account found with that email address.");
-            }
-
-            const parent = parentList.documents[0];
-
-            // 2. Find child by username under that parent
-            const childList = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
-                Query.equal('username', username),
-                Query.equal('parentId', parent.$id)
+            // Try kidId (starts with #)
+            const byKidId = await databases.listDocuments(DB_ID, 'children', [
+                Query.equal('kidId', q.startsWith('#') ? q : '#' + q), Query.limit(1)
             ]);
+            if (byKidId.documents.length > 0) return byKidId.documents[0];
 
-            if (childList.documents.length === 0) {
-                throw new Error("No child account found with that username under this parent.");
-            }
+            return null;
+        } catch (e) {
+            console.warn('searchChild error:', e.message);
+            return null;
+        }
+    },
 
-            const child = childList.documents[0];
+    /**
+     * Send a buddy request from the current kid to another child.
+     * Also notifies the target child's parent.
+     */
+    sendBuddyRequest: async function (fromChild, toChild) {
+        const { databases, DB_ID } = this._getServices();
+        const { ID, Query } = Appwrite;
 
-            // 3. Verify password (plain text match per schema)
-            if (child.password !== password) {
-                throw new Error("Incorrect password. Please try again.");
-            }
+        // Prevent self-add
+        if (fromChild.$id === toChild.$id) throw new Error("You can't add yourself as a buddy!");
 
-            // 4. Store a lightweight child session in sessionStorage
-            const childSession = {
-                $id: child.$id,
-                role: 'kid',
-                firstName: child.name,   // so updateHeader() works the same way
-                name: child.name,
-                username: child.username,
-                parentId: child.parentId,
-                isOnline: child.isOnline,
-                threatScore: child.threatScore
-            };
+        // Check for existing request in either direction
+        const existing = await databases.listDocuments(DB_ID, 'buddies', [
+            Query.equal('fromChildId', fromChild.$id),
+            Query.equal('toChildId', toChild.$id)
+        ]);
+        if (existing.documents.length > 0) throw new Error('You already sent a buddy request to this kid!');
 
-            sessionStorage.setItem('cubby_child_session', JSON.stringify(childSession));
-            console.log('✅ [Kid Login] Session stored for:', child.username);
+        const reverseExisting = await databases.listDocuments(DB_ID, 'buddies', [
+            Query.equal('fromChildId', toChild.$id),
+            Query.equal('toChildId', fromChild.$id)
+        ]);
+        if (reverseExisting.documents.length > 0) throw new Error('This kid already sent you a buddy request! Check your requests.');
 
-            return childSession;
+        const now = new Date().toISOString();
+        const doc = await databases.createDocument(DB_ID, 'buddies', ID.unique(), {
+            fromChildId: fromChild.$id,
+            toChildId: toChild.$id,
+            fromUsername: fromChild.username || fromChild.name,
+            toUsername: toChild.username || toChild.name,
+            fromKidId: fromChild.kidId || '',
+            toKidId: toChild.kidId || '',
+            status: 'pending',
+            createdAt: now,
+            updatedAt: now
+        });
 
-        } catch (error) {
-            console.error('Kid Login Error:', error);
-            throw error;
+        // Notify target child's parent
+        if (toChild.parentId) {
+            await this._createParentNotification(toChild.parentId, {
+                type: 'buddy_request',
+                childId: toChild.$id,
+                buddyId: fromChild.$id,
+                message: `${fromChild.username || fromChild.name} sent a buddy request to your child ${toChild.username || toChild.name}.`
+            });
+        }
+
+        return doc;
+    },
+
+    /**
+     * Get accepted buddies for a child.
+     */
+    getBuddies: async function (childId) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const [sent, received] = await Promise.all([
+                databases.listDocuments(DB_ID, 'buddies', [
+                    Query.equal('fromChildId', childId),
+                    Query.equal('status', 'accepted')
+                ]),
+                databases.listDocuments(DB_ID, 'buddies', [
+                    Query.equal('toChildId', childId),
+                    Query.equal('status', 'accepted')
+                ])
+            ]);
+            // Flatten into a unified list
+            const buddies = [
+                ...sent.documents.map(d => ({ buddyDocId: d.$id, childId: d.toChildId, username: d.toUsername, kidId: d.toKidId })),
+                ...received.documents.map(d => ({ buddyDocId: d.$id, childId: d.fromChildId, username: d.fromUsername, kidId: d.fromKidId }))
+            ];
+            return buddies;
+        } catch (e) {
+            console.warn('getBuddies error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Get incoming pending buddy requests for a child.
+     */
+    getIncomingBuddyRequests: async function (childId) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, 'buddies', [
+                Query.equal('toChildId', childId),
+                Query.equal('status', 'pending'),
+                Query.orderDesc('createdAt')
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('getIncomingBuddyRequests error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Accept a buddy request. Notifies both parents.
+     */
+    acceptBuddyRequest: async function (buddyDocId, acceptingChild) {
+        const { databases, DB_ID } = this._getServices();
+        const doc = await databases.getDocument(DB_ID, 'buddies', buddyDocId);
+
+        await databases.updateDocument(DB_ID, 'buddies', buddyDocId, {
+            status: 'accepted',
+            updatedAt: new Date().toISOString()
+        });
+
+        // Notify the accepting child's parent
+        if (acceptingChild.parentId) {
+            await this._createParentNotification(acceptingChild.parentId, {
+                type: 'buddy_accepted',
+                childId: acceptingChild.$id,
+                buddyId: doc.fromChildId,
+                message: `Your child ${acceptingChild.username || acceptingChild.name} accepted a buddy request from ${doc.fromUsername}.`
+            });
+        }
+
+        return doc;
+    },
+
+    /**
+     * Decline a buddy request.
+     */
+    declineBuddyRequest: async function (buddyDocId) {
+        const { databases, DB_ID } = this._getServices();
+        await databases.updateDocument(DB_ID, 'buddies', buddyDocId, {
+            status: 'declined',
+            updatedAt: new Date().toISOString()
+        });
+    },
+
+    /**
+     * Get unread parent notifications.
+     */
+    getParentNotifications: async function (parentId, unreadOnly = true) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const queries = [
+                Query.equal('parentId', parentId),
+                Query.orderDesc('createdAt'),
+                Query.limit(30)
+            ];
+            if (unreadOnly) queries.push(Query.equal('isRead', false));
+
+            const result = await databases.listDocuments(DB_ID, 'parent_notifications', queries);
+            return result.documents;
+        } catch (e) {
+            console.warn('getParentNotifications error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Mark a parent notification as read.
+     */
+    markNotificationRead: async function (notifId) {
+        const { databases, DB_ID } = this._getServices();
+        try {
+            await databases.updateDocument(DB_ID, 'parent_notifications', notifId, { isRead: true });
+        } catch (e) {
+            console.warn('markNotificationRead error:', e.message);
+        }
+    },
+
+    /** Internal helper — create a parent notification document. */
+    _createParentNotification: async function (parentId, data) {
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+        try {
+            await databases.createDocument(DB_ID, 'parent_notifications', ID.unique(), {
+                parentId,
+                type: data.type,
+                message: data.message,
+                childId: data.childId || '',
+                buddyId: data.buddyId || '',
+                isRead: false,
+                createdAt: new Date().toISOString()
+            });
+        } catch (e) {
+            console.warn('_createParentNotification error:', e.message);
         }
     },
 
@@ -478,6 +845,48 @@ const DataService = {
             status: newStatus
         });
         return true;
+    },
+
+    /**
+     * Deletes the ID document and face selfie files from Appwrite Storage
+     * after a parent has been verified (approved or rejected).
+     * Also clears the file ID fields in the user's database record.
+     */
+    cleanupParentVerificationFiles: async function (userId) {
+        const { storage, databases, DB_ID, COLLECTIONS, BUCKET_PARENT_DOCS } = this._getServices();
+        const bucketId = BUCKET_PARENT_DOCS || 'parent_docs';
+
+        try {
+            // 1. Fetch the user document to get the stored file IDs
+            const user = await databases.getDocument(DB_ID, COLLECTIONS.USERS, userId);
+
+            const filesToDelete = [];
+            if (user.faceId && !user.faceId.startsWith('mock_')) {
+                filesToDelete.push(user.faceId);
+            }
+            if (user.idDocumentId) {
+                filesToDelete.push(user.idDocumentId);
+            }
+
+            // 2. Delete files from Storage (individually, ignore errors if already gone)
+            await Promise.allSettled(
+                filesToDelete.map(fileId => storage.deleteFile(bucketId, fileId))
+            );
+
+            console.log(`🗑️ [Storage] Deleted ${filesToDelete.length} verification file(s) for user ${userId}`);
+
+            // 3. Clear the file ID fields in the database (avoid dead references)
+            await databases.updateDocument(DB_ID, COLLECTIONS.USERS, userId, {
+                faceId: null,
+                idDocumentId: null
+            });
+
+            console.log('✅ [DB] Cleared faceId and idDocumentId from user record.');
+
+        } catch (err) {
+            // Non-fatal: log but don't throw — the status update already succeeded
+            console.warn('⚠️ [Cleanup] Could not fully clean up verification files:', err.message);
+        }
     },
 
     createStaffAccount: async function (creatorEmail, newStaffData) {

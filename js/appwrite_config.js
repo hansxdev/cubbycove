@@ -27,6 +27,9 @@ try {
         ACCESS_LOGS: 'access_logs'
     };
 
+    // Storage Bucket IDs
+    const BUCKET_PARENT_DOCS = 'parent_docs'; // Create this bucket in your Appwrite project
+
     // Expose creating services globally
     window.AppwriteService = {
         client,
@@ -34,7 +37,8 @@ try {
         databases,
         storage,
         DB_ID,
-        COLLECTIONS
+        COLLECTIONS,
+        BUCKET_PARENT_DOCS
     };
 
     console.log("✅ [Appwrite] Client Initialized");

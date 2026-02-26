@@ -134,19 +134,24 @@ async function loadPendingParents() {
         updateBadge('verification', pendingParents.length);
 
         pendingParents.forEach(parent => {
-            // Check for valid ID and faceId or use placeholders
-            const faceImage = parent.faceId ?
-                `https://cloud.appwrite.io/v1/storage/buckets/65b12345/files/${parent.faceId}/view?project=69904f4900396667cf4c` :
-                `https://api.dicebear.com/7.x/avataaars/svg?seed=${parent.firstName}`;
+            // Build Appwrite Storage file-view URLs using live config values
+            const svc = window.AppwriteService;
+            const endpoint = (svc?.client?.config?.endpoint || 'https://sgp.cloud.appwrite.io/v1').replace(/\/$/, '');
+            const projectId = svc?.client?.config?.project || '69904f4900396667cf4c';
+            const bucketId = svc?.BUCKET_PARENT_DOCS || 'parent_docs';
 
-            // Assuming we stored ID document file ID in a field like 'idDocumentId' or similar. 
-            // DataService.registerParent currently doesn't upload files, it just sets up text data.
-            // So we will use a dedicated placeholder indicating "No Document Uploaded" or check if field exists.
-            const idImage = parent.idDocumentId ?
-                `https://cloud.appwrite.io/v1/storage/buckets/65b12345/files/${parent.idDocumentId}/view?project=69904f4900396667cf4c` :
-                "../images/id_placeholder.jpg"; // You'll need this image or use a generic placeholder service
+            const buildFileUrl = (fileId) =>
+                `${endpoint}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}`;
 
-            const idImageSrc = parent.idDocumentId ? `https://placehold.co/400x250/e2e8f0/64748b?text=ID+Document` : `https://placehold.co/400x250/e2e8f0/64748b?text=No+ID+Uploaded`;
+            // Face / selfie image — fall back to dicebear avatar if no real upload
+            const faceImageSrc = (parent.faceId && !parent.faceId.startsWith('mock_'))
+                ? buildFileUrl(parent.faceId)
+                : `https://api.dicebear.com/7.x/avataaars/svg?seed=${parent.firstName}`;
+
+            // ID document image — show placeholder if not uploaded
+            const idImageSrc = parent.idDocumentId
+                ? buildFileUrl(parent.idDocumentId)
+                : null;
 
             const html = `
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card mb-4" id="user-${parent.$id}">
@@ -159,16 +164,18 @@ async function loadPendingParents() {
                              <div class="text-center w-full md:w-1/2">
                                 <p class="text-xs font-bold text-gray-400 uppercase mb-2">Uploaded ID</p>
                                 <div class="rounded-lg shadow-inner bg-gray-100 border border-gray-200 w-full h-48 flex items-center justify-center overflow-hidden">
-                                    ${parent.idDocumentId ?
-                    `<img src="${idImage}" class="w-full h-full object-cover">` :
-                    `<div class="text-gray-400 flex flex-col items-center"><i class="fa-solid fa-id-card text-3xl mb-2"></i><span>No ID Uploaded</span></div>`
+                                    ${idImageSrc
+                    ? `<img src="${idImageSrc}" class="w-full h-full object-cover"
+                                              onerror="this.outerHTML='<div class=\\'text-gray-400 flex flex-col items-center\\'><i class=\\'fa-solid fa-id-card text-3xl mb-2\\'></i><span>Could not load ID</span></div>'">`
+                    : `<div class="text-gray-400 flex flex-col items-center"><i class="fa-solid fa-id-card text-3xl mb-2"></i><span>No ID Uploaded</span></div>`
                 }
                                 </div>
                             </div>
                             <div class="text-center w-full md:w-1/2">
                                 <p class="text-xs font-bold text-gray-400 uppercase mb-2">Live Photo / Avatar</p>
                                 <div class="rounded-lg shadow-inner bg-gray-100 border border-gray-200 w-full h-48 flex items-center justify-center overflow-hidden">
-                                     <img src="${faceImage}" class="w-full h-full object-cover">
+                                     <img src="${faceImageSrc}" class="w-full h-full object-cover"
+                                          onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=${parent.firstName}'">
                                 </div>
                             </div>
                         </div>
@@ -203,12 +210,18 @@ async function loadPendingParents() {
 }
 
 async function updateParentStatus(userId, status) {
-    if (confirm(`Set status to ${status}?`)) {
+    const action = status === 'active' ? 'Approve' : 'Reject';
+    if (confirm(`${action} this parent? Their verification photos will be deleted after.`)) {
         try {
+            // 1. Update the status (approve or reject)
             await DataService.updateUserStatus(userId, status);
-            // Reload to refresh list
+
+            // 2. Delete their ID photo & face selfie from Storage (frees up space + protects privacy)
+            await DataService.cleanupParentVerificationFiles(userId);
+
+            // 3. Reload UI
             loadPendingParents();
-            loadOverviewStats(); // Update counters
+            loadOverviewStats();
         } catch (error) {
             alert("Error updating status: " + error.message);
         }

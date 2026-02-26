@@ -28,12 +28,12 @@
         <!-- SIDEBAR NAVIGATION -->
         <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 transition-all duration-300"
             id="sidebar">
-            <div class="h-16 flex items-center justify-center border-b border-gray-100">
+            <div class="h-16 flex items-center justify-center border-b border-gray-100 overflow-hidden">
                 <div class="flex items-center gap-2">
-                    <div class="bg-cubby-purple text-white p-1.5 rounded-lg">
+                    <div class="bg-cubby-purple text-white p-1.5 rounded-lg flex-shrink-0">
                         <i class="fa-solid fa-shield-cat text-lg"></i>
                     </div>
-                    <span class="text-xl font-extrabold text-gray-800">Parent<span
+                    <span class="nav-label text-xl font-extrabold text-gray-800 whitespace-nowrap">Parent<span
                             class="text-cubby-purple">Hub</span></span>
                 </div>
             </div>
@@ -41,26 +41,31 @@
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
                 <a href="#" onclick="showTab('overview')" id="nav-overview"
                     class="nav-item flex items-center gap-3 px-4 py-3 bg-cubby-purple text-white rounded-xl font-bold shadow-md shadow-purple-200 transform scale-105 transition-all">
-                    <i class="fa-solid fa-chart-pie w-6 text-center"></i> Overview
+                    <i class="fa-solid fa-chart-pie w-6 text-center"></i>
+                    <span class="nav-label">Overview</span>
                 </a>
                 <a href="#" onclick="showTab('kids')" id="nav-kids"
                     class="nav-item flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:shadow-sm rounded-xl font-semibold transition-all">
-                    <i class="fa-solid fa-users w-6 text-center"></i> My Kids
+                    <i class="fa-solid fa-users w-6 text-center"></i>
+                    <span class="nav-label">My Kids</span>
                 </a>
                 <a href="#" onclick="showTab('activity')" id="nav-activity"
                     class="nav-item flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:shadow-sm rounded-xl font-semibold transition-all">
-                    <i class="fa-solid fa-clock-rotate-left w-6 text-center"></i> Activity Log
+                    <i class="fa-solid fa-clock-rotate-left w-6 text-center"></i>
+                    <span class="nav-label">Activity Log</span>
                 </a>
                 <a href="#" onclick="showTab('settings')" id="nav-settings"
                     class="nav-item flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:shadow-sm rounded-xl font-semibold transition-all">
-                    <i class="fa-solid fa-sliders w-6 text-center"></i> Settings
+                    <i class="fa-solid fa-sliders w-6 text-center"></i>
+                    <span class="nav-label">Settings</span>
                 </a>
             </nav>
 
             <div class="p-4 border-t border-gray-100 mt-4">
                 <button onclick="handleParentLogout()"
                     class="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl font-semibold transition-all">
-                    <i class="fa-solid fa-right-from-bracket w-6 text-center"></i> Log Out
+                    <i class="fa-solid fa-right-from-bracket w-6 text-center"></i>
+                    <span class="nav-label">Log Out</span>
                 </button>
             </div>
         </aside>
@@ -70,16 +75,36 @@
             <!-- TOP BAR -->
             <header
                 class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10 border-b border-gray-100">
-                <button class="text-gray-500 hover:text-gray-700 focus:outline-none lg:hidden">
+                <button onclick="toggleSidebar()" id="sidebar-toggle-btn"
+                    class="text-gray-500 hover:text-cubby-purple focus:outline-none transition-colors p-1 rounded-lg hover:bg-gray-100">
                     <i class="fa-solid fa-bars text-xl"></i>
                 </button>
                 <h2 class="text-lg font-bold text-gray-700" id="page-title">Dashboard Overview</h2>
                 <div class="flex items-center gap-4">
-                    <button class="relative p-2 text-gray-400 hover:text-cubby-purple transition-colors">
+                    <!-- Notification Bell -->
+                    <button id="notif-bell-btn" onclick="toggleNotifPanel()"
+                        class="relative p-2 text-gray-400 hover:text-cubby-purple transition-colors">
                         <i class="fa-solid fa-bell text-xl"></i>
-                        <span
-                            class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                        <span id="notif-badge"
+                            class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white hidden flex items-center justify-center">0</span>
                     </button>
+
+                    <!-- Notification History Panel — fixed so parent overflow-hidden never clips it -->
+                    <div id="notif-panel"
+                        class="hidden fixed top-16 right-4 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[9998] overflow-hidden">
+                        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                            <div>
+                                <h3 class="font-bold text-gray-800">Recent Activity</h3>
+                                <p class="text-xs text-gray-400">Handled login requests</p>
+                            </div>
+                            <button onclick="toggleNotifPanel()" class="text-gray-400 hover:text-gray-600">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="notif-list" class="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                            <p class="text-sm text-gray-400 text-center py-8">No recent activity.</p>
+                        </div>
+                    </div>
                     <div class="flex items-center gap-3 border-l pl-4 border-gray-200">
                         <div class="text-right hidden sm:block">
                             <p id="userName" class="text-sm font-bold text-gray-700">Guest Parent</p>
@@ -129,6 +154,26 @@
                             </div>
                             <h3 id="stat-active-profiles" class="text-2xl font-extrabold text-gray-800">0</h3>
                             <p class="text-sm text-gray-500">Active Child Profiles</p>
+                        </div>
+                    </div>
+
+                    <!-- UNREAD LOGIN REQUESTS — visible section, only shown when there are pending requests -->
+                    <div id="unread-requests-section" class="hidden">
+                        <div class="bg-white rounded-2xl shadow-sm border-2 border-orange-200 p-6">
+                            <div class="flex items-center gap-3 mb-5">
+                                <div
+                                    class="w-9 h-9 bg-orange-100 text-orange-500 rounded-xl flex items-center justify-center animate-pulse">
+                                    <i class="fa-solid fa-bell-ring"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="font-extrabold text-gray-800">New Login Requests</h3>
+                                    <p class="text-xs text-gray-400">Your child is waiting for permission to log in</p>
+                                </div>
+                                <span id="unread-count-badge"
+                                    class="text-xs font-bold bg-orange-500 text-white px-2.5 py-1 rounded-full">0
+                                    new</span>
+                            </div>
+                            <div id="unread-requests-list" class="space-y-3"></div>
                         </div>
                     </div>
 
@@ -238,6 +283,51 @@
                 </div>
 
             </main>
+        </div>
+    </div>
+
+    <!-- CHILD LOGIN APPROVAL MODAL -->
+    <div id="approval-modal"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
+            <button onclick="closeApprovalModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">
+                <i class="fa-solid fa-times"></i>
+            </button>
+            <div class="text-center mb-6">
+                <div
+                    class="w-16 h-16 bg-cubby-blue/10 text-cubby-blue rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                    <i class="fa-solid fa-child-reaching"></i>
+                </div>
+                <h3 class="text-xl font-extrabold text-gray-800 mb-1">Login Request</h3>
+                <p class="text-sm text-gray-500">Your child wants to log in. Approve to let them in.</p>
+            </div>
+
+            <div class="bg-gray-50 rounded-2xl p-5 space-y-3 mb-6 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-500 font-semibold">Child Username</span>
+                    <span id="modal-child-username" class="font-bold text-gray-800">—</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 font-semibold">Requested At</span>
+                    <span id="modal-requested-at" class="font-bold text-gray-800">—</span>
+                </div>
+                <div class="flex justify-between items-start gap-4">
+                    <span class="text-gray-500 font-semibold shrink-0">Device</span>
+                    <span id="modal-device" class="font-bold text-gray-800 text-right text-xs break-all">—</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="deny-btn" onclick="handleDenyRequest()"
+                    class="flex-1 py-3 border-2 border-red-200 text-red-500 font-bold rounded-xl hover:bg-red-50 transition-all">
+                    <i class="fa-solid fa-times mr-1"></i> Deny
+                </button>
+                <button id="approve-btn" onclick="handleApproveRequest()"
+                    class="flex-1 py-3 bg-cubby-blue hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-md">
+                    <i class="fa-solid fa-check mr-1"></i> Approve
+                </button>
+            </div>
         </div>
     </div>
 

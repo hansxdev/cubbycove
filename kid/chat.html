@@ -218,9 +218,10 @@
 
                 <div
                     class="flex-1 bg-gray-100 rounded-2xl flex items-center px-4 py-2 border-2 border-transparent focus-within:border-cubby-green focus-within:bg-white transition-all">
-                    <input type="text" id="message-input" placeholder="Type a safe message..."
-                        class="w-full bg-transparent border-none focus:ring-0 text-sm sm:text-base text-gray-700 placeholder-gray-400"
-                        autocomplete="off">
+                    <textarea id="message-input" rows="1" placeholder="Type a safe message..."
+                        class="w-full bg-transparent border-none focus:ring-0 text-sm sm:text-base text-gray-700 placeholder-gray-400 resize-none leading-relaxed max-h-32 overflow-y-auto"
+                        autocomplete="off"
+                        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
                 </div>
 
                 <button id="send-btn"

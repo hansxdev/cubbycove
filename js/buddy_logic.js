@@ -74,7 +74,6 @@ function renderBuddyList(buddies) {
                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddy.username)}"
                     class="w-8 h-8 rounded-full bg-gray-200 border border-white shadow-sm shrink-0">
                 <span class="font-bold text-gray-700 group-hover:text-cubby-blue text-sm truncate">${buddy.username}</span>
-                <span class="w-2 h-2 bg-green-400 rounded-full ml-auto shrink-0"></span>
             </a>
             <button onclick="unfriendBuddy('${buddy.buddyDocId}', '${encodeURIComponent(buddy.username)}')"
                 class="opacity-0 group-hover:opacity-100 transition-opacity ml-1 shrink-0 text-gray-300 hover:text-red-500 text-xs p-1 rounded-lg hover:bg-red-50"

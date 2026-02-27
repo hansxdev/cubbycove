@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. Child session guard
     const raw = sessionStorage.getItem('cubby_child_session');
-    if (!raw) { window.location.href = '../login.html'; return; }
+    if (!raw) { window.location.replace('../login.html'); return; }
     _currentChild = JSON.parse(raw);
 
     // 2. Parse URL params
@@ -74,10 +74,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 8. Start polling for new messages
     startPolling();
 
-    // 9. Wire send button + Enter key
+    // 9. Wire send button + keyboard
     $('send-btn').addEventListener('click', sendMessage);
-    $('message-input').addEventListener('keypress', e => {
-        if (e.key === 'Enter') sendMessage();
+    $('message-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // don't insert newline on plain Enter
+            sendMessage();
+        }
+        // Shift+Enter falls through naturally, inserting a newline in the textarea
     });
 
     // 10. Focus input
@@ -292,7 +296,7 @@ function renderMessage(msg) {
 
         div.className = `flex justify-end ${marginTop} message-enter`;
         div.innerHTML = `
-            <div class="max-w-[75%] bg-cubby-green ${bubble} px-4 py-2 shadow-sm text-white text-sm leading-relaxed font-medium">
+            <div class="max-w-[75%] bg-cubby-green ${bubble} px-4 py-2 shadow-sm text-white text-sm leading-relaxed font-medium break-words overflow-wrap-anywhere" style="overflow-wrap:anywhere;word-break:break-word;">
                 ${escapeHtml(msg.text)}
             </div>`;
 
@@ -309,14 +313,14 @@ function renderMessage(msg) {
             // No repeated avatar — use an invisible spacer to keep alignment
             div.innerHTML = `
                 <div class="w-8 shrink-0"></div>
-                <div class="max-w-[75%] bg-white ${bubble} px-4 py-2 shadow-sm text-gray-800 text-sm leading-relaxed">
+                <div class="max-w-[75%] bg-white ${bubble} px-4 py-2 shadow-sm text-gray-800 text-sm leading-relaxed break-words" style="overflow-wrap:anywhere;word-break:break-word;">
                     ${escapeHtml(msg.text)}
                 </div>`;
         } else {
             div.innerHTML = `
                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.fromUsername || _buddyName)}"
                     class="w-8 h-8 rounded-full bg-white border border-gray-200 shrink-0">
-                <div class="max-w-[75%] bg-white ${bubble} px-4 py-2 shadow-sm text-gray-800 text-sm leading-relaxed">
+                <div class="max-w-[75%] bg-white ${bubble} px-4 py-2 shadow-sm text-gray-800 text-sm leading-relaxed break-words" style="overflow-wrap:anywhere;word-break:break-word;">
                     ${escapeHtml(msg.text)}
                 </div>`;
         }
@@ -344,8 +348,9 @@ async function sendMessage() {
         return;
     }
 
-    // Clear input immediately for snappy UX
+    // Clear input immediately for snappy UX and reset textarea height
     input.value = '';
+    input.style.height = 'auto';
     sendBtn.disabled = true;
 
     // Optimistic render — show the message right away, before DB save

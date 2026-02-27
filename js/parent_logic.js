@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             console.warn("Logout error:", e);
         }
-        window.location.href = '../index.html';
+        window.location.replace('../login.html');
     };
 
     // --- Start notification polling when on the dashboard ---

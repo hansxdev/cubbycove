@@ -18,16 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // No special init needed yet
     }
 
-    // --- Global Parent Logout ---
-    window.handleParentLogout = async function () {
-        stopNotifPolling();
-        try {
-            await DataService.logout();
-        } catch (e) {
-            console.warn("Logout error:", e);
-        }
-        window.location.replace('../login.html');
-    };
+    // Global assignment for stopping notifications
+    window.stopNotifPollingGlobal = stopNotifPolling;
 
     // --- Start notification polling when on the dashboard ---
     if (dashboardMain) {
@@ -189,6 +181,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
+// --- Global Parent Logout ---
+window.handleParentLogout = async function () {
+    try {
+        if (typeof window.stopNotifPollingGlobal === 'function') {
+            window.stopNotifPollingGlobal();
+        }
+    } catch (e) {
+        console.warn('stop polling error:', e);
+    }
+
+    try {
+        await DataService.logout();
+    } catch (e) {
+        console.warn("Logout error:", e);
+    }
+
+    window.location.href = '../login.html';
+};
+
 // ── Tab Switching ─────────────────────────────────────────────────────────────
 function showTab(tabName) {
     const titles = { overview: 'Dashboard Overview', kids: 'My Kids', activity: 'Activity Log', settings: 'Settings' };
@@ -339,7 +350,10 @@ async function inlineDeny(requestId) {
  */
 async function loadDashboardData() {
     const user = await DataService.getCurrentUser();
-    if (!user) return; // Should likely redirect to login
+    if (!user) {
+        window.location.href = '../login.html';
+        return; // Redirect to login immediately
+    }
 
     // update Header Profile
     const userNameEl = document.getElementById('userName');
@@ -613,7 +627,7 @@ function openEditChildModal(childId) {
     document.getElementById('editChildName').value = child.name || '';
     document.getElementById('editChildUsername').value = child.username || '';
     document.getElementById('editChildPassword').value = child.password || '';
-    
+
     // Select avatar
     const avatarInput = document.querySelector(`input[name="editAvatar"][value="${child.avatar}"]`);
     if (avatarInput) avatarInput.checked = true;
@@ -633,7 +647,7 @@ function closeEditChildModal() {
 
 async function saveEditedChild() {
     if (!_editingChildId) return;
-    
+
     const btn = document.getElementById('editChildSaveBtn');
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';

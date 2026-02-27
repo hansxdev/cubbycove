@@ -20,8 +20,10 @@ let _conversationId = '';      // stable "<idA>_<idB>" sorted string
 let _pollInterval = null;    // setInterval handle for message polling
 let _lastMessageTime = null;    // ISO string — only fetch messages newer than this
 let _knownMessageIds = new Set(); // dedup guard so we never render the same msg twice
+let _lastRenderedMsg = null;    // { fromChildId, sentAt } — used for grouping logic
 
-const POLL_MS = 2000; // check for new messages every 2 seconds
+const POLL_MS = 2000;  // check for new messages every 2 seconds
+const GROUP_MS = 60000; // messages within 60s from same sender are grouped
 
 // ── Bad-word list ─────────────────────────────────────────────────────────────
 const BAD_WORDS = ['stupid', 'ugly', 'hate', 'dumb', 'idiot', 'kill', 'die', 'shut up'];
@@ -179,6 +181,7 @@ async function loadMessageHistory() {
 
         // Render all history messages
         container.innerHTML = '';
+        _lastRenderedMsg = null; // reset grouping state for fresh render
         messages.forEach(msg => {
             _knownMessageIds.add(msg.$id);
             renderMessage(msg);
@@ -246,44 +249,83 @@ async function pollNewMessages() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// RENDER A SINGLE MESSAGE
+// RENDER A SINGLE MESSAGE (with grouping & time separators)
 // ══════════════════════════════════════════════════════════════════════════════
 function renderMessage(msg) {
     if (!msg || !msg.text) return;
 
     const isMe = msg.fromChildId === _currentChild.$id;
     const container = $('chat-messages');
-    const timeStr = msg.sentAt
-        ? new Date(msg.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : '';
 
+    // ── Grouping decision ────────────────────────────────────────────────────
+    const prev = _lastRenderedMsg;
+    const sameSender = prev && prev.fromChildId === msg.fromChildId;
+    const gapMs = prev && msg.sentAt && prev.sentAt
+        ? (new Date(msg.sentAt) - new Date(prev.sentAt))
+        : Infinity;
+    const isGrouped = sameSender && gapMs < GROUP_MS;
+
+    // ── Time separator ───────────────────────────────────────────────────────
+    // Show on very first message OR when >= 1 min passes between any two messages
+    if (!prev || gapMs >= GROUP_MS) {
+        const sep = document.createElement('div');
+        sep.className = 'text-center my-3';
+        sep.innerHTML = `<span class="bg-gray-100 text-gray-400 text-[10px] font-bold px-3 py-1 rounded-full">
+            ${formatTime(msg.sentAt)}
+        </span>`;
+        container.appendChild(sep);
+    }
+
+    // ── Build bubble ─────────────────────────────────────────────────────────
     const div = document.createElement('div');
-    div.className = isMe
-        ? 'flex gap-3 justify-end message-enter'
-        : 'flex gap-3 message-enter';
     div.dataset.msgId = msg.$id || '';
 
+    // Vertical margin: tight inside a group, small gap at group start
+    const marginTop = isGrouped ? 'mt-0.5' : 'mt-1';
+
     if (isMe) {
+        // My messages — right aligned, green bubble
+        // Connected corner: top-right (when grouped the connecting edge flattens)
+        const bubble = isGrouped
+            ? 'rounded-tl-2xl rounded-bl-2xl rounded-tr-sm rounded-br-none'
+            : 'rounded-2xl rounded-br-none';
+
+        div.className = `flex justify-end ${marginTop} message-enter`;
         div.innerHTML = `
-            <div class="flex flex-col items-end gap-1 max-w-[75%]">
-                <div class="bg-cubby-green p-3 rounded-2xl rounded-br-none shadow-md text-white text-sm leading-relaxed font-medium">
-                    ${escapeHtml(msg.text)}
-                </div>
-                <span class="text-[10px] text-gray-400 mr-1">${timeStr}</span>
+            <div class="max-w-[75%] bg-cubby-green ${bubble} px-4 py-2 shadow-sm text-white text-sm leading-relaxed font-medium">
+                ${escapeHtml(msg.text)}
             </div>`;
+
     } else {
-        div.innerHTML = `
-            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.fromUsername || _buddyName)}"
-                class="w-8 h-8 rounded-full bg-white border border-gray-200 self-end mb-1 shrink-0">
-            <div class="flex flex-col gap-1 max-w-[75%]">
-                <div class="bg-white p-3 rounded-2xl rounded-bl-none shadow-sm text-gray-800 text-sm leading-relaxed">
+        // Buddy messages — left aligned, white bubble
+        // Connected corner: top-left (when grouped)
+        const bubble = isGrouped
+            ? 'rounded-tr-2xl rounded-br-2xl rounded-tl-sm rounded-bl-none'
+            : 'rounded-2xl rounded-bl-none';
+
+        div.className = `flex gap-2 items-end ${marginTop} message-enter`;
+
+        if (isGrouped) {
+            // No repeated avatar — use an invisible spacer to keep alignment
+            div.innerHTML = `
+                <div class="w-8 shrink-0"></div>
+                <div class="max-w-[75%] bg-white ${bubble} px-4 py-2 shadow-sm text-gray-800 text-sm leading-relaxed">
                     ${escapeHtml(msg.text)}
-                </div>
-                <span class="text-[10px] text-gray-400 ml-1">${timeStr}</span>
-            </div>`;
+                </div>`;
+        } else {
+            div.innerHTML = `
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.fromUsername || _buddyName)}"
+                    class="w-8 h-8 rounded-full bg-white border border-gray-200 shrink-0">
+                <div class="max-w-[75%] bg-white ${bubble} px-4 py-2 shadow-sm text-gray-800 text-sm leading-relaxed">
+                    ${escapeHtml(msg.text)}
+                </div>`;
+        }
     }
 
     container.appendChild(div);
+
+    // Update grouping tracker
+    _lastRenderedMsg = { fromChildId: msg.fromChildId, sentAt: msg.sentAt };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -367,6 +409,11 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function formatTime(isoStr) {
+    if (!isoStr) return '';
+    return new Date(isoStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 // Stop polling when the user leaves the page (saves resources)

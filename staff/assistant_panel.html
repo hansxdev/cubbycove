@@ -121,8 +121,8 @@
                         class="bg-gradient-to-r from-cubby-purple to-purple-600 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
                         <div class="relative z-10">
                             <h2 class="text-3xl font-extrabold mb-2">Hello, Staff Member! 👋</h2>
-                            <p class="text-purple-100 font-semibold max-w-xl">You have <span
-                                    class="text-white font-bold underline">10 new tasks</span> pending your review
+                            <p class="text-purple-100 font-semibold max-w-xl">You have <span id="overview-total-tasks"
+                                    class="text-white font-bold underline">loading...</span> pending your review
                                 today. Let's keep CubbyCove safe!</p>
                         </div>
                         <i
@@ -138,9 +138,9 @@
                                 <div>
                                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pending Parents
                                     </p>
-                                    <h3
+                                    <h3 id="stat-pending-parents"
                                         class="text-3xl font-black text-gray-800 mt-1 group-hover:text-cubby-purple transition-colors">
-                                        3</h3>
+                                        —</h3>
                                 </div>
                                 <div
                                     class="w-12 h-12 bg-purple-50 text-cubby-purple rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
@@ -159,9 +159,9 @@
                                 <div>
                                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Chat Reports
                                     </p>
-                                    <h3
+                                    <h3 id="stat-chat-reports"
                                         class="text-3xl font-black text-gray-800 mt-1 group-hover:text-red-500 transition-colors">
-                                        5</h3>
+                                        —</h3>
                                 </div>
                                 <div
                                     class="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
@@ -180,9 +180,9 @@
                                 <div>
                                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Video Review
                                     </p>
-                                    <h3
+                                    <h3 id="stat-video-review"
                                         class="text-3xl font-black text-gray-800 mt-1 group-hover:text-blue-500 transition-colors">
-                                        2</h3>
+                                        —</h3>
                                 </div>
                                 <div
                                     class="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform">

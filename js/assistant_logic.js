@@ -81,25 +81,32 @@ async function loadOverviewStats() {
         const flaggedLogs = await DataService.getThreatLogs('pending');
         const flaggedCount = flaggedLogs.length;
 
-        // Update Dashboard Cards
-        updateOverviewCard('Pending Parents', pendingParentsCount);
-        updateOverviewCard('Video Review', pendingVideosCount);
-        updateOverviewCard('Chat Reports', flaggedCount);
+        // Update stat cards by ID (reliable)
+        const pendingParentsEl = document.getElementById('stat-pending-parents');
+        const chatReportsEl = document.getElementById('stat-chat-reports');
+        const videoReviewEl = document.getElementById('stat-video-review');
+        const totalTasksEl = document.getElementById('overview-total-tasks');
+
+        if (pendingParentsEl) pendingParentsEl.innerText = pendingParentsCount;
+        if (chatReportsEl) chatReportsEl.innerText = flaggedCount;
+        if (videoReviewEl) videoReviewEl.innerText = pendingVideosCount;
+
+        // Update welcome banner total
+        const total = pendingParentsCount + pendingVideosCount + flaggedCount;
+        if (totalTasksEl) {
+            totalTasksEl.innerText = total === 0
+                ? 'no tasks'
+                : `${total} new task${total !== 1 ? 's' : ''}`;
+        }
+
+        // Also refresh sidebar badges
+        updateBadge('verification', pendingParentsCount);
+        updateBadge('moderation', flaggedCount);
+        updateBadge('content', pendingVideosCount);
 
     } catch (error) {
         console.error("Error loading stats:", error);
     }
-}
-
-function updateOverviewCard(title, count) {
-    // Helper to find card by text content (fragile but works for now without IDs on cards)
-    const cardTitles = document.querySelectorAll('.text-xs.font-bold.text-gray-400.uppercase.tracking-widest');
-    cardTitles.forEach(el => {
-        if (el.textContent.includes(title)) {
-            const countEl = el.nextElementSibling; // The h3
-            if (countEl) countEl.innerText = count;
-        }
-    });
 }
 
 

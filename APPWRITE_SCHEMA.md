@@ -100,3 +100,50 @@ Stores uploaded images from the parent registration flow.
 ### 4. Logic & Functions
 - `onUserCreate`: Trigger to create a `Users` document.
 - `monitorScreenTime`: Scheduled function to aggregate daily logs (Future).
+
+---
+
+### 5. Additional Collections (Added via setup scripts)
+
+#### Collection: `buddies`
+Tracks friend relationships and pending requests between children.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `fromChildId` | String | Yes | Child who sent the request. |
+| `toChildId` | String | Yes | Child who received the request. |
+| `fromUsername` | String | Yes | Sender's display username. |
+| `toUsername` | String | Yes | Receiver's display username. |
+| `fromKidId` | String | No | Sender's short `#XXXXXX` ID. |
+| `toKidId` | String | No | Receiver's short `#XXXXXX` ID. |
+| `status` | String | Yes | Enum: `pending`, `accepted`, `declined`. |
+| `createdAt` | String | Yes | ISO timestamp. |
+| `updatedAt` | String | No | ISO timestamp of last status change. |
+
+#### Collection: `parent_notifications`
+Real-time notifications delivered to parents about buddy and chat events.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `parentId` | String | Yes | The parent to notify (`users.$id`). |
+| `type` | String | Yes | Enum: `buddy_request` (someone wants to add child), `buddy_added` (child initiated add), `buddy_accepted`. |
+| `message` | String | Yes | Human-readable notification text. |
+| `childId` | String | No | The child involved. |
+| `buddyId` | String | No | The buddy child involved. |
+| `isRead` | Boolean | No | Default `false`. Shown as blue dot until dismissed. |
+| `createdAt` | String | Yes | ISO timestamp. |
+
+#### Collection: `chat_messages`
+Stores chat messages between buddies. Powered by Appwrite Realtime.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `conversationId` | String | Yes | Stable ID: `[childIdA, childIdB].sort().join('_')`. |
+| `fromChildId` | String | Yes | Sender's child document ID. |
+| `fromUsername` | String | Yes | Sender's display name. |
+| `text` | String | Yes | Message content (max 1000 chars). |
+| `sentAt` | String | Yes | ISO timestamp. |
+
+> **Setup**: Run `js/appwrite_add_chat.js` in your Appwrite Console F12 to create this collection.
+> **Realtime**: Enable Realtime in your Appwrite project settings so `subscribeToChatMessages()` works live.
+

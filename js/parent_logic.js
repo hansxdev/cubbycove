@@ -97,8 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Build buddy notification items
             const buddyItems = buddyNotifs.map(notif => {
                 const time = new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const isBuddyReq = notif.type === 'buddy_request';
-                const icon = isBuddyReq ? 'fa-user-plus text-cubby-pink' : 'fa-handshake text-cubby-green';
+                let icon;
+                if (notif.type === 'buddy_request') icon = 'fa-user-plus text-cubby-pink';
+                else if (notif.type === 'buddy_added') icon = 'fa-user-check text-cubby-blue';
+                else icon = 'fa-handshake text-cubby-green';
                 const unreadDot = !notif.isRead ? '<span class="w-2 h-2 bg-cubby-blue rounded-full shrink-0"></span>' : '';
                 return {
                     ts: notif.createdAt,

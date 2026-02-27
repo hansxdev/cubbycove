@@ -622,13 +622,23 @@ const DataService = {
             updatedAt: now
         });
 
-        // Notify target child's parent
+        // Notify target child's parent (someone wants to add their child)
         if (toChild.parentId) {
             await this._createParentNotification(toChild.parentId, {
                 type: 'buddy_request',
                 childId: toChild.$id,
                 buddyId: fromChild.$id,
                 message: `${fromChild.username || fromChild.name} sent a buddy request to your child ${toChild.username || toChild.name}.`
+            });
+        }
+
+        // Notify sending child's parent (their child is adding someone new)
+        if (fromChild.parentId) {
+            await this._createParentNotification(fromChild.parentId, {
+                type: 'buddy_added',
+                childId: fromChild.$id,
+                buddyId: toChild.$id,
+                message: `Your child ${fromChild.username || fromChild.name} sent a buddy request to ${toChild.username || toChild.name}.`
             });
         }
 
@@ -717,6 +727,78 @@ const DataService = {
             status: 'declined',
             updatedAt: new Date().toISOString()
         });
+    },
+
+    /**
+     * Remove / unfriend an existing buddy. Deletes the buddy document entirely.
+     */
+    removeBuddy: async function (buddyDocId) {
+        const { databases, DB_ID } = this._getServices();
+        await databases.deleteDocument(DB_ID, 'buddies', buddyDocId);
+        console.log('💔 [Buddies] Buddy removed:', buddyDocId);
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CHAT MESSAGES (Appwrite Realtime)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Build a stable conversation ID from two child IDs (alphabetical sort for consistency).
+     */
+    _buildConversationId: function (childIdA, childIdB) {
+        return [childIdA, childIdB].sort().join('_');
+    },
+
+    /**
+     * Fetch past messages for a conversation.
+     */
+    getChatMessages: async function (conversationId, limit = 50) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, 'chat_messages', [
+                Query.equal('conversationId', conversationId),
+                Query.orderDesc('sentAt'),
+                Query.limit(limit)
+            ]);
+            // Return in chronological order (oldest first)
+            return result.documents.reverse();
+        } catch (e) {
+            console.warn('getChatMessages error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Send a chat message.
+     */
+    sendChatMessage: async function (conversationId, fromChildId, fromUsername, text) {
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+        const doc = await databases.createDocument(DB_ID, 'chat_messages', ID.unique(), {
+            conversationId,
+            fromChildId,
+            fromUsername,
+            text: text.slice(0, 1000), // safety cap
+            sentAt: new Date().toISOString()
+        });
+        return doc;
+    },
+
+    /**
+     * Subscribe to real-time updates for a chat conversation.
+     * Returns an unsubscribe function.
+     */
+    subscribeToChatMessages: function (conversationId, DB_ID, onMessage) {
+        const { client } = this._getServices();
+        const channel = `databases.${DB_ID}.collections.chat_messages.documents`;
+        const unsubscribe = client.subscribe(channel, (event) => {
+            const doc = event.payload;
+            if (doc && doc.conversationId === conversationId) {
+                onMessage(doc);
+            }
+        });
+        return unsubscribe;
     },
 
     /**

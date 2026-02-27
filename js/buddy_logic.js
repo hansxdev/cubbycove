@@ -67,13 +67,21 @@ function renderBuddyList(buddies) {
     }
 
     container.innerHTML = buddies.map(buddy => `
-        <a href="chat.html"
-            class="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-xl transition-colors group">
-            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddy.username)}"
-                class="w-8 h-8 rounded-full bg-gray-200 border border-white shadow-sm shrink-0">
-            <span class="font-bold text-gray-700 group-hover:text-cubby-blue text-sm truncate">${buddy.username}</span>
-            <span class="w-2 h-2 bg-green-400 rounded-full ml-auto shrink-0"></span>
-        </a>
+        <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-xl transition-colors group relative"
+             title="Chat with ${buddy.username}">
+            <a href="chat.html?buddyId=${encodeURIComponent(buddy.childId)}&buddyName=${encodeURIComponent(buddy.username)}&buddyDocId=${encodeURIComponent(buddy.buddyDocId)}"
+               class="flex items-center gap-2 flex-1 min-w-0">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddy.username)}"
+                    class="w-8 h-8 rounded-full bg-gray-200 border border-white shadow-sm shrink-0">
+                <span class="font-bold text-gray-700 group-hover:text-cubby-blue text-sm truncate">${buddy.username}</span>
+                <span class="w-2 h-2 bg-green-400 rounded-full ml-auto shrink-0"></span>
+            </a>
+            <button onclick="unfriendBuddy('${buddy.buddyDocId}', '${encodeURIComponent(buddy.username)}')"
+                class="opacity-0 group-hover:opacity-100 transition-opacity ml-1 shrink-0 text-gray-300 hover:text-red-500 text-xs p-1 rounded-lg hover:bg-red-50"
+                title="Unfriend ${buddy.username}">
+                <i class="fa-solid fa-user-xmark"></i>
+            </button>
+        </div>
     `).join('');
 }
 
@@ -229,11 +237,12 @@ window.sendBuddyRequest = async function () {
     sendBtn.textContent = '⏳';
     sendBtn.disabled = true;
 
-    // Build a fromChild object (DataService needs username/kidId)
+    // Build a fromChild object (DataService needs username/kidId/parentId)
     const fromChild = {
         $id: _currentChild.$id,
         username: _currentChild.username || _currentChild.name,
-        kidId: _currentChild.kidId || ''
+        kidId: _currentChild.kidId || '',
+        parentId: _currentChild.parentId || ''
     };
 
     try {
@@ -245,5 +254,19 @@ window.sendBuddyRequest = async function () {
         alert(e.message);
         sendBtn.textContent = 'Add!';
         sendBtn.disabled = false;
+    }
+};
+
+/**
+ * Unfriend — remove an accepted buddy relationship.
+ */
+window.unfriendBuddy = async function (buddyDocId, encodedUsername) {
+    const username = decodeURIComponent(encodedUsername);
+    if (!confirm(`Remove ${username} from your buddies?`)) return;
+    try {
+        await DataService.removeBuddy(buddyDocId);
+        await refreshBuddyUI();
+    } catch (e) {
+        alert('Could not unfriend: ' + e.message);
     }
 };

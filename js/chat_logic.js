@@ -3,53 +3,56 @@
  *
  * Features:
  *  • Reads URL params (buddyId, buddyName, buddyDocId) set by buddy_logic.js
- *  • Populates the chat header + sidebar with real buddy info
+ *  • Populates chat header + sidebar with real buddy info
  *  • Loads past Appwrite messages via DataService.getChatMessages()
  *  • Sends new messages via DataService.sendChatMessage()
- *  • Listens for incoming messages via Appwrite Realtime (DataService.subscribeToChatMessages)
+ *  • Polls every 2 seconds for new messages (kids have no Appwrite Auth session,
+ *    so Appwrite Realtime WebSocket cannot authenticate — polling is the reliable fix)
  *  • Client-side bad-word filter with safety toast
  */
 
 // ── State ────────────────────────────────────────────────────────────────────
 let _currentChild = null;
-let _buddyId = null;       // childId of the buddy in the URL
-let _buddyName = '';       // display name
-let _buddyDocId = '';      // buddies collection doc ID (for unfriend if needed)
-let _conversationId = '';  // stable conv ID derived from both child IDs
-let _unsubscribeChat = null; // Appwrite Realtime unsubscribe fn
-let _knownMessageIds = new Set(); // prevent duplicate rendering
+let _buddyId = '';      // childId of the buddy from URL param
+let _buddyName = '';      // display name from URL param
+let _buddyDocId = '';      // buddies doc ID from URL param
+let _conversationId = '';      // stable "<idA>_<idB>" sorted string
+let _pollInterval = null;    // setInterval handle for message polling
+let _lastMessageTime = null;    // ISO string — only fetch messages newer than this
+let _knownMessageIds = new Set(); // dedup guard so we never render the same msg twice
 
-// ── Bad-word list (shared, conservative) ─────────────────────────────────────
+const POLL_MS = 2000; // check for new messages every 2 seconds
+
+// ── Bad-word list ─────────────────────────────────────────────────────────────
 const BAD_WORDS = ['stupid', 'ugly', 'hate', 'dumb', 'idiot', 'kill', 'die', 'shut up'];
 
-// ── DOM shorthand helpers ─────────────────────────────────────────────────────
+// ── Tiny DOM helper ───────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
-// ── Boot ─────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
 
-    // 1. Get current child session
-    const session = sessionStorage.getItem('cubby_child_session');
-    if (!session) {
-        window.location.href = '../login.html';
-        return;
-    }
-    _currentChild = JSON.parse(session);
+    // 1. Child session guard
+    const raw = sessionStorage.getItem('cubby_child_session');
+    if (!raw) { window.location.href = '../login.html'; return; }
+    _currentChild = JSON.parse(raw);
 
-    // 2. Read URL params
+    // 2. Parse URL params
     const params = new URLSearchParams(window.location.search);
     _buddyId = params.get('buddyId') || '';
     _buddyName = params.get('buddyName') || '';
     _buddyDocId = params.get('buddyDocId') || '';
 
-    // 3. Load buddy list in sidebar
+    // 3. Populate the sidebar buddy list
     loadChatBuddySidebar();
 
-    // 4. If no buddy selected, show picker state
+    // 4. No buddy selected — show picker UI
     if (!_buddyId) {
         $('chat-loading').classList.add('hidden');
-        $('no-buddy-state').classList.remove('hidden');
-        $('no-buddy-state').classList.add('flex');
+        const nbs = $('no-buddy-state');
+        if (nbs) { nbs.classList.remove('hidden'); nbs.classList.add('flex'); }
         $('send-btn').disabled = true;
         $('message-input').disabled = true;
         $('message-input').placeholder = 'Pick a buddy first...';
@@ -57,32 +60,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // 5. Update chat header with buddy info
+    // 5. Populate header
     updateChatHeader(_buddyId, _buddyName);
 
-    // 6. Build conversation ID
+    // 6. Stable conversation ID
     _conversationId = DataService._buildConversationId(_currentChild.$id, _buddyId);
 
-    // 7. Load history
+    // 7. Load history (initial full load)
     await loadMessageHistory();
 
-    // 8. Subscribe to real-time messages
-    setupRealtimeChat();
+    // 8. Start polling for new messages
+    startPolling();
 
-    // 9. Wire up send button + enter key
+    // 9. Wire send button + Enter key
     $('send-btn').addEventListener('click', sendMessage);
     $('message-input').addEventListener('keypress', e => {
         if (e.key === 'Enter') sendMessage();
     });
 
-    // 10. Focus
+    // 10. Focus input
     $('message-input').focus();
 
     // 11. Sidebar search filter
     $('buddy-search')?.addEventListener('input', filterBuddySidebar);
 });
 
-// ── Header update ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// CHAT HEADER
+// ══════════════════════════════════════════════════════════════════════════════
 function updateChatHeader(buddyId, buddyName) {
     const avatarEl = $('chat-buddy-avatar');
     const nameEl = $('chat-buddy-name');
@@ -93,13 +98,14 @@ function updateChatHeader(buddyId, buddyName) {
         if (statusEl) statusEl.textContent = '';
         return;
     }
-
     if (avatarEl) avatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddyName)}`;
     if (nameEl) nameEl.textContent = buddyName || 'Your Buddy';
     if (statusEl) statusEl.textContent = 'Online';
 }
 
-// ── Load buddy sidebar in chat ────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// BUDDY SIDEBAR (inside chat page)
+// ══════════════════════════════════════════════════════════════════════════════
 async function loadChatBuddySidebar() {
     const container = $('chat-buddy-list');
     if (!container || !_currentChild) return;
@@ -127,37 +133,39 @@ async function loadChatBuddySidebar() {
                     class="w-10 h-10 rounded-full bg-white border border-gray-200">
                 <div class="flex-1 min-w-0 sidebar-label whitespace-nowrap overflow-hidden transition-all duration-300">
                     <h4 class="font-bold ${isActive ? 'text-cubby-green' : 'text-gray-800'} truncate text-sm">${buddy.username}</h4>
-                    ${isActive ? '<p class="text-xs text-cubby-green font-semibold">Chatting now</p>' : '<p class="text-xs text-gray-400 truncate">Tap to chat</p>'}
+                    ${isActive
+                    ? '<p class="text-xs text-cubby-green font-semibold">Chatting now</p>'
+                    : '<p class="text-xs text-gray-400 truncate">Tap to chat</p>'}
                 </div>
                 ${isActive ? '<span class="w-2 h-2 bg-cubby-green rounded-full shrink-0"></span>' : ''}
             </a>`;
         }).join('');
 
     } catch (e) {
-        console.warn('Could not load buddy sidebar:', e.message);
-        container.innerHTML = '<p class="text-xs text-gray-400 p-4">Could not load buddies.</p>';
+        console.warn('loadChatBuddySidebar error:', e.message);
     }
 }
 
 function filterBuddySidebar(e) {
     const q = e.target.value.toLowerCase();
     document.querySelectorAll('.buddy-item').forEach(el => {
-        const name = el.dataset.name || '';
-        el.style.display = name.includes(q) ? '' : 'none';
+        el.style.display = (el.dataset.name || '').includes(q) ? '' : 'none';
     });
 }
 
-// ── Load message history ──────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// INITIAL HISTORY LOAD
+// ══════════════════════════════════════════════════════════════════════════════
 async function loadMessageHistory() {
-    $('chat-loading').classList.remove('hidden');
+    const loadingEl = $('chat-loading');
+    if (loadingEl) loadingEl.classList.remove('hidden');
     const container = $('chat-messages');
 
     try {
         const messages = await DataService.getChatMessages(_conversationId, 50);
-        $('chat-loading').classList.add('hidden');
+        if (loadingEl) loadingEl.classList.add('hidden');
 
         if (messages.length === 0) {
-            // Show welcome card
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-12 text-center" id="empty-chat-msg">
                     <div class="w-16 h-16 bg-cubby-green/10 text-cubby-green rounded-full flex items-center justify-center text-3xl mb-3">
@@ -169,59 +177,91 @@ async function loadMessageHistory() {
             return;
         }
 
-        // Render existing messages
+        // Render all history messages
         container.innerHTML = '';
-        messages.forEach(msg => renderMessage(msg));
+        messages.forEach(msg => {
+            _knownMessageIds.add(msg.$id);
+            renderMessage(msg);
+        });
+
+        // Track the latest timestamp so polling knows where to start
+        _lastMessageTime = messages[messages.length - 1].sentAt;
+
         scrollToBottom();
 
     } catch (e) {
-        $('chat-loading').innerHTML = `
+        if (loadingEl) loadingEl.innerHTML = `
             <div class="text-center text-red-400 text-sm py-8">
-                <i class="fa-solid fa-circle-exclamation text-xl mb-2"></i>
-                <p>Could not load messages. Are you connected to the internet?</p>
+                <i class="fa-solid fa-circle-exclamation text-xl mb-2 block"></i>
+                Could not load messages. Check your connection.
             </div>`;
         console.error('loadMessageHistory error:', e.message);
     }
 }
 
-// ── Appwrite Realtime subscription ────────────────────────────────────────────
-function setupRealtimeChat() {
-    if (!window.AppwriteService) return;
-    const { DB_ID } = window.AppwriteService;
+// ══════════════════════════════════════════════════════════════════════════════
+// POLLING — replaces Appwrite Realtime (works without an auth session)
+// ══════════════════════════════════════════════════════════════════════════════
+function startPolling() {
+    stopPolling(); // clear any stale interval first
+    _pollInterval = setInterval(pollNewMessages, POLL_MS);
+    console.log(`✅ [CubbyChat] Polling every ${POLL_MS}ms for new messages`);
+}
 
-    // Unsubscribe any previous listener
-    if (_unsubscribeChat) { try { _unsubscribeChat(); } catch (e) { } }
+function stopPolling() {
+    if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
+}
 
-    _unsubscribeChat = DataService.subscribeToChatMessages(
-        _conversationId,
-        DB_ID,
-        (newMsg) => {
-            // Avoid duplicates (we already rendered optimistically on send)
-            if (_knownMessageIds.has(newMsg.$id)) return;
-            _knownMessageIds.add(newMsg.$id);
+async function pollNewMessages() {
+    if (!_conversationId) return;
 
-            // Remove the "say hi" card if present
+    try {
+        // Fetch the most recent batch; we'll filter client-side by ID
+        const messages = await DataService.getChatMessages(_conversationId, 25);
+
+        let addedAny = false;
+        messages.forEach(msg => {
+            if (_knownMessageIds.has(msg.$id)) return; // already rendered
+            _knownMessageIds.add(msg.$id);
+
+            // Remove the "say hi" placeholder if still showing
             const emptyCard = $('empty-chat-msg');
             if (emptyCard) emptyCard.remove();
 
-            renderMessage(newMsg);
-            scrollToBottom();
-        }
-    );
+            renderMessage(msg);
+            addedAny = true;
 
-    console.log('✅ [CubbyChat] Real-time subscription active');
+            // Update last-seen timestamp
+            if (!_lastMessageTime || msg.sentAt > _lastMessageTime) {
+                _lastMessageTime = msg.sentAt;
+            }
+        });
+
+        if (addedAny) scrollToBottom();
+
+    } catch (e) {
+        // Silent — don't spam the user, just wait for next poll
+        console.warn('[CubbyChat] Poll error:', e.message);
+    }
 }
 
-// ── Render a single message ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// RENDER A SINGLE MESSAGE
+// ══════════════════════════════════════════════════════════════════════════════
 function renderMessage(msg) {
+    if (!msg || !msg.text) return;
+
     const isMe = msg.fromChildId === _currentChild.$id;
     const container = $('chat-messages');
+    const timeStr = msg.sentAt
+        ? new Date(msg.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '';
 
     const div = document.createElement('div');
-    div.className = isMe ? 'flex gap-3 justify-end message-enter' : 'flex gap-3 message-enter';
+    div.className = isMe
+        ? 'flex gap-3 justify-end message-enter'
+        : 'flex gap-3 message-enter';
     div.dataset.msgId = msg.$id || '';
-
-    const timeStr = msg.sentAt ? new Date(msg.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
     if (isMe) {
         div.innerHTML = `
@@ -246,27 +286,27 @@ function renderMessage(msg) {
     container.appendChild(div);
 }
 
-// ── Send a message ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// SEND MESSAGE
+// ══════════════════════════════════════════════════════════════════════════════
 async function sendMessage() {
     const input = $('message-input');
     const sendBtn = $('send-btn');
     const text = input.value.trim();
 
-    if (!text || !_conversationId) return;
-    if (!_currentChild) return;
+    if (!text || !_conversationId || !_currentChild) return;
 
     // Bad-word check
-    const hasBadWord = BAD_WORDS.some(w => text.toLowerCase().includes(w));
-    if (hasBadWord) {
+    if (BAD_WORDS.some(w => text.toLowerCase().includes(w))) {
         showSafetyWarning();
         return;
     }
 
-    // Disable input briefly
+    // Clear input immediately for snappy UX
     input.value = '';
     sendBtn.disabled = true;
 
-    // Optimistic render (before persisting)
+    // Optimistic render — show the message right away, before DB save
     const tempId = 'temp_' + Date.now();
     const tempMsg = {
         $id: tempId,
@@ -276,9 +316,9 @@ async function sendMessage() {
         text,
         sentAt: new Date().toISOString()
     };
-    _knownMessageIds.add(tempId);
+    _knownMessageIds.add(tempId); // mark so pollNewMessages skips this temp bubble
 
-    // Remove the "say hi" card if present
+    // Remove placeholder if showing
     const emptyCard = $('empty-chat-msg');
     if (emptyCard) emptyCard.remove();
 
@@ -292,11 +332,13 @@ async function sendMessage() {
             _currentChild.username || _currentChild.name,
             text
         );
-        // Track the real ID so the realtime event is deduplicated
-        if (saved && saved.$id) _knownMessageIds.add(saved.$id);
+        // Register the real DB id so the next poll doesn't render a duplicate
+        if (saved && saved.$id) {
+            _knownMessageIds.add(saved.$id);
+            _lastMessageTime = saved.sentAt || tempMsg.sentAt;
+        }
     } catch (e) {
         console.error('sendMessage error:', e.message);
-        // Show error in UI but keep the optimistic bubble
         showSafetyWarning('Could not send. Check your connection.');
     } finally {
         sendBtn.disabled = false;
@@ -304,7 +346,9 @@ async function sendMessage() {
     }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
 function showSafetyWarning(msg) {
     const toast = $('safety-toast');
     if (!toast) return;
@@ -325,7 +369,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (_unsubscribeChat) try { _unsubscribeChat(); } catch (e) { }
-});
+// Stop polling when the user leaves the page (saves resources)
+window.addEventListener('beforeunload', stopPolling);
+window.addEventListener('pagehide', stopPolling);

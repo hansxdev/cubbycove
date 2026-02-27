@@ -1040,6 +1040,9 @@ const DataService = {
                 name: childData.name,
                 username: childData.username,
                 password: childData.password,
+                avatar: childData.avatar || 'Felix',
+                allowChat: childData.allowChat !== undefined ? childData.allowChat : false,
+                allowGames: childData.allowGames !== undefined ? childData.allowGames : true,
                 isOnline: false,
                 threatScore: 0
             };
@@ -1087,6 +1090,21 @@ const DataService = {
         } catch (error) {
             console.error("Get Children Error:", error);
             return [];
+        }
+    },
+
+    /**
+     * Updates an existing Child Profile
+     */
+    updateChild: async function (childId, updateData) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            const doc = await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, updateData);
+            console.log("✅ [Appwrite] Child profile updated:", doc.$id);
+            return doc;
+        } catch (error) {
+            console.error("Update Child Error:", error);
+            throw error;
         }
     },
     updateThreatLog: async function (logId, status, resolution) {

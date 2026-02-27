@@ -354,7 +354,7 @@ async function loadDashboardData() {
     await renderKidsAndStats(user);
 
     // --- 2. Render Activity ---
-    renderActivityLogs(user);
+    renderActivityLogs();
 
     // --- 3. Initial Screen Time Mode ---
     changeTimeMode('daily'); // Default
@@ -367,6 +367,7 @@ async function renderKidsAndStats(user) {
 
     // Query children from the database by parentId
     const children = await DataService.getChildrenByParent(user.$id);
+    window._currentChildren = children;
 
     if (!children || children.length === 0) {
         // KEEP EMPTY STATE (Already in HTML)
@@ -392,7 +393,7 @@ async function renderKidsAndStats(user) {
         const borderClass = child.isOnline ? 'border-cubby-green' : 'border-gray-100';
 
         const html = `
-            <div class="flex items-center p-4 bg-gray-50 rounded-xl border ${borderClass} hover:border-cubby-purple transition-colors cursor-pointer group">
+            <div class="flex items-center p-4 bg-gray-50 rounded-xl border ${borderClass} hover:border-cubby-purple transition-colors cursor-pointer group" onclick="openEditChildModal('${child.$id}')">
                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(child.username || child.name)}"
                     class="w-12 h-12 rounded-full bg-white border-2 border-white shadow-sm mr-4">
                 <div class="flex-1">
@@ -416,13 +417,40 @@ async function renderKidsAndStats(user) {
     }
 }
 
-function renderActivityLogs(user) {
+function renderActivityLogs() {
     const listEl = document.getElementById('activity-list');
-    if (!listEl || !user.activityLogs || user.activityLogs.length === 0) return;
+    const children = window._currentChildren || [];
+
+    let allLogs = [];
+    children.forEach(child => {
+        if (child.activityLogs) {
+            let logs;
+            if (typeof child.activityLogs === 'string') {
+                try { logs = JSON.parse(child.activityLogs); } catch (e) { logs = []; }
+            } else if (Array.isArray(child.activityLogs)) {
+                logs = child.activityLogs;
+            } else {
+                logs = [];
+            }
+            logs.forEach(log => {
+                log.childName = child.name;
+                allLogs.push(log);
+            });
+        }
+    });
+
+    if (!listEl || allLogs.length === 0) {
+        if (listEl) listEl.innerHTML = '<p class="text-sm text-gray-400 italic">No recent activity.</p>';
+        return;
+    }
+
+    // Sort by descending timestamp
+    allLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    allLogs = allLogs.slice(0, 20); // show top 20
 
     listEl.innerHTML = '<div class="absolute left-2.5 top-2 bottom-4 w-0.5 bg-gray-100"></div>'; // Reset with line
 
-    user.activityLogs.forEach(log => {
+    allLogs.forEach(log => {
         const html = `
             <div class="flex gap-4 relative">
                 <div class="w-5 h-5 rounded-full bg-cubby-blue/20 border-4 border-white z-10 flex-shrink-0"></div>
@@ -452,11 +480,45 @@ function changeTimeMode(mode) {
         }
     });
 
-    // Calculate Screen Time based on Mode (Mock Logic)
-    let timeText = "0m";
-    if (mode === 'daily') timeText = "45m";
-    if (mode === 'weekly') timeText = "5h 12m";
-    if (mode === 'monthly') timeText = "22h";
+    // Calculate Screen Time based on Mode real data
+    let totalMinutes = 0;
+    const children = window._currentChildren || [];
+    const now = new Date();
+
+    children.forEach(child => {
+        if (child.screenTimeLogs) {
+            let logs;
+            if (typeof child.screenTimeLogs === 'string') {
+                try { logs = JSON.parse(child.screenTimeLogs); } catch (e) { logs = []; }
+            } else if (Array.isArray(child.screenTimeLogs)) {
+                logs = child.screenTimeLogs;
+            } else {
+                logs = [];
+            }
+            logs.forEach(log => {
+                const logDate = new Date(log.date);
+                if (mode === 'daily') {
+                    if (logDate.toDateString() === now.toDateString()) totalMinutes += log.minutes;
+                } else if (mode === 'weekly') {
+                    const diff = Math.abs(now - logDate) / (1000 * 60 * 60 * 24);
+                    if (diff <= 7) totalMinutes += log.minutes;
+                } else if (mode === 'monthly') {
+                    if (logDate.getMonth() === now.getMonth() && logDate.getFullYear() === now.getFullYear()) totalMinutes += log.minutes;
+                }
+            });
+        }
+    });
+
+    let timeText = "";
+    if (totalMinutes === 0) {
+        timeText = "0m";
+    } else if (totalMinutes < 60) {
+        timeText = `${totalMinutes}m`;
+    } else {
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        timeText = `${h}h ${m}m`;
+    }
 
     const statEl = document.getElementById('stat-screen-time');
     if (statEl) statEl.innerText = timeText;
@@ -533,4 +595,76 @@ async function saveChild() {
             btn.classList.remove('opacity-75');
         }
     }
+}
+
+// --- Child Edit Modal ---
+let _editingChildId = null;
+
+function openEditChildModal(childId) {
+    if (!window._currentChildren) return;
+    const child = window._currentChildren.find(c => c.$id === childId);
+    if (!child) return;
+
+    _editingChildId = childId;
+    const modal = document.getElementById('edit-child-modal');
+    if (!modal) return;
+
+    // Populate modal fields
+    document.getElementById('editChildName').value = child.name || '';
+    document.getElementById('editChildUsername').value = child.username || '';
+    document.getElementById('editChildPassword').value = child.password || '';
+    
+    // Select avatar
+    const avatarInput = document.querySelector(`input[name="editAvatar"][value="${child.avatar}"]`);
+    if (avatarInput) avatarInput.checked = true;
+
+    // Checkboxes
+    document.getElementById('editAllowChat').checked = !!child.allowChat;
+    document.getElementById('editAllowGames').checked = !!child.allowGames;
+
+    modal.classList.remove('hidden');
+}
+
+function closeEditChildModal() {
+    const modal = document.getElementById('edit-child-modal');
+    if (modal) modal.classList.add('hidden');
+    _editingChildId = null;
+}
+
+async function saveEditedChild() {
+    if (!_editingChildId) return;
+    
+    const btn = document.getElementById('editChildSaveBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+    btn.disabled = true;
+
+    const name = document.getElementById('editChildName').value.trim();
+    const username = document.getElementById('editChildUsername').value.trim();
+    const password = document.getElementById('editChildPassword').value;
+    const avatar = document.querySelector('input[name="editAvatar"]:checked')?.value || 'Felix';
+    const allowChat = document.getElementById('editAllowChat').checked;
+    const allowGames = document.getElementById('editAllowGames').checked;
+
+    if (!name || !username || !password) {
+        alert("Please fill in all fields.");
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        return;
+    }
+
+    try {
+        await DataService.updateChild(_editingChildId, {
+            name, username, password, avatar, allowChat, allowGames
+        });
+        alert('Child profile updated successfully!');
+        closeEditChildModal();
+        let user = await DataService.getCurrentUser();
+        await renderKidsAndStats(user); // refresh list
+    } catch (e) {
+        alert('Failed to update child: ' + e.message);
+    }
+
+    btn.innerHTML = originalText;
+    btn.disabled = false;
 }

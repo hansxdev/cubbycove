@@ -331,6 +331,75 @@
         </div>
     </div>
 
+    <!-- EDIT CHILD MODAL -->
+    <div id="edit-child-modal"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xl p-8 relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeEditChildModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">
+                <i class="fa-solid fa-times"></i>
+            </button>
+            <h3 class="text-xl font-extrabold text-gray-800 mb-6">Edit Child Profile</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Display Name</label>
+                    <input type="text" id="editChildName"
+                        class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-cubby-purple bg-gray-50">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Username</label>
+                    <input type="text" id="editChildUsername"
+                        class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-cubby-purple bg-gray-50">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Password</label>
+                    <input type="password" id="editChildPassword"
+                        class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-cubby-purple bg-gray-50">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Choose Avatar</label>
+                    <div class="flex gap-4">
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="editAvatar" value="Felix" class="hidden peer">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                                class="w-12 h-12 rounded-full border-2 border-transparent peer-checked:border-cubby-purple bg-gray-100 group-hover:scale-110 transition-transform">
+                        </label>
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="editAvatar" value="Aneka" class="hidden peer">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka"
+                                class="w-12 h-12 rounded-full border-2 border-transparent peer-checked:border-cubby-purple bg-gray-100 group-hover:scale-110 transition-transform">
+                        </label>
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="editAvatar" value="Bailey" class="hidden peer">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Bailey"
+                                class="w-12 h-12 rounded-full border-2 border-transparent peer-checked:border-cubby-purple bg-gray-100 group-hover:scale-110 transition-transform">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="space-y-2 mt-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="editAllowChat" class="w-4 h-4 text-cubby-purple rounded">
+                        <span class="text-sm font-bold text-gray-700">Allow Chat</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="editAllowGames" class="w-4 h-4 text-cubby-purple rounded">
+                        <span class="text-sm font-bold text-gray-700">Allow Games</span>
+                    </label>
+                </div>
+
+                <div class="pt-4">
+                    <button id="editChildSaveBtn" onclick="saveEditedChild()"
+                        class="w-full py-3 bg-cubby-purple text-white font-bold rounded-xl hover:bg-purple-700 transition-colors shadow-sm">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Import Logic -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
     <script src="../js/appwrite_config.js"></script>

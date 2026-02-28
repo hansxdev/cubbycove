@@ -30,6 +30,9 @@ try {
     // Storage Bucket IDs
     const BUCKET_PARENT_DOCS = 'parent_docs'; // Create this bucket in your Appwrite project
 
+    // Third-party APIs
+    const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY'; // Replace with real Gemini API key for advanced filtering
+
     // Expose creating services globally
     window.AppwriteService = {
         client,
@@ -38,7 +41,8 @@ try {
         storage,
         DB_ID,
         COLLECTIONS,
-        BUCKET_PARENT_DOCS
+        BUCKET_PARENT_DOCS,
+        GEMINI_API_KEY
     };
 
     console.log("✅ [Appwrite] Client Initialized");

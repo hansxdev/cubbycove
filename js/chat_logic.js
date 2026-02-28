@@ -34,7 +34,7 @@ const TAGALOG_BAD_WORDS = [
     'bayag', 'titi', 'pepe', 'puke', 'tanga'
 ];
 
-// ── ML AI Integration ─────────────────────────────────────────────────────────
+// ── Gemini AI Integration ─────────────────────────────────────────────────────────
 async function analyzeMessageWithAI(text) {
     const lowerText = text.toLowerCase();
 
@@ -45,16 +45,38 @@ async function analyzeMessageWithAI(text) {
     }
 
     try {
-        // Use an ML-based text vector API to understand meaning and detect profanity
-        const response = await fetch('https://vector.profanity.dev', {
+        const apiKey = window.AppwriteService?.GEMINI_API_KEY;
+        if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY') {
+            console.warn("⚠️ Gemini API Key not set. Falling back to simple English string check.");
+            return !BAD_WORDS.some(w => lowerText.includes(w));
+        }
+
+        const prompt = `You are a strict child-safety chat moderator. Analyze this message sent by a child and respond with exactly "SAFE" or "UNSAFE".
+Flags for UNSAFE: swearing, bullying, sexual content, sharing PII, or severe insults in English, Tagalog, or other languages.
+Message to analyze: "${text}"`;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text })
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    temperature: 0.2,
+                    maxOutputTokens: 5
+                }
+            })
         });
+
         const data = await response.json();
-        return !data.isProfanity;
+
+        if (data.candidates && data.candidates.length > 0) {
+            const aiResponse = data.candidates[0].content.parts[0].text.trim().toUpperCase();
+            return !aiResponse.includes("UNSAFE");
+        }
+
+        return true;
     } catch (e) {
-        console.warn("AI API failed, falling back to local English list:", e);
+        console.warn("Gemini API failed, falling back to local English list:", e);
         return !BAD_WORDS.some(w => lowerText.includes(w));
     }
 }

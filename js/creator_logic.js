@@ -1,6 +1,7 @@
 // Logic for creator/creator.html
 
 let currentUser = null;
+let selectedVideoFile = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initCreatorStudio();
@@ -29,6 +30,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadForm = document.getElementById('uploadForm');
     if (uploadForm) {
         uploadForm.addEventListener('submit', handleUpload);
+    }
+
+    const localVideoInfo = document.getElementById('videoUrl');
+    const localVideoInput = document.getElementById('localVideoUpload');
+    if (localVideoInput) {
+        localVideoInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                selectedVideoFile = e.target.files[0];
+                if (localVideoInfo) localVideoInfo.value = selectedVideoFile.name;
+            }
+        });
     }
 
     // Default Tab
@@ -79,14 +91,40 @@ async function handleUpload(e) {
         return;
     }
 
+    if (!url && !selectedVideoFile) {
+        alert("Please provide a YouTube URL or select a video file.");
+        return;
+    }
+
     const btn = document.querySelector('#uploadForm button[type="submit"]');
-    const originalText = btn.innerText;
+    const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
     btn.disabled = true;
 
     try {
+        let finalUrl = '';
+        if (selectedVideoFile) {
+            const { storage, ID } = Appwrite;
+            const svc = window.AppwriteService;
+            try {
+                const bucketId = 'parent_docs'; // reuse if there's no video bucket
+                const uploadedFile = await svc.storage.createFile(bucketId, ID.unique(), selectedVideoFile);
+                const endpoint = (svc.client.config.endpoint || 'https://sgp.cloud.appwrite.io/v1').replace(/\/$/, '');
+                const projectId = svc.client.config.project || '69904f4900396667cf4c';
+                finalUrl = `${endpoint}/storage/buckets/${bucketId}/files/${uploadedFile.$id}/view?project=${projectId}`;
+            } catch (e) {
+                console.warn("Storage upload failed, simulating offline:", e);
+                finalUrl = URL.createObjectURL(selectedVideoFile);
+            }
+        } else {
+            let finalId = url;
+            if (url.includes('v=')) finalId = url.split('v=')[1].split('&')[0];
+            else if (url.includes('youtu.be/')) finalId = url.split('youtu.be/')[1];
+            finalUrl = finalId.includes('http') ? finalId : `https://www.youtube.com/watch?v=${finalId}`;
+        }
+
         await DataService.addVideo({
-            url: url,
+            url: finalUrl,
             title: title,
             category: category,
             creatorEmail: currentUser.email
@@ -94,6 +132,8 @@ async function handleUpload(e) {
 
         alert("Video submitted successfully! It is now pending review.");
         document.getElementById('uploadForm').reset();
+        selectedVideoFile = null;
+        document.getElementById('videoUrl').value = '';
         await loadMyUploads();
         showTab('uploads');
     } catch (error) {

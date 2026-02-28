@@ -25,8 +25,26 @@ let _lastRenderedMsg = null;    // { fromChildId, sentAt } — used for grouping
 const POLL_MS = 2000;  // check for new messages every 2 seconds
 const GROUP_MS = 60000; // messages within 60s from same sender are grouped
 
-// ── Bad-word list ─────────────────────────────────────────────────────────────
+// ── Bad-word list (Fallback if AI fails) ──────────────────────────────────────
 const BAD_WORDS = ['stupid', 'ugly', 'hate', 'dumb', 'idiot', 'kill', 'die', 'shut up'];
+
+// ── ML AI Integration ─────────────────────────────────────────────────────────
+async function analyzeMessageWithAI(text) {
+    try {
+        // Use an ML-based text vector API to understand meaning and detect profanity
+        const response = await fetch('https://vector.profanity.dev', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+        });
+        const data = await response.json();
+        return !data.isProfanity;
+    } catch (e) {
+        console.warn("AI API failed, falling back to local list:", e);
+        const lower = text.toLowerCase();
+        return !BAD_WORDS.some(w => lower.includes(w));
+    }
+}
 
 // ── Tiny DOM helper ───────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -313,15 +331,17 @@ function renderMessage(msg) {
             // No repeated avatar — use an invisible spacer to keep alignment
             div.innerHTML = `
                 <div class="w-8 shrink-0"></div>
-                <div class="max-w-[75%] bg-white ${bubble} px-4 py-2 shadow-sm text-gray-800 text-sm leading-relaxed break-words" style="overflow-wrap:anywhere;word-break:break-word;">
+                <div class="max-w-[75%] bg-white ${bubble} px-4 py-2 shadow-sm text-gray-800 text-sm leading-relaxed break-words relative group" style="overflow-wrap:anywhere;word-break:break-word;">
                     ${escapeHtml(msg.text)}
+                    <button onclick="reportChatMessage('${msg.$id}', '${escapeHtml(msg.text.replace(/'/g, "\\'"))}')" class="absolute -right-8 top-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Report this message"><i class="fa-solid fa-flag"></i></button>
                 </div>`;
         } else {
             div.innerHTML = `
                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.fromUsername || _buddyName)}"
                     class="w-8 h-8 rounded-full bg-white border border-gray-200 shrink-0">
-                <div class="max-w-[75%] bg-white ${bubble} px-4 py-2 shadow-sm text-gray-800 text-sm leading-relaxed break-words" style="overflow-wrap:anywhere;word-break:break-word;">
+                <div class="max-w-[75%] bg-white ${bubble} px-4 py-2 shadow-sm text-gray-800 text-sm leading-relaxed break-words relative group" style="overflow-wrap:anywhere;word-break:break-word;">
                     ${escapeHtml(msg.text)}
+                    <button onclick="reportChatMessage('${msg.$id}', '${escapeHtml(msg.text.replace(/'/g, "\\'"))}')" class="absolute -right-8 top-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Report this message"><i class="fa-solid fa-flag"></i></button>
                 </div>`;
         }
     }
@@ -342,11 +362,18 @@ async function sendMessage() {
 
     if (!text || !_conversationId || !_currentChild) return;
 
-    // Bad-word check
-    if (BAD_WORDS.some(w => text.toLowerCase().includes(w))) {
+    // AI Check
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>';
+
+    const isFriendly = await analyzeMessageWithAI(text);
+    if (!isFriendly) {
         showSafetyWarning();
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i>';
         return;
     }
+    sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i>';
 
     // Clear input immediately for snappy UX and reset textarea height
     input.value = '';
@@ -403,6 +430,18 @@ function showSafetyWarning(msg) {
     if (span) span.textContent = msg || "That message isn't nice! Please be kind. 💛";
     toast.classList.remove('hidden');
     setTimeout(() => toast.classList.add('hidden'), 3000);
+}
+
+window.reportChatMessage = async function (msgId, text) {
+    if (confirm("Do you want to report this message to the safety team?")) {
+        try {
+            await DataService.reportMessage(msgId, _conversationId, _currentChild.$id, _buddyId, text);
+            showSafetyWarning("Message reported to safety team. Thank you! 🛡️");
+        } catch (e) {
+            console.error("Report error:", e);
+            showSafetyWarning("Failed to report message. Try again later.");
+        }
+    }
 }
 
 function scrollToBottom() {

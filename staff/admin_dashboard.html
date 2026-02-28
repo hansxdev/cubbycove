@@ -173,8 +173,27 @@
                     <div class="bg-white rounded-xl shadow-sm p-6">
                         <div class="flex justify-between items-center mb-4 border-b pb-2">
                             <h3 class="font-bold text-lg text-gray-800">User Management</h3>
-                            <input type="text" placeholder="Search user..."
-                                class="text-xs bg-gray-50 border border-gray-300 rounded-full px-3 py-1 focus:outline-none">
+                            <div class="flex gap-2 items-center flex-wrap">
+                                <div class="hidden sm:flex gap-2 mr-2" id="user-filters">
+                                    <button
+                                        class="filter-btn user-btn bg-cubby-blue text-white text-xs px-3 py-1 rounded-full font-bold transition-colors"
+                                        data-filter="All">All</button>
+                                    <button
+                                        class="filter-btn user-btn bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full font-bold hover:bg-gray-200 transition-colors"
+                                        data-filter="Parent">Parent</button>
+                                    <button
+                                        class="filter-btn user-btn bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full font-bold hover:bg-gray-200 transition-colors"
+                                        data-filter="Child">Child</button>
+                                    <button
+                                        class="filter-btn user-btn bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full font-bold hover:bg-gray-200 transition-colors"
+                                        data-filter="accepted">Accepted</button>
+                                    <button
+                                        class="filter-btn user-btn bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full font-bold hover:bg-gray-200 transition-colors"
+                                        data-filter="rejected">Rejected</button>
+                                </div>
+                                <input type="text" id="user-search-input" placeholder="Search user..."
+                                    class="text-xs bg-gray-50 border border-gray-300 rounded-full px-3 py-1 focus:outline-none focus:ring-1 focus:ring-cubby-blue">
+                            </div>
                         </div>
 
                         <div class="overflow-x-auto">
@@ -192,6 +211,15 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div class="pt-4 flex items-center justify-between border-t border-gray-100 mt-2">
+                            <span class="text-xs font-bold text-gray-500" id="user-page-info">Showing 0 of 0</span>
+                            <div class="flex gap-2">
+                                <button id="btn-prev-users"
+                                    class="px-3 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50">Prev</button>
+                                <button id="btn-next-users"
+                                    class="px-3 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50">Next</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -202,15 +230,23 @@
                         <h3 class="font-bold text-lg text-gray-800 mb-4 border-b pb-2">Add Safe Video</h3>
                         <form id="addVideoForm" class="space-y-4">
                             <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">YouTube Video
-                                    ID</label>
-                                <div class="flex gap-2">
-                                    <input type="text" id="videoId" placeholder="e.g. dQw4w9WgXcQ"
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">YouTube Link OR
+                                    Local Video</label>
+                                <div class="flex gap-2 items-center relative">
+                                    <input type="text" id="videoId"
+                                        placeholder="e.g. YouTube ID/Link OR select a local file"
                                         class="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cubby-blue">
-                                    <button type="button"
-                                        class="bg-gray-200 hover:bg-gray-300 text-gray-600 px-4 rounded-lg font-bold text-xs">Test</button>
+                                    <div class="relative flex-shrink-0 cursor-pointer">
+                                        <input type="file" id="localVideoUpload"
+                                            accept="video/mp4,video/x-m4v,video/*,application/youtube-url"
+                                            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                        <button type="button"
+                                            class="bg-cubby-blue hover:bg-blue-400 text-white px-4 py-2 rounded-lg font-bold text-xs"><i
+                                                class="fa-solid fa-upload"></i> Device</button>
+                                    </div>
                                 </div>
-                                <p class="text-xs text-gray-400 mt-1">The code at the end of the YouTube URL.</p>
+                                <p class="text-xs font-semibold text-gray-400 mt-1">Paste a URL, YouTube ID, or click
+                                    "Device" to upload locally.</p>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Video Title</label>
@@ -271,8 +307,12 @@
                         </form>
                     </div>
 
-                    <div class="bg-white rounded-xl shadow-sm p-6">
-                        <h3 class="font-bold text-lg text-gray-800 mb-4">Existing Staff</h3>
+                    <div class="bg-white rounded-xl shadow-sm p-6 overflow-hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-lg text-gray-800">Existing Staff</h3>
+                            <input type="text" id="staff-search-input" placeholder="Search staff..."
+                                class="text-xs bg-gray-50 border border-gray-300 rounded-full px-3 py-1 focus:outline-none focus:ring-1 focus:ring-cubby-purple">
+                        </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
@@ -287,6 +327,15 @@
                                     <!-- Populated by JS -->
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="pt-4 flex items-center justify-between border-t border-gray-100 mt-2">
+                            <span class="text-xs font-bold text-gray-500" id="staff-page-info">Showing 0 of 0</span>
+                            <div class="flex gap-2">
+                                <button id="btn-prev-staff"
+                                    class="px-3 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50">Prev</button>
+                                <button id="btn-next-staff"
+                                    class="px-3 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50">Next</button>
+                            </div>
                         </div>
                     </div>
                 </div>

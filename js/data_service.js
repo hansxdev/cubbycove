@@ -785,6 +785,21 @@ const DataService = {
         return doc;
     },
 
+    reportMessage: async function (messageId, conversationId, reporterId, reportedId, text) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+
+        const doc = await databases.createDocument(DB_ID, COLLECTIONS.THREAT_LOGS, ID.unique(), {
+            reason: 'User Reported',
+            senderId: reportedId || 'Unknown',
+            receiverId: reporterId || 'Global',
+            messageContent: text || 'No text provided',
+            status: 'pending',
+            timestamp: new Date().toISOString()
+        });
+        return doc;
+    },
+
     /**
      * Subscribe to real-time updates for a chat conversation.
      * Returns an unsubscribe function.
@@ -920,6 +935,16 @@ const DataService = {
         // Fetch most recent users
         const response = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
             Query.orderDesc('createdAt'),
+            Query.limit(100)
+        ]);
+        return response.documents;
+    },
+
+    getAllChildren: async function () {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        // In appwrite JS SDK, we just list without query, limit is 25 by default, set limit high
+        const response = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
             Query.limit(100)
         ]);
         return response.documents;

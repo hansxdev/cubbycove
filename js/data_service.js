@@ -790,6 +790,8 @@ const DataService = {
         const { ID } = Appwrite;
 
         const doc = await databases.createDocument(DB_ID, COLLECTIONS.THREAT_LOGS, ID.unique(), {
+            childId: reportedId || 'Unknown',
+            content: text || 'No text provided',
             reason: 'User Reported',
             senderId: reportedId || 'Unknown',
             receiverId: reporterId || 'Global',
@@ -857,7 +859,7 @@ const DataService = {
         try {
             await databases.createDocument(DB_ID, 'parent_notifications', ID.unique(), {
                 parentId,
-                type: data.type,
+                type: data.type || 'alert',
                 message: data.message,
                 childId: data.childId || '',
                 buddyId: data.buddyId || '',
@@ -866,6 +868,66 @@ const DataService = {
             });
         } catch (e) {
             console.warn('_createParentNotification error:', e.message);
+        }
+    },
+
+    alertParentsOfReport: async function (senderId, receiverId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            // Get children
+            const sender = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, senderId);
+            const receiver = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, receiverId);
+
+            // Alert sender's parent
+            if (sender.parentId) {
+                await this._createParentNotification(sender.parentId, {
+                    type: 'alert',
+                    message: `${sender.username || sender.name} has sent suspected foul words to their buddies, please guide them accordingly.`,
+                    childId: sender.$id
+                });
+            }
+
+            // Alert receiver's parent
+            if (receiver.parentId) {
+                await this._createParentNotification(receiver.parentId, {
+                    type: 'alert',
+                    message: `${receiver.username || receiver.name} received a suspected foul message from their buddy, please advice them accordingly.`,
+                    childId: receiver.$id
+                });
+            }
+        } catch (e) {
+            console.error('alertParentsOfReport error:', e);
+        }
+    },
+
+    banChildFromChat: async function (childId, durationMs) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            const childDoc = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+            const banUntil = Date.now() + durationMs;
+
+            // In our system, we update allowChat and threatScore to store ban info
+            await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
+                allowChat: false,
+                threatScore: banUntil // hacky but stores ban timestamp without schema change
+            });
+
+            if (childDoc.parentId) {
+                let durationStr = "a set amount of time";
+                if (durationMs === 3600000) durationStr = "1 hour";
+                else if (durationMs === 18000000) durationStr = "5 hours";
+                else if (durationMs === 86400000) durationStr = "1 day";
+                else if (durationMs === 604800000) durationStr = "1 week";
+                else if (durationMs > 2500000000) durationStr = "1 month";
+
+                await this._createParentNotification(childDoc.parentId, {
+                    type: 'alert',
+                    message: `Your child ${childDoc.username || childDoc.name} has been banned from chatting for ${durationStr}, please advice them.`,
+                    childId: childDoc.$id
+                });
+            }
+        } catch (e) {
+            console.error('banChildFromChat error:', e);
         }
     },
 

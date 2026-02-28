@@ -27,9 +27,23 @@ const GROUP_MS = 60000; // messages within 60s from same sender are grouped
 
 // ── Bad-word list (Fallback if AI fails) ──────────────────────────────────────
 const BAD_WORDS = ['stupid', 'ugly', 'hate', 'dumb', 'idiot', 'kill', 'die', 'shut up'];
+const TAGALOG_BAD_WORDS = [
+    'putangina', 'tangina', 'puta', 'gago', 'tarantado', 'bobo',
+    'ulol', 'pota', 'pucha', 'pokpok', 'hinayupak', 'hayop',
+    'bwisit', 'leche', 'lintik', 'punyeta', 'kantot', 'iyot',
+    'bayag', 'titi', 'pepe', 'puke', 'tanga'
+];
 
 // ── ML AI Integration ─────────────────────────────────────────────────────────
 async function analyzeMessageWithAI(text) {
+    const lowerText = text.toLowerCase();
+
+    // 1. Tagalog check: Many ML public APIs are weak in Filipino dialects.
+    const containsTagalogProfanity = TAGALOG_BAD_WORDS.some(w => lowerText.includes(w));
+    if (containsTagalogProfanity) {
+        return false; // Instantly flag as profanity
+    }
+
     try {
         // Use an ML-based text vector API to understand meaning and detect profanity
         const response = await fetch('https://vector.profanity.dev', {
@@ -40,9 +54,8 @@ async function analyzeMessageWithAI(text) {
         const data = await response.json();
         return !data.isProfanity;
     } catch (e) {
-        console.warn("AI API failed, falling back to local list:", e);
-        const lower = text.toLowerCase();
-        return !BAD_WORDS.some(w => lower.includes(w));
+        console.warn("AI API failed, falling back to local English list:", e);
+        return !BAD_WORDS.some(w => lowerText.includes(w));
     }
 }
 

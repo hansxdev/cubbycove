@@ -367,9 +367,22 @@ async function loadChatReports() {
                             <span class="text-xs text-red-700 font-bold">${report.messageContent}</span>
                         </div>
                     </div>
-                    <div class="flex justify-end gap-3">
-                        <button onclick="resolveReport('${report.$id}', 'dismissed')" class="text-sm font-bold text-gray-500 hover:text-gray-700 px-4 py-2">Dismiss</button>
-                        <button onclick="resolveReport('${report.$id}', 'warned')" class="bg-orange-100 text-orange-600 text-sm font-bold px-4 py-2 rounded-lg hover:bg-orange-200">Warn User</button>
+                    <div class="flex justify-between items-center bg-gray-50 border-t border-gray-100 p-4 -mx-6 -mb-6 mt-4">
+                        <div class="flex gap-2 items-center bg-white p-1.5 rounded-lg border border-gray-200">
+                            <select id="ban-time-${report.$id}" class="text-xs border-none bg-transparent focus:ring-0 text-gray-600 font-bold outline-none cursor-pointer">
+                                <option value="3600000">1 hour</option>
+                                <option value="18000000">5 hours</option>
+                                <option value="86400000">1 day</option>
+                                <option value="604800000">1 week</option>
+                                <option value="2592000000">1 month</option>
+                            </select>
+                            <button onclick="handleBanUser('${report.$id}', '${report.senderId}', document.getElementById('ban-time-${report.$id}').value)" class="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-red-600 transition-colors">Ban Sender</button>
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            <button onclick="resolveReport('${report.$id}', 'dismissed')" class="text-sm font-bold text-gray-500 hover:text-gray-700 px-3 py-2">Dismiss</button>
+                            <button onclick="handleAlertParents('${report.$id}', '${report.senderId}', '${report.receiverId}')" class="bg-blue-100 text-blue-600 text-sm font-bold px-4 py-2 rounded-lg hover:bg-blue-200 transition-colors"><i class="fa-solid fa-bell mr-1"></i> Alert Parents</button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -394,6 +407,32 @@ async function resolveReport(reportId, action) {
     }
 }
 
+async function handleAlertParents(reportId, senderId, receiverId) {
+    if (!confirm("Alert both parents about this report?")) return;
+    try {
+        await DataService.alertParentsOfReport(senderId, receiverId);
+        await DataService.updateThreatLog(reportId, 'resolved', 'alerted parents');
+        loadChatReports();
+        loadOverviewStats();
+        alert("Parents have been successfully alerted.");
+    } catch (e) {
+        alert("Error: " + e.message);
+    }
+}
+
+async function handleBanUser(reportId, senderId, durationMs) {
+    if (!confirm("Ban this user from chatting for the selected duration?")) return;
+    try {
+        await DataService.banChildFromChat(senderId, parseInt(durationMs));
+        await DataService.updateThreatLog(reportId, 'resolved', 'banned user');
+        loadChatReports();
+        loadOverviewStats();
+        alert("User banned and their parent notified.");
+    } catch (e) {
+        alert("Error: " + e.message);
+    }
+}
+
 function updateBadge(tab, count) {
     const badge = document.querySelector(`#nav-${tab} span`);
     if (badge) {
@@ -407,3 +446,5 @@ function updateBadge(tab, count) {
 window.updateParentStatus = updateParentStatus;
 window.updateVideoStatus = updateVideoStatus;
 window.resolveReport = resolveReport;
+window.handleAlertParents = handleAlertParents;
+window.handleBanUser = handleBanUser;

@@ -46,8 +46,8 @@ async function analyzeMessageWithAI(text) {
 
     try {
         const apiKey = window.AppwriteService?.GEMINI_API_KEY;
-        if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY') {
-            console.warn("⚠️ Gemini API Key not set. Falling back to simple English string check.");
+        if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY' || apiKey === '[GCP_API_KEY]') {
+            console.warn("⚠️ Gemini API Key not set or redacted. Falling back to simple English string check.");
             return !BAD_WORDS.some(w => lowerText.includes(w));
         }
 
@@ -67,6 +67,10 @@ Message to analyze: "${text}"`;
             })
         });
 
+        if (!response.ok) {
+            throw new Error(`Gemini API returned ${response.status}`);
+        }
+
         const data = await response.json();
 
         if (data.candidates && data.candidates.length > 0) {
@@ -74,9 +78,9 @@ Message to analyze: "${text}"`;
             return !aiResponse.includes("UNSAFE");
         }
 
-        return true;
+        throw new Error("No candidates returned from Gemini");
     } catch (e) {
-        console.warn("Gemini API failed, falling back to local English list:", e);
+        console.warn("Gemini API failed, falling back to local English list:", e.message);
         return !BAD_WORDS.some(w => lowerText.includes(w));
     }
 }

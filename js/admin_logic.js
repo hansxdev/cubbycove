@@ -323,10 +323,11 @@ function renderStaffList() {
     pageData.forEach(s => {
         const isMe = s.email === currentUser.email;
         let statusClass = 'text-green-500';
-        if (s.status === 'banned') statusClass = 'text-red-500';
+        if (s.status === 'banned' || s.status === 'archived') statusClass = 'text-red-500';
 
         const html = `
-            <tr class="border-b border-gray-100 hover:bg-gray-50">
+            <tr class="border-b border-gray-100 hover:bg-gray-50 ${isMe ? '' : 'cursor-pointer'}" 
+                ${isMe ? '' : `onclick="openManageStaffModal('${s.$id}', '${s.firstName} ${s.lastName}', '${s.role}', '${s.email}')"`}>
                 <td class="p-2 font-semibold">
                     ${s.firstName} ${s.lastName} 
                     ${isMe ? '<span class="text-xs text-blue-500">(You)</span>' : ''}
@@ -339,6 +340,52 @@ function renderStaffList() {
         listBody.insertAdjacentHTML('beforeend', html);
     });
 }
+
+// --- MANAGE STAFF MODAL ---
+let editingStaffId = null;
+
+window.openManageStaffModal = function (id, name, role, email) {
+    editingStaffId = id;
+    document.getElementById('manage-staff-info').innerText = `${name} (${email})`;
+    document.getElementById('manage-staff-role').value = role;
+    document.getElementById('manage-staff-modal').classList.remove('hidden');
+};
+
+window.closeManageStaffModal = function () {
+    editingStaffId = null;
+    document.getElementById('manage-staff-modal').classList.add('hidden');
+};
+
+window.submitStaffRoleChange = async function () {
+    if (!editingStaffId) return;
+    const newRole = document.getElementById('manage-staff-role').value;
+
+    if (!confirm(`Are you sure you want to change this staff's role to ${newRole}?`)) return;
+
+    try {
+        await DataService.updateUserRole(editingStaffId, newRole);
+        alert('Role updated successfully!');
+        closeManageStaffModal();
+        loadStaffList();
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+};
+
+window.archiveStaffAccount = async function () {
+    if (!editingStaffId) return;
+    if (!confirm('Are you sure you want to archive this account? They will no longer be able to log in.')) return;
+
+    try {
+        await DataService.updateUserStatus(editingStaffId, 'archived');
+        alert('Account archived successfully!');
+        closeManageStaffModal();
+        loadStaffList();
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+};
+
 
 async function handleCreateStaff(e) {
     e.preventDefault();

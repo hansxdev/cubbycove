@@ -274,9 +274,9 @@ const DataService = {
                 await account.deleteSession('current');
                 throw new Error("Your registration was not approved. Please contact support if you believe this is an error.");
             }
-            if (doc.status === 'suspended' || doc.status === 'banned') {
+            if (doc.status === 'suspended' || doc.status === 'banned' || doc.status === 'archived') {
                 await account.deleteSession('current');
-                throw new Error("Account suspended. Contact support.");
+                throw new Error(`Account ${doc.status}. Contact support.`);
             }
 
             return doc;
@@ -1016,6 +1016,14 @@ const DataService = {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         await databases.updateDocument(DB_ID, COLLECTIONS.USERS, userId, {
             status: newStatus
+        });
+        return true;
+    },
+
+    updateUserRole: async function (userId, newRole) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        await databases.updateDocument(DB_ID, COLLECTIONS.USERS, userId, {
+            role: newRole
         });
         return true;
     },

@@ -1,32 +1,20 @@
-/**
- * CUBBYCHAT LOGIC — kid/chat.html
- *
- * Features:
- *  • Reads URL params (buddyId, buddyName, buddyDocId) set by buddy_logic.js
- *  • Populates chat header + sidebar with real buddy info
- *  • Loads past Appwrite messages via DataService.getChatMessages()
- *  • Sends new messages via DataService.sendChatMessage()
- *  • Polls every 2 seconds for new messages (kids have no Appwrite Auth session,
- *    so Appwrite Realtime WebSocket cannot authenticate — polling is the reliable fix)
- *  • Client-side bad-word filter with safety toast
- */
-
-// ── State ────────────────────────────────────────────────────────────────────
+// CUBBYCHAT LOGIC — Handles the real-time chat interface for kids.
 let _currentChild = null;
-let _buddyId = '';      // childId of the buddy from URL param
-let _buddyName = '';      // display name from URL param
-let _buddyDocId = '';      // buddies doc ID from URL param
-let _conversationId = '';      // stable "<idA>_<idB>" sorted string
-let _pollInterval = null;    // setInterval handle for message polling
-let _lastMessageTime = null;    // ISO string — only fetch messages newer than this
-let _knownMessageIds = new Set(); // dedup guard so we never render the same msg twice
-let _lastRenderedMsg = null;    // { fromChildId, sentAt } — used for grouping logic
+let _buddyId = '';
+let _buddyName = '';
+let _buddyDocId = '';
+let _conversationId = '';
+let _pollInterval = null;
+let _lastMessageTime = null;
+let _knownMessageIds = new Set();
+let _lastRenderedMsg = null;
 
-const POLL_MS = 2000;  // check for new messages every 2 seconds
-const GROUP_MS = 60000; // messages within 60s from same sender are grouped
+const POLL_MS = 2000;
+const GROUP_MS = 60000;
 
-// ── Bad-word list (Fallback if AI fails) ──────────────────────────────────────
+// List of restricted English words used as a safety fallback.
 const BAD_WORDS = ['stupid', 'ugly', 'hate', 'dumb', 'idiot', 'kill', 'die', 'shut up'];
+// List of restricted Tagalog words for local dialect filtering.
 const TAGALOG_BAD_WORDS = [
     'putangina', 'tangina', 'puta', 'gago', 'tarantado', 'bobo',
     'ulol', 'pota', 'pucha', 'pokpok', 'hinayupak', 'hayop',
@@ -34,80 +22,40 @@ const TAGALOG_BAD_WORDS = [
     'bayag', 'titi', 'pepe', 'puke', 'tanga'
 ];
 
-// ── Gemini AI Integration ─────────────────────────────────────────────────────────
+// Analyzes message text for profanity using local lists and the Vector Profanity API.
 async function analyzeMessageWithAI(text) {
     const lowerText = text.toLowerCase();
-
-    // 1. Tagalog check: Many ML public APIs are weak in Filipino dialects.
-    const containsTagalogProfanity = TAGALOG_BAD_WORDS.some(w => lowerText.includes(w));
-    if (containsTagalogProfanity) {
-        return false; // Instantly flag as profanity
-    }
-
+    if (TAGALOG_BAD_WORDS.some(w => lowerText.includes(w))) return false;
     try {
-        const apiKey = window.AppwriteService?.GEMINI_API_KEY;
-        if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY' || apiKey === '[GCP_API_KEY]') {
-            console.warn("⚠️ Gemini API Key not set or redacted. Falling back to simple English string check.");
-            return !BAD_WORDS.some(w => lowerText.includes(w));
-        }
-
-        const prompt = `You are a strict child-safety chat moderator. Analyze this message sent by a child and respond with exactly "SAFE" or "UNSAFE".
-Flags for UNSAFE: swearing, bullying, sexual content, sharing PII, or severe insults in English, Tagalog, or other languages.
-Message to analyze: "${text}"`;
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch('https://vector.profanity.dev', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                    temperature: 0.2,
-                    maxOutputTokens: 5
-                }
-            })
+            body: JSON.stringify({ message: text })
         });
-
-        if (!response.ok) {
-            throw new Error(`Gemini API returned ${response.status}`);
-        }
-
         const data = await response.json();
-
-        if (data.candidates && data.candidates.length > 0) {
-            const aiResponse = data.candidates[0].content.parts[0].text.trim().toUpperCase();
-            return !aiResponse.includes("UNSAFE");
-        }
-
-        throw new Error("No candidates returned from Gemini");
+        return !data.isProfanity;
     } catch (e) {
-        console.warn("Gemini API failed, falling back to local English list:", e.message);
+        console.warn("API failed, falling back to local list:", e.message);
         return !BAD_WORDS.some(w => lowerText.includes(w));
     }
 }
 
-// ── Tiny DOM helper ───────────────────────────────────────────────────────────
+// Retrieves a DOM element by its unique identifier.
 const $ = id => document.getElementById(id);
 
-// ══════════════════════════════════════════════════════════════════════════════
-// BOOT
-// ══════════════════════════════════════════════════════════════════════════════
+// Initializes the chat application state and event listeners on page load.
 document.addEventListener('DOMContentLoaded', async () => {
-
-    // 1. Child session guard
     const raw = sessionStorage.getItem('cubby_child_session');
     if (!raw) { window.location.replace('../login.html'); return; }
     _currentChild = JSON.parse(raw);
 
-    // 2. Parse URL params
     const params = new URLSearchParams(window.location.search);
     _buddyId = params.get('buddyId') || '';
     _buddyName = params.get('buddyName') || '';
     _buddyDocId = params.get('buddyDocId') || '';
 
-    // 3. Populate the sidebar buddy list
     loadChatBuddySidebar();
 
-    // 4. No buddy selected — show picker UI
     if (!_buddyId) {
         $('chat-loading').classList.add('hidden');
         const nbs = $('no-buddy-state');
@@ -119,38 +67,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // 5. Populate header
     updateChatHeader(_buddyId, _buddyName);
-
-    // 6. Stable conversation ID
     _conversationId = DataService._buildConversationId(_currentChild.$id, _buddyId);
-
-    // 7. Load history (initial full load)
     await loadMessageHistory();
-
-    // 8. Start polling for new messages
     startPolling();
 
-    // 9. Wire send button + keyboard
     $('send-btn').addEventListener('click', sendMessage);
     $('message-input').addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault(); // don't insert newline on plain Enter
+            e.preventDefault();
             sendMessage();
         }
-        // Shift+Enter falls through naturally, inserting a newline in the textarea
     });
 
-    // 10. Focus input
     $('message-input').focus();
-
-    // 11. Sidebar search filter
     $('buddy-search')?.addEventListener('input', filterBuddySidebar);
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// CHAT HEADER
-// ══════════════════════════════════════════════════════════════════════════════
+// Updates the chat header with the current buddy's avatar and name.
 function updateChatHeader(buddyId, buddyName) {
     const avatarEl = $('chat-buddy-avatar');
     const nameEl = $('chat-buddy-name');
@@ -166,49 +100,35 @@ function updateChatHeader(buddyId, buddyName) {
     if (statusEl) statusEl.textContent = 'Online';
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// BUDDY SIDEBAR (inside chat page)
-// ══════════════════════════════════════════════════════════════════════════════
+// Loads and renders the list of buddies in the sidebar.
 async function loadChatBuddySidebar() {
     const container = $('chat-buddy-list');
     if (!container || !_currentChild) return;
-
     try {
         const buddies = await DataService.getBuddies(_currentChild.$id);
-
         if (buddies.length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-6 px-4">
-                    <i class="fa-solid fa-user-group text-gray-200 text-3xl mb-2"></i>
-                    <p class="text-xs text-gray-400 font-semibold">No buddies yet!</p>
-                    <a href="home_logged_in.html" class="text-xs text-cubby-blue font-bold hover:underline mt-1 block">Add some!</a>
-                </div>`;
+            container.innerHTML = `<div class="text-center py-6 px-4"><i class="fa-solid fa-user-group text-gray-200 text-3xl mb-2"></i><p class="text-xs text-gray-400 font-semibold">No buddies yet!</p></div>`;
             return;
         }
-
         container.innerHTML = buddies.map(buddy => {
             const isActive = buddy.childId === _buddyId;
             return `
             <a href="chat.html?buddyId=${encodeURIComponent(buddy.childId)}&buddyName=${encodeURIComponent(buddy.username)}&buddyDocId=${encodeURIComponent(buddy.buddyDocId)}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all sidebar-link buddy-item ${isActive ? 'bg-cubby-green/10' : 'hover:bg-gray-50'}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all buddy-item ${isActive ? 'bg-cubby-green/10' : 'hover:bg-gray-50'}"
                data-name="${buddy.username.toLowerCase()}">
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddy.username)}"
-                    class="w-10 h-10 rounded-full bg-white border border-gray-200">
-                <div class="flex-1 min-w-0 sidebar-label whitespace-nowrap overflow-hidden transition-all duration-300">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddy.username)}" class="w-10 h-10 rounded-full bg-white border border-gray-200">
+                <div class="flex-1 min-w-0 info">
                     <h4 class="font-bold ${isActive ? 'text-cubby-green' : 'text-gray-800'} truncate text-sm">${buddy.username}</h4>
-                    ${isActive
-                    ? '<p class="text-xs text-cubby-green font-semibold">Chatting now</p>'
-                    : '<p class="text-xs text-gray-400 truncate">Tap to chat</p>'}
+                    <p class="text-xs text-gray-400 truncate">${isActive ? 'Chatting now' : 'Tap to chat'}</p>
                 </div>
-                ${isActive ? '<span class="w-2 h-2 bg-cubby-green rounded-full shrink-0"></span>' : ''}
             </a>`;
         }).join('');
-
     } catch (e) {
         console.warn('loadChatBuddySidebar error:', e.message);
     }
 }
 
+// Filters the visible buddies in the sidebar based on user search input.
 function filterBuddySidebar(e) {
     const q = e.target.value.toLowerCase();
     document.querySelectorAll('.buddy-item').forEach(el => {
@@ -216,289 +136,168 @@ function filterBuddySidebar(e) {
     });
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// INITIAL HISTORY LOAD
-// ══════════════════════════════════════════════════════════════════════════════
+// Fetches and displays the previous message history for the current conversation.
 async function loadMessageHistory() {
     const loadingEl = $('chat-loading');
     if (loadingEl) loadingEl.classList.remove('hidden');
     const container = $('chat-messages');
-
     try {
         const messages = await DataService.getChatMessages(_conversationId, 50);
         if (loadingEl) loadingEl.classList.add('hidden');
-
         if (messages.length === 0) {
-            container.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-12 text-center" id="empty-chat-msg">
-                    <div class="w-16 h-16 bg-cubby-green/10 text-cubby-green rounded-full flex items-center justify-center text-3xl mb-3">
-                        <i class="fa-solid fa-hand-sparkles"></i>
-                    </div>
-                    <h3 class="font-extrabold text-gray-700 text-lg mb-1">Say hi to ${escapeHtml(_buddyName)}! 👋</h3>
-                    <p class="text-sm text-gray-400 max-w-xs">You two haven't chatted yet. Send the first message!</p>
-                </div>`;
+            container.innerHTML = `<div class="flex flex-col items-center justify-center py-12 text-center" id="empty-chat-msg"><h3 class="font-extrabold text-gray-700 text-lg mb-1">Say hi to ${escapeHtml(_buddyName)}! 👋</h3></div>`;
             return;
         }
-
-        // Render all history messages
         container.innerHTML = '';
-        _lastRenderedMsg = null; // reset grouping state for fresh render
+        _lastRenderedMsg = null;
         messages.forEach(msg => {
             _knownMessageIds.add(msg.$id);
             renderMessage(msg);
         });
-
-        // Track the latest timestamp so polling knows where to start
         _lastMessageTime = messages[messages.length - 1].sentAt;
-
         scrollToBottom();
-
     } catch (e) {
-        if (loadingEl) loadingEl.innerHTML = `
-            <div class="text-center text-red-400 text-sm py-8">
-                <i class="fa-solid fa-circle-exclamation text-xl mb-2 block"></i>
-                Could not load messages. Check your connection.
-            </div>`;
         console.error('loadMessageHistory error:', e.message);
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// POLLING — replaces Appwrite Realtime (works without an auth session)
-// ══════════════════════════════════════════════════════════════════════════════
+// Begins the recurring poll for new incoming chat messages.
 function startPolling() {
-    stopPolling(); // clear any stale interval first
+    stopPolling();
     _pollInterval = setInterval(pollNewMessages, POLL_MS);
-    console.log(`✅ [CubbyChat] Polling every ${POLL_MS}ms for new messages`);
 }
 
+// Stops the recurring poll for new chat messages.
 function stopPolling() {
     if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
 }
 
+// Checks the server for new messages that haven't been rendered yet.
 async function pollNewMessages() {
     if (!_conversationId) return;
-
     try {
-        // Fetch the most recent batch; we'll filter client-side by ID
         const messages = await DataService.getChatMessages(_conversationId, 25);
-
         let addedAny = false;
         messages.forEach(msg => {
-            if (_knownMessageIds.has(msg.$id)) return; // already rendered
+            if (_knownMessageIds.has(msg.$id)) return;
             _knownMessageIds.add(msg.$id);
-
-            // Remove the "say hi" placeholder if still showing
             const emptyCard = $('empty-chat-msg');
             if (emptyCard) emptyCard.remove();
-
             renderMessage(msg);
             addedAny = true;
-
-            // Update last-seen timestamp
-            if (!_lastMessageTime || msg.sentAt > _lastMessageTime) {
-                _lastMessageTime = msg.sentAt;
-            }
+            if (!_lastMessageTime || msg.sentAt > _lastMessageTime) _lastMessageTime = msg.sentAt;
         });
-
         if (addedAny) scrollToBottom();
-
     } catch (e) {
-        // Silent — don't spam the user, just wait for next poll
         console.warn('[CubbyChat] Poll error:', e.message);
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// RENDER A SINGLE MESSAGE (with grouping & time separators)
-// ══════════════════════════════════════════════════════════════════════════════
+// Renders a single message bubble into the chat message container.
 function renderMessage(msg) {
     if (!msg || !msg.text) return;
-
     const isMe = msg.fromChildId === _currentChild.$id;
     const container = $('chat-messages');
-
-    // ── Grouping decision ────────────────────────────────────────────────────
     const prev = _lastRenderedMsg;
-    const sameSender = prev && prev.fromChildId === msg.fromChildId;
-    const gapMs = prev && msg.sentAt && prev.sentAt
-        ? (new Date(msg.sentAt) - new Date(prev.sentAt))
-        : Infinity;
-    const isGrouped = sameSender && gapMs < GROUP_MS;
+    const gapMs = prev && msg.sentAt && prev.sentAt ? (new Date(msg.sentAt) - new Date(prev.sentAt)) : Infinity;
+    const isGrouped = prev && prev.fromChildId === msg.fromChildId && gapMs < GROUP_MS;
 
-    // ── Time separator ───────────────────────────────────────────────────────
-    // Show on very first message OR when >= 1 min passes between any two messages
     if (!prev || gapMs >= GROUP_MS) {
         const sep = document.createElement('div');
         sep.className = 'text-center my-3';
-        sep.innerHTML = `<span class="bg-gray-100 text-gray-400 text-[10px] font-bold px-3 py-1 rounded-full">
-            ${formatTime(msg.sentAt)}
-        </span>`;
+        sep.innerHTML = `<span class="bg-gray-100 text-gray-400 text-[10px] font-bold px-3 py-1 rounded-full">${formatTime(msg.sentAt)}</span>`;
         container.appendChild(sep);
     }
 
-    // ── Build bubble ─────────────────────────────────────────────────────────
     const div = document.createElement('div');
-    div.dataset.msgId = msg.$id || '';
-
-    // Vertical margin: tight inside a group, small gap at group start
-    const marginTop = isGrouped ? 'mt-0.5' : 'mt-1';
+    const bubbleClass = isGrouped ? (isMe ? 'rounded-tr-sm' : 'rounded-tl-sm') : '';
+    div.className = `flex ${isMe ? 'justify-end' : 'gap-2 items-end'} mt-1 message-enter`;
 
     if (isMe) {
-        // My messages — right aligned, green bubble
-        // Connected corner: top-right (when grouped the connecting edge flattens)
-        const bubble = isGrouped
-            ? 'rounded-tl-2xl rounded-bl-2xl rounded-tr-sm rounded-br-none'
-            : 'rounded-2xl rounded-br-none';
-
-        div.className = `flex justify-end ${marginTop} message-enter`;
-        div.innerHTML = `
-            <div class="max-w-[75%] bg-cubby-green ${bubble} px-4 py-2 shadow-sm text-white text-sm leading-relaxed font-medium break-words overflow-wrap-anywhere" style="overflow-wrap:anywhere;word-break:break-word;">
-                ${escapeHtml(msg.text)}
-            </div>`;
-
+        div.innerHTML = `<div class="max-w-[75%] bg-cubby-green rounded-2xl ${bubbleClass} rounded-br-none px-4 py-2 text-white text-sm font-medium break-words overflow-wrap-anywhere">${escapeHtml(msg.text)}</div>`;
     } else {
-        // Buddy messages — left aligned, white bubble
-        // Connected corner: top-left (when grouped)
-        const bubble = isGrouped
-            ? 'rounded-tr-2xl rounded-br-2xl rounded-tl-sm rounded-bl-none'
-            : 'rounded-2xl rounded-bl-none';
-
-        div.className = `flex gap-2 items-end ${marginTop} message-enter`;
-
-        if (isGrouped) {
-            // No repeated avatar — use an invisible spacer to keep alignment
-            div.innerHTML = `
-                <div class="w-8 shrink-0"></div>
-                <div class="max-w-[75%] bg-white ${bubble} px-4 py-2 shadow-sm text-gray-800 text-sm leading-relaxed break-words relative group" style="overflow-wrap:anywhere;word-break:break-word;">
-                    ${escapeHtml(msg.text)}
-                    <button onclick="reportChatMessage('${msg.$id}', '${escapeHtml(msg.text.replace(/'/g, "\\'"))}')" class="absolute -right-8 top-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Report this message"><i class="fa-solid fa-flag"></i></button>
-                </div>`;
-        } else {
-            div.innerHTML = `
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.fromUsername || _buddyName)}"
-                    class="w-8 h-8 rounded-full bg-white border border-gray-200 shrink-0">
-                <div class="max-w-[75%] bg-white ${bubble} px-4 py-2 shadow-sm text-gray-800 text-sm leading-relaxed break-words relative group" style="overflow-wrap:anywhere;word-break:break-word;">
-                    ${escapeHtml(msg.text)}
-                    <button onclick="reportChatMessage('${msg.$id}', '${escapeHtml(msg.text.replace(/'/g, "\\'"))}')" class="absolute -right-8 top-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Report this message"><i class="fa-solid fa-flag"></i></button>
-                </div>`;
-        }
+        const avatarHtml = isGrouped ? '<div class="w-8 shrink-0"></div>' : `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.fromUsername || _buddyName)}" class="w-8 h-8 rounded-full bg-white border border-gray-200 shrink-0">`;
+        div.innerHTML = `${avatarHtml}<div class="max-w-[75%] bg-white rounded-2xl ${bubbleClass} rounded-bl-none px-4 py-2 shadow-sm text-gray-800 text-sm relative group break-words overflow-wrap-anywhere">${escapeHtml(msg.text)}<button onclick="reportChatMessage('${msg.$id}', '${escapeHtml(msg.text.replace(/'/g, "\\'"))}')" class="absolute -right-8 top-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-flag"></i></button></div>`;
     }
-
     container.appendChild(div);
-
-    // Update grouping tracker
     _lastRenderedMsg = { fromChildId: msg.fromChildId, sentAt: msg.sentAt };
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// SEND MESSAGE
-// ══════════════════════════════════════════════════════════════════════════════
+// Processes and sends a user's text message after passing a safety check.
 async function sendMessage() {
     const input = $('message-input');
     const sendBtn = $('send-btn');
     const text = input.value.trim();
-
     if (!text || !_conversationId || !_currentChild) return;
 
-    // AI Check
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>';
 
-    const isFriendly = await analyzeMessageWithAI(text);
-    if (!isFriendly) {
+    if (!(await analyzeMessageWithAI(text))) {
         showSafetyWarning();
         sendBtn.disabled = false;
         sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i>';
         return;
     }
-    sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i>';
 
-    // Clear input immediately for snappy UX and reset textarea height
     input.value = '';
     input.style.height = 'auto';
-    sendBtn.disabled = true;
-
-    // Optimistic render — show the message right away, before DB save
     const tempId = 'temp_' + Date.now();
-    const tempMsg = {
-        $id: tempId,
-        conversationId: _conversationId,
-        fromChildId: _currentChild.$id,
-        fromUsername: _currentChild.username || _currentChild.name,
-        text,
-        sentAt: new Date().toISOString()
-    };
-    _knownMessageIds.add(tempId); // mark so pollNewMessages skips this temp bubble
-
-    // Remove placeholder if showing
-    const emptyCard = $('empty-chat-msg');
-    if (emptyCard) emptyCard.remove();
-
-    renderMessage(tempMsg);
+    _knownMessageIds.add(tempId);
+    renderMessage({ $id: tempId, fromChildId: _currentChild.$id, fromUsername: _currentChild.username, text, sentAt: new Date().toISOString() });
     scrollToBottom();
 
     try {
-        const saved = await DataService.sendChatMessage(
-            _conversationId,
-            _currentChild.$id,
-            _currentChild.username || _currentChild.name,
-            text
-        );
-        // Register the real DB id so the next poll doesn't render a duplicate
-        if (saved && saved.$id) {
-            _knownMessageIds.add(saved.$id);
-            _lastMessageTime = saved.sentAt || tempMsg.sentAt;
-        }
+        const saved = await DataService.sendChatMessage(_conversationId, _currentChild.$id, _currentChild.username || _currentChild.name, text);
+        if (saved?.$id) _knownMessageIds.add(saved.$id);
     } catch (e) {
-        console.error('sendMessage error:', e.message);
         showSafetyWarning('Could not send. Check your connection.');
     } finally {
         sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i>';
         input.focus();
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// HELPERS
-// ══════════════════════════════════════════════════════════════════════════════
+// Displays a brief visual alert when a safety violation or error occurs.
 function showSafetyWarning(msg) {
     const toast = $('safety-toast');
     if (!toast) return;
-    const span = toast.querySelector('span');
-    if (span) span.textContent = msg || "That message isn't nice! Please be kind. 💛";
+    toast.querySelector('span').textContent = msg || "That message isn't nice! Please be kind. 💛";
     toast.classList.remove('hidden');
     setTimeout(() => toast.classList.add('hidden'), 3000);
 }
 
+// Submits a message report to the administrative moderation team.
 window.reportChatMessage = async function (msgId, text) {
     if (confirm("Do you want to report this message to the safety team?")) {
         try {
             await DataService.reportMessage(msgId, _conversationId, _currentChild.$id, _buddyId, text);
             showSafetyWarning("Message reported to safety team. Thank you! 🛡️");
         } catch (e) {
-            console.error("Report error:", e);
             showSafetyWarning("Failed to report message. Try again later.");
         }
     }
 }
 
+// Forces the chat message container to scroll to the most recent message.
 function scrollToBottom() {
     const c = $('chat-messages');
     if (c) c.scrollTop = c.scrollHeight;
 }
 
+// Converts raw text into a safe HTML string to prevent script injection.
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
+// Formats an ISO date string into a localized time format for display.
 function formatTime(isoStr) {
-    if (!isoStr) return '';
-    return new Date(isoStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return isoStr ? new Date(isoStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 }
 
-// Stop polling when the user leaves the page (saves resources)
+// Safely terminates message polling when the user navigates away from the page.
 window.addEventListener('beforeunload', stopPolling);
 window.addEventListener('pagehide', stopPolling);

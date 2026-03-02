@@ -1056,10 +1056,12 @@ const DataService = {
 
             console.log(`🗑️ [Storage] Deleted ${filesToDelete.length} verification file(s) for user ${userId}`);
 
-            // 3. Clear the file ID fields in the database (avoid dead references)
+            // 3. Clear the file ID fields in the database (avoid dead references).
+            // NOTE: Appwrite schema marks these as required so they cannot be set to null.
+            // We use the sentinel value 'deleted' to indicate the files are gone.
             await databases.updateDocument(DB_ID, COLLECTIONS.USERS, userId, {
-                faceId: null,
-                idDocumentId: null
+                faceId: 'deleted',
+                idDocumentId: 'deleted'
             });
 
             console.log('✅ [DB] Cleared faceId and idDocumentId from user record.');

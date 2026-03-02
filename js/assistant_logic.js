@@ -234,23 +234,35 @@ async function _loadVerificationImages(parent) {
     const projectId = svc.client?.config?.project || '69904f4900396667cf4c';
     const bucketId = svc.BUCKET_PARENT_DOCS || 'parent_docs';
 
-    const fetchImage = async (fileId) => {
+    const fetchImage = async (fileId, jwtToken) => {
         const url = `${endpoint}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}`;
         const res = await fetch(url, {
-            headers: { 'X-Appwrite-Project': projectId },
-            credentials: 'include'
+            headers: {
+                'X-Appwrite-Project': projectId,
+                'X-Appwrite-JWT': jwtToken
+            }
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();
         return URL.createObjectURL(blob);
     };
 
+    // Create a short-lived JWT to authenticate storage reads for this session
+    // (needed because <img> tags / cross-origin fetch can't send Appwrite session cookies)
+    let jwt = '';
+    try {
+        const jwtResult = await svc.account.createJWT();
+        jwt = jwtResult.jwt;
+    } catch (e) {
+        console.warn('Could not create JWT for image fetch:', e.message);
+    }
+
     // Load face / selfie
     const faceContainer = document.getElementById(`face-container-${parent.$id}`);
     if (faceContainer) {
-        if (parent.faceId && !parent.faceId.startsWith('mock_')) {
+        if (parent.faceId && !parent.faceId.startsWith('mock_') && parent.faceId !== 'deleted') {
             try {
-                const blobUrl = await fetchImage(parent.faceId);
+                const blobUrl = await fetchImage(parent.faceId, jwt);
                 faceContainer.innerHTML = `<img src="${blobUrl}" class="w-full h-full object-cover">`;
             } catch (e) {
                 console.warn(`Could not load face image for ${parent.$id}:`, e.message);
@@ -266,9 +278,9 @@ async function _loadVerificationImages(parent) {
 
     // Load ID document
     const idContainer = document.getElementById(`id-container-${parent.$id}`);
-    if (idContainer && parent.idDocumentId) {
+    if (idContainer && parent.idDocumentId && parent.idDocumentId !== 'deleted') {
         try {
-            const blobUrl = await fetchImage(parent.idDocumentId);
+            const blobUrl = await fetchImage(parent.idDocumentId, jwt);
             idContainer.innerHTML = `<img src="${blobUrl}" class="w-full h-full object-cover">`;
         } catch (e) {
             console.warn(`Could not load ID image for ${parent.$id}:`, e.message);

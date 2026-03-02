@@ -22,20 +22,54 @@ const TAGALOG_BAD_WORDS = [
     'bayag', 'titi', 'pepe', 'puke', 'tanga'
 ];
 
-// Analyzes message text for profanity using local lists and the Vector Profanity API.
+// WARNING: Hardcoding API keys in the client-side is insecure. 
+// For production use, it is highly recommended to move this to an Appwrite Function.
+const GEMINI_API_KEY = "[ENCRYPTION_KEY]"; // Replace with your actual Gemini API key
+
+// Analyzes message text for profanity using local lists and the Gemini API.
 async function analyzeMessageWithAI(text) {
     const lowerText = text.toLowerCase();
     if (TAGALOG_BAD_WORDS.some(w => lowerText.includes(w))) return false;
+
+    // Use Gemini API directly via REST since we have no Node backend or bundler
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+    const prompt = `You are a strict content moderator for a platform used by elementary school students. 
+Check the following message for profanity, cyberbullying, or inappropriate content.
+
+Message: "${text}"
+
+Return a JSON object with exactly two fields:
+1. "isSafe" (boolean): true if the message is completely safe, false if it contains profanity or bullying.
+2. "reason" (string): a very brief reason for your decision.`;
+
     try {
-        const response = await fetch('https://vector.profanity.dev', {
+        const response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text })
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: 'application/json' }
+            })
         });
+
+        if (!response.ok) {
+            throw new Error(`Gemini API Error: ${response.status}`);
+        }
+
         const data = await response.json();
-        return !data.isProfanity;
+
+        // Extract the generated text from Gemini's response
+        const responseText = data.candidates[0].content.parts[0].text;
+        const evaluation = JSON.parse(responseText);
+
+        // Debug log for the reason
+        console.log("Gemini Moderation:", evaluation);
+
+        return evaluation.isSafe;
+
     } catch (e) {
-        console.warn("API failed, falling back to local list:", e.message);
+        console.warn("Gemini API failed, falling back to local list:", e.message);
         return !BAD_WORDS.some(w => lowerText.includes(w));
     }
 }

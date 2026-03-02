@@ -383,6 +383,16 @@ async function renderKidsAndStats(user) {
     const children = await DataService.getChildrenByParent(user.$id);
     window._currentChildren = children;
 
+    // Retrieve or generate kidIds for any existing children that don't have one
+    if (children && children.length > 0) {
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            if (!child.kidId || child.kidId === '') {
+                child.kidId = await DataService.ensureKidId(child.$id);
+            }
+        }
+    }
+
     if (!children || children.length === 0) {
         // KEEP EMPTY STATE (Already in HTML)
         if (activeStatEl) activeStatEl.innerText = "0";

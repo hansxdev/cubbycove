@@ -118,6 +118,16 @@ function validateStep(step) {
             }
         });
 
+        // 1.2 Check Email Domain
+        if (email && email.value) {
+            const emailVal = email.value.trim().toLowerCase();
+            if (!emailVal.endsWith('@gmail.com')) {
+                markError(email);
+                alert("Only @gmail.com email addresses are allowed for registration.");
+                isValid = false;
+            }
+        }
+
         // 1.5. Check Password Complexity (NEW)
         if (pass && pass.value) {
             const result = SecurityUtils.validatePassword(pass.value);

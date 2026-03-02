@@ -141,14 +141,20 @@ async function loadPendingParents() {
         updateBadge('verification', pendingParents.length);
 
         pendingParents.forEach(parent => {
-            // Build Appwrite Storage file-view URLs using live config values
+            // Build Appwrite Storage file-view URLs using the actual SDK
             const svc = window.AppwriteService;
-            const endpoint = (svc?.client?.config?.endpoint || 'https://sgp.cloud.appwrite.io/v1').replace(/\/$/, '');
-            const projectId = svc?.client?.config?.project || '69904f4900396667cf4c';
             const bucketId = svc?.BUCKET_PARENT_DOCS || 'parent_docs';
 
-            const buildFileUrl = (fileId) =>
-                `${endpoint}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}`;
+            const buildFileUrl = (fileId) => {
+                try {
+                    return svc.storage.getFileView(bucketId, fileId).toString();
+                } catch (e) {
+                    console.warn('SDK getFileView failed, falling back to manual URL:', e);
+                    const endpoint = (svc?.client?.config?.endpoint || 'https://sgp.cloud.appwrite.io/v1').replace(/\/$/, '');
+                    const projectId = svc?.client?.config?.project || '69904f4900396667cf4c';
+                    return `${endpoint}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}`;
+                }
+            };
 
             // Face / selfie image — fall back to dicebear avatar if no real upload
             const faceImageSrc = (parent.faceId && !parent.faceId.startsWith('mock_'))

@@ -327,7 +327,7 @@ function renderStaffList() {
 
         const html = `
             <tr class="border-b border-gray-100 hover:bg-gray-50 ${isMe ? '' : 'cursor-pointer'}" 
-                ${isMe ? '' : `onclick="openManageStaffModal('${s.$id}', '${s.firstName} ${s.lastName}', '${s.role}', '${s.email}')"`}>
+                ${isMe ? '' : `onclick="openManageStaffModal('${s.$id}', '${s.firstName} ${s.lastName}', '${s.role}', '${s.email}', '${s.status}')"`}>
                 <td class="p-2 font-semibold">
                     ${s.firstName} ${s.lastName} 
                     ${isMe ? '<span class="text-xs text-blue-500">(You)</span>' : ''}
@@ -344,10 +344,28 @@ function renderStaffList() {
 // --- MANAGE STAFF MODAL ---
 let editingStaffId = null;
 
-window.openManageStaffModal = function (id, name, role, email) {
+window.openManageStaffModal = function (id, name, role, email, status) {
     editingStaffId = id;
     document.getElementById('manage-staff-info').innerText = `${name} (${email})`;
     document.getElementById('manage-staff-role').value = role;
+
+    // Toggle archive/unarchive buttons
+    const btnArchive = document.getElementById('archive-staff-btn');
+    const btnUnarchive = document.getElementById('unarchive-staff-btn');
+    const archiveHint = document.getElementById('archive-staff-hint');
+    
+    if (btnArchive && btnUnarchive) {
+        if (status === 'archived') {
+            btnArchive.classList.add('hidden');
+            btnUnarchive.classList.remove('hidden');
+            if (archiveHint) archiveHint.innerText = 'Click unarchive to restore access.';
+        } else {
+            btnArchive.classList.remove('hidden');
+            btnUnarchive.classList.add('hidden');
+            if (archiveHint) archiveHint.innerText = 'Archived accounts cannot log in.';
+        }
+    }
+
     document.getElementById('manage-staff-modal').classList.remove('hidden');
 };
 
@@ -379,6 +397,20 @@ window.archiveStaffAccount = async function () {
     try {
         await DataService.updateUserStatus(editingStaffId, 'archived');
         alert('Account archived successfully!');
+        closeManageStaffModal();
+        loadStaffList();
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+};
+
+window.unarchiveStaffAccount = async function () {
+    if (!editingStaffId) return;
+    if (!confirm('Are you sure you want to unarchive this account? They will regain access.')) return;
+
+    try {
+        await DataService.updateUserStatus(editingStaffId, 'active');
+        alert('Account unarchived successfully!');
         closeManageStaffModal();
         loadStaffList();
     } catch (e) {

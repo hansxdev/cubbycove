@@ -1139,7 +1139,8 @@ const DataService = {
                 allowChat: childData.allowChat !== undefined ? childData.allowChat : false,
                 allowGames: childData.allowGames !== undefined ? childData.allowGames : true,
                 isOnline: false,
-                threatScore: 0
+                threatScore: 0,
+                kidId: '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0')
             };
 
             const doc = await databases.createDocument(DB_ID, COLLECTIONS.CHILDREN, childId, newChild);

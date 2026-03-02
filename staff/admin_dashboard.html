@@ -366,12 +366,15 @@
                         <button onclick="submitStaffRoleChange()"
                             class="w-full bg-cubby-purple text-white font-bold py-2 rounded-lg hover:bg-purple-700 transition-colors">Update
                             Role</button>
-                        <hr>
                         <div class="pt-2">
-                            <button onclick="archiveStaffAccount()"
+                            <button id="archive-staff-btn" onclick="archiveStaffAccount()"
                                 class="w-full border-2 border-red-500 text-red-500 font-bold py-2 rounded-lg hover:bg-red-50 transition-colors">Archive
                                 Account</button>
-                            <p class="text-xs text-gray-400 mt-2 text-center">Archived accounts cannot log in.</p>
+                            <button id="unarchive-staff-btn" onclick="unarchiveStaffAccount()"
+                                class="w-full border-2 border-green-500 text-green-500 font-bold py-2 rounded-lg hover:bg-green-50 transition-colors hidden">Unarchive
+                                Account</button>
+                            <p id="archive-staff-hint" class="text-xs text-gray-400 mt-2 text-center">Archived accounts
+                                cannot log in.</p>
                         </div>
                     </div>
                 </div>

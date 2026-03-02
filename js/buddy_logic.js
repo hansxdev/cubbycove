@@ -16,14 +16,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     _currentChild = JSON.parse(session);
 
-    // Ensure this child has a kidId
+    // Try to retrieve the kid's ID (the backend parent dashboard generates it)
     try {
-        const kidId = await DataService.ensureKidId(_currentChild.$id);
-        _currentChild.kidId = kidId;
-        // Update session so it's consistent
-        sessionStorage.setItem('cubby_child_session', JSON.stringify(_currentChild));
+        const profile = await DataService.getChildProfileReadOnly(_currentChild.$id);
+        if (profile && profile.kidId) {
+            _currentChild.kidId = profile.kidId;
+            sessionStorage.setItem('cubby_child_session', JSON.stringify(_currentChild));
+        }
     } catch (e) {
-        console.warn('Could not ensure kidId:', e.message);
+        // Safe to ignore if permissions block it, the ID will just say 'Not set yet'
+        console.debug('Could not directly fetch kid profile (expected if no read-access):', e.message);
     }
 
     await refreshBuddyUI();

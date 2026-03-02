@@ -545,15 +545,28 @@ const DataService = {
      * who doesn't have one yet. Returns the existing kidId if already set.
      */
     ensureKidId: async function (childId) {
-        const { databases, DB_ID } = this._getServices();
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
         // Fetch the child doc
-        const child = await databases.getDocument(DB_ID, 'children', childId);
+        const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
         if (child.kidId) return child.kidId;
 
         // Generate a new 6-char uppercase hex ID
         const kidId = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0');
-        await databases.updateDocument(DB_ID, 'children', childId, { kidId });
+        await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, { kidId });
         return kidId;
+    },
+
+    /**
+     * Safely attempts to read the child's profile to get their kidId and other details.
+     * Fails gracefully if permissions prevent reading.
+     */
+    getChildProfileReadOnly: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            return await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+        } catch (e) {
+            return null; // Silent fail (e.g. 404 permissions block)
+        }
     },
 
     /**
@@ -1218,7 +1231,7 @@ const DataService = {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         const { Query } = Appwrite;
 
-        let queries = [Query.orderDesc('timestamp')];
+        let queries = [Query.orderDesc('$createdAt')];
         if (statusFilter) {
             queries.push(Query.equal('status', statusFilter));
         }

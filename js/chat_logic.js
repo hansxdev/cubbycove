@@ -32,7 +32,7 @@ async function analyzeMessageWithAI(text) {
     if (TAGALOG_BAD_WORDS.some(w => lowerText.includes(w))) return false;
 
     // Use Gemini API directly via REST since we have no Node backend or bundler
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
     const prompt = `You are a strict content moderator for a platform used by elementary school students. 
 Check the following message for profanity, cyberbullying, or inappropriate content.
@@ -54,7 +54,8 @@ Return a JSON object with exactly two fields:
         });
 
         if (!response.ok) {
-            throw new Error(`Gemini API Error: ${response.status}`);
+            const errorData = await response.text();
+            throw new Error(`${response.status} - ${errorData}`);
         }
 
         const data = await response.json();

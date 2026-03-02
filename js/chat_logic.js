@@ -24,7 +24,7 @@ const TAGALOG_BAD_WORDS = [
 
 // WARNING: Hardcoding API keys in the client-side is insecure. 
 // For production use, it is highly recommended to move this to an Appwrite Function.
-const GEMINI_API_KEY = "[ENCRYPTION_KEY]"; // Replace with your actual Gemini API key
+const GEMINI_API_KEY = "AIzaSyDa-i3mYO4K1G5wa46ilVdAFh0NuSegtsg"; // Replace with your actual Gemini API key
 
 // Analyzes message text for profanity using local lists and the Gemini API.
 async function analyzeMessageWithAI(text) {

@@ -140,32 +140,8 @@ async function loadPendingParents() {
 
         updateBadge('verification', pendingParents.length);
 
-        pendingParents.forEach(parent => {
-            // Build Appwrite Storage file-view URLs using the actual SDK
-            const svc = window.AppwriteService;
-            const bucketId = svc?.BUCKET_PARENT_DOCS || 'parent_docs';
-
-            const buildFileUrl = (fileId) => {
-                try {
-                    return svc.storage.getFileView(bucketId, fileId).toString();
-                } catch (e) {
-                    console.warn('SDK getFileView failed, falling back to manual URL:', e);
-                    const endpoint = (svc?.client?.config?.endpoint || 'https://sgp.cloud.appwrite.io/v1').replace(/\/$/, '');
-                    const projectId = svc?.client?.config?.project || '69904f4900396667cf4c';
-                    return `${endpoint}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}`;
-                }
-            };
-
-            // Face / selfie image — fall back to dicebear avatar if no real upload
-            const faceImageSrc = (parent.faceId && !parent.faceId.startsWith('mock_'))
-                ? buildFileUrl(parent.faceId)
-                : `https://api.dicebear.com/7.x/avataaars/svg?seed=${parent.firstName}`;
-
-            // ID document image — show placeholder if not uploaded
-            const idImageSrc = parent.idDocumentId
-                ? buildFileUrl(parent.idDocumentId)
-                : null;
-
+        for (const parent of pendingParents) {
+            // Render the card first with loading spinners for images
             const html = `
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card mb-4" id="user-${parent.$id}">
                     <div class="bg-gray-50 px-6 py-3 border-b border-gray-100 flex justify-between items-center">
@@ -176,19 +152,17 @@ async function loadPendingParents() {
                         <div class="flex flex-col md:flex-row gap-8 items-center justify-center mb-6">
                              <div class="text-center w-full md:w-1/2">
                                 <p class="text-xs font-bold text-gray-400 uppercase mb-2">Uploaded ID</p>
-                                <div class="rounded-lg shadow-inner bg-gray-100 border border-gray-200 w-full h-48 flex items-center justify-center overflow-hidden">
-                                    ${idImageSrc
-                    ? `<img src="${idImageSrc}" class="w-full h-full object-cover"
-                                              onerror="this.outerHTML='<div class=\\'text-gray-400 flex flex-col items-center\\'><i class=\\'fa-solid fa-id-card text-3xl mb-2\\'></i><span>Could not load ID</span></div>'">`
+                                <div class="rounded-lg shadow-inner bg-gray-100 border border-gray-200 w-full h-48 flex items-center justify-center overflow-hidden" id="id-container-${parent.$id}">
+                                    ${parent.idDocumentId
+                    ? `<i class="fa-solid fa-spinner fa-spin text-gray-400 text-2xl"></i>`
                     : `<div class="text-gray-400 flex flex-col items-center"><i class="fa-solid fa-id-card text-3xl mb-2"></i><span>No ID Uploaded</span></div>`
                 }
                                 </div>
                             </div>
                             <div class="text-center w-full md:w-1/2">
                                 <p class="text-xs font-bold text-gray-400 uppercase mb-2">Live Photo / Avatar</p>
-                                <div class="rounded-lg shadow-inner bg-gray-100 border border-gray-200 w-full h-48 flex items-center justify-center overflow-hidden">
-                                     <img src="${faceImageSrc}" class="w-full h-full object-cover"
-                                          onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=${parent.firstName}'">
+                                <div class="rounded-lg shadow-inner bg-gray-100 border border-gray-200 w-full h-48 flex items-center justify-center overflow-hidden" id="face-container-${parent.$id}">
+                                    <i class="fa-solid fa-spinner fa-spin text-gray-400 text-2xl"></i>
                                 </div>
                             </div>
                         </div>
@@ -214,7 +188,10 @@ async function loadPendingParents() {
                 </div>
             `;
             container.insertAdjacentHTML('beforeend', html);
-        });
+
+            // Now async-load the actual images using SDK auth (handles private buckets)
+            _loadVerificationImages(parent);
+        }
 
     } catch (error) {
         console.error("Error loading parents:", error);
@@ -242,6 +219,63 @@ async function updateParentStatus(userId, status) {
 }
 
 // --- VIDEO REVIEW ---
+
+/**
+ * Fetches parent verification images from Appwrite Storage using authenticated fetch
+ * (with credentials: 'include') and sets blob URLs as img src.
+ * This is necessary because <img> tags cannot send cross-origin session cookies,
+ * which private Appwrite buckets require.
+ */
+async function _loadVerificationImages(parent) {
+    const svc = window.AppwriteService;
+    if (!svc) return;
+
+    const endpoint = (svc.client?.config?.endpoint || 'https://sgp.cloud.appwrite.io/v1').replace(/\/$/, '');
+    const projectId = svc.client?.config?.project || '69904f4900396667cf4c';
+    const bucketId = svc.BUCKET_PARENT_DOCS || 'parent_docs';
+
+    const fetchImage = async (fileId) => {
+        const url = `${endpoint}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}`;
+        const res = await fetch(url, {
+            headers: { 'X-Appwrite-Project': projectId },
+            credentials: 'include'
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        return URL.createObjectURL(blob);
+    };
+
+    // Load face / selfie
+    const faceContainer = document.getElementById(`face-container-${parent.$id}`);
+    if (faceContainer) {
+        if (parent.faceId && !parent.faceId.startsWith('mock_')) {
+            try {
+                const blobUrl = await fetchImage(parent.faceId);
+                faceContainer.innerHTML = `<img src="${blobUrl}" class="w-full h-full object-cover">`;
+            } catch (e) {
+                console.warn(`Could not load face image for ${parent.$id}:`, e.message);
+                // Fallback to avatar
+                const seed = encodeURIComponent(parent.firstName);
+                faceContainer.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}" class="w-full h-full object-cover">`;
+            }
+        } else {
+            const seed = encodeURIComponent(parent.firstName);
+            faceContainer.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}" class="w-full h-full object-cover">`;
+        }
+    }
+
+    // Load ID document
+    const idContainer = document.getElementById(`id-container-${parent.$id}`);
+    if (idContainer && parent.idDocumentId) {
+        try {
+            const blobUrl = await fetchImage(parent.idDocumentId);
+            idContainer.innerHTML = `<img src="${blobUrl}" class="w-full h-full object-cover">`;
+        } catch (e) {
+            console.warn(`Could not load ID image for ${parent.$id}:`, e.message);
+            idContainer.innerHTML = `<div class="text-gray-400 flex flex-col items-center"><i class="fa-solid fa-id-card text-3xl mb-2"></i><span>Could not load ID</span></div>`;
+        }
+    }
+}
 
 async function loadPendingVideos() {
     const container = document.getElementById('tab-content');

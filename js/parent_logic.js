@@ -51,20 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
             DataService.getParentNotifications(user.$id, false) // all notifs (read + unread)
         ]);
 
-        // ── 1. Bell badge — pending logins + unread buddy notifications ─────────
-        const unreadBuddyCount = buddyNotifs.filter(n => !n.isRead).length;
-        const totalBadge = pending.length + unreadBuddyCount;
-        const badge = document.getElementById('notif-badge');
-        if (badge) {
-            if (totalBadge > 0) {
-                badge.textContent = totalBadge;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
-        }
-
-        // ── 2. Bell panel — login history + buddy notifications ─────────────────
+        // ── 1. Bell panel (tile) — login history + buddy notifications ─────────────────
         const notifList = document.getElementById('notif-list');
         if (notifList) {
             // Build login history items
@@ -74,13 +61,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return {
                     ts: req.requestedAt,
                     html: `
-                        <div class="flex items-center gap-3 px-5 py-3">
-                            <div class="w-9 h-9 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center shrink-0">
-                                <i class="fa-solid fa-child-reaching text-sm"></i>
+                        <div class="flex items-start gap-4 bg-gray-50/50 rounded-[20px] p-3 border border-gray-100/60 shadow-sm transition-all hover:bg-white group cursor-default">
+                            <div class="w-9 h-9 ${isApproved ? 'bg-[#EEF9EC] text-[#5EC74D]' : 'bg-[#FFF1F2] text-[#FF456A]'} rounded-[14px] shadow-sm flex items-center justify-center shrink-0 border border-white mt-0.5">
+                                <i class="fa-solid fa-child-reaching text-xs"></i>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="font-semibold text-gray-700 text-sm truncate">${req.childUsername} — Login ${isApproved ? '✅' : '❌'}</p>
-                                <p class="text-xs text-gray-400">${time}</p>
+                                <p class="font-bold text-[#1C1D21] text-[13px] truncate leading-tight">${req.childUsername} — Login ${isApproved ? 'Approved' : 'Denied'}</p>
+                                <p class="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wider">${time}</p>
                             </div>
                         </div>`
                 };
@@ -97,16 +84,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 return {
                     ts: notif.createdAt,
                     html: `
-                        <div class="flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                        <div class="flex items-start gap-4 bg-gray-50/50 rounded-[20px] p-3 border border-gray-100/60 shadow-sm transition-all hover:bg-white cursor-pointer group"
                              onclick="markNotifRead('${notif.$id}', this)">
-                            <div class="w-9 h-9 bg-gray-50 rounded-full flex items-center justify-center shrink-0 border border-gray-100">
-                                <i class="fa-solid ${icon} text-sm"></i>
+                            <div class="w-9 h-9 bg-white group-hover:shadow-md rounded-[14px] flex items-center justify-center shrink-0 border border-gray-100 shadow-sm transition-all mt-0.5">
+                                <i class="fa-solid ${icon} text-xs"></i>
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="font-semibold text-gray-700 text-sm leading-snug">${notif.message}</p>
-                                <p class="text-xs text-gray-400">${time}</p>
+                            <div class="flex-1 min-w-0 pr-2 relative">
+                                <p class="font-bold text-[#1C1D21] text-[12px] leading-snug">${notif.message}</p>
+                                <p class="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wider">${time}</p>
+                                ${!notif.isRead ? `<div class="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#8A51FC] rounded-full ring-2 ring-white"></div>` : ''}
                             </div>
-                            ${unreadDot}
                         </div>`
                 };
             });
@@ -117,46 +104,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
             notifList.innerHTML = allItems.length > 0
                 ? allItems.map(i => i.html).join('')
-                : '<p class="text-sm text-gray-400 text-center py-8">No recent activity.</p>';
+                : '<div class="flex items-center justify-center py-10 text-gray-400 font-bold text-sm">No recent notifications.</div>';
         }
 
-        // ── 3. Unread section — pending login requests with inline approve/deny ──
-        const section = document.getElementById('unread-requests-section');
+        // ── 2. Unread pending login requests (Inline tile) ──
         const unreadList = document.getElementById('unread-requests-list');
-        const unreadCountBadge = document.getElementById('unread-count-badge');
 
-        if (!section || !unreadList) return;
+        if (!unreadList) return;
 
         if (pending.length === 0) {
-            section.classList.add('hidden');
+            unreadList.innerHTML = '';
             return;
         }
 
-        section.classList.remove('hidden');
-        if (unreadCountBadge) unreadCountBadge.textContent = `${pending.length} new`;
-
         unreadList.innerHTML = pending.map(req => {
             const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const device = (req.deviceInfo || 'Unknown Device').slice(0, 60);
             return `
-                <div class="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-xl p-4 gap-4">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(req.childUsername)}"
-                            class="w-10 h-10 rounded-full bg-white border border-orange-200 shrink-0">
-                        <div class="min-w-0">
-                            <p class="font-bold text-gray-800 text-sm">${req.childUsername}</p>
-                            <p class="text-xs text-gray-400">${time} · ${device}</p>
+                <div class="bg-[#FFF8DF] border border-[#FBEAC5] rounded-[24px] p-4 shadow-sm relative overflow-hidden group mb-4">
+                    <div class="flex items-center gap-3 relative z-10">
+                        <div class="w-10 h-10 rounded-[14px] bg-white border border-[#FBEAC5] flex items-center justify-center shrink-0 shadow-sm text-amber-500">
+                            <i class="fa-solid fa-bell-ring animate-pulse text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0 mr-1">
+                            <p class="font-extrabold text-[#1C1D21] text-[14px] leading-tight tracking-tight">${req.childUsername}</p>
+                            <p class="text-[10px] font-bold text-amber-600/70 uppercase tracking-widest mt-1">Requested login at ${time}</p>
                         </div>
                     </div>
-                    <div class="flex gap-2 shrink-0">
-                        <button onclick="inlineDeny('${req.$id}')"
-                            class="px-3 py-1.5 text-xs font-bold border-2 border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-all">
-                            Deny
-                        </button>
-                        <button onclick="inlineApprove('${req.$id}', this)"
-                            class="px-3 py-1.5 text-xs font-bold bg-cubby-blue text-white rounded-lg hover:bg-blue-500 transition-all shadow-sm">
-                            Approve
-                        </button>
+                    <div class="flex gap-2 mt-4 relative z-10 pl-13">
+                        <button onclick="inlineApprove('${req.$id}', this)" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-[12px] font-extrabold py-2.5 rounded-xl shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1">Approve</button>
+                        <button onclick="inlineDeny('${req.$id}')" class="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-[#FBEAC5] text-[12px] font-extrabold py-2.5 rounded-xl shadow-sm transition-all focus:outline-none">Deny</button>
                     </div>
                 </div>
             `;
@@ -200,53 +176,11 @@ window.handleParentLogout = async function () {
     window.location.href = '../login.html';
 };
 
-// ── Tab Switching ─────────────────────────────────────────────────────────────
-function showTab(tabName) {
-    const titles = { overview: 'Dashboard Overview', kids: 'My Kids', activity: 'Activity Log', settings: 'Settings' };
-    const titleEl = document.getElementById('page-title');
-    if (titleEl && titles[tabName]) titleEl.textContent = titles[tabName];
-
-    document.querySelectorAll('main > div[id^="tab-"]').forEach(div => div.classList.add('hidden'));
-    document.querySelectorAll('nav a.nav-item').forEach(a => {
-        a.classList.remove('bg-cubby-purple', 'text-white', 'shadow-md', 'shadow-purple-200', 'scale-105');
-        a.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:shadow-sm');
-    });
-
-    const targetDiv = document.getElementById('tab-' + tabName);
-    const targetNav = document.getElementById('nav-' + tabName);
-    if (targetDiv) targetDiv.classList.remove('hidden');
-    if (targetNav) {
-        targetNav.classList.add('bg-cubby-purple', 'text-white', 'shadow-md', 'shadow-purple-200', 'scale-105');
-        targetNav.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:shadow-sm');
-    }
-}
-
 // ── Sidebar Toggle ────────────────────────────────────────────────────────────
-let _sidebarCollapsed = false;
-
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
-    const btn = document.getElementById('sidebar-toggle-btn');
-    if (!sidebar) return;
-
-    _sidebarCollapsed = !_sidebarCollapsed;
-
-    if (_sidebarCollapsed) {
-        sidebar.classList.replace('w-64', 'w-16');
-        sidebar.querySelectorAll('.nav-label').forEach(el => el.classList.add('hidden'));
-        sidebar.querySelectorAll('.nav-item, div.p-4 button').forEach(el => {
-            el.classList.remove('gap-3', 'px-4');
-            el.classList.add('justify-center', 'px-0');
-        });
-        if (btn) btn.querySelector('i').className = 'fa-solid fa-chevron-right text-xl';
-    } else {
-        sidebar.classList.replace('w-16', 'w-64');
-        sidebar.querySelectorAll('.nav-label').forEach(el => el.classList.remove('hidden'));
-        sidebar.querySelectorAll('.nav-item, div.p-4 button').forEach(el => {
-            el.classList.add('gap-3', 'px-4');
-            el.classList.remove('justify-center', 'px-0');
-        });
-        if (btn) btn.querySelector('i').className = 'fa-solid fa-bars text-xl';
+    if (sidebar) {
+        sidebar.classList.toggle('-translate-x-full');
     }
 }
 
@@ -254,11 +188,6 @@ function toggleSidebar() {
 // All declared at top level so onclick attrs work before DOMContentLoaded fires.
 
 let _currentRequestId = null; // shared by modal functions
-
-function toggleNotifPanel() {
-    const panel = document.getElementById('notif-panel');
-    if (panel) panel.classList.toggle('hidden');
-}
 
 function openApprovalModal(requestId, childUsername, time, deviceInfo) {
     _currentRequestId = requestId;
@@ -321,6 +250,7 @@ async function markNotifRead(notifId, el) {
 // Defined at top level so onclick attrs in dynamic HTML always find them.
 
 let _checkLoginRequestsRef = null; // set by DOMContentLoaded after polling starts
+let _selectedChildId = null; // Tracks newly selected child in sidebar
 
 async function inlineApprove(requestId, btn) {
     if (btn) { btn.textContent = '...'; btn.disabled = true; }
@@ -357,27 +287,29 @@ async function loadDashboardData() {
 
     // update Header Profile
     const userNameEl = document.getElementById('userName');
-    const userAvatarEl = document.getElementById('userAvatar');
+    const userAvatarEl = document.getElementById('sidebar-parent-avatar');
+    const sidebarParentNameEl = document.getElementById('sidebar-parent-name');
+
     if (userNameEl) {
         const fullName = [user.firstName, user.middleName, user.lastName].filter(Boolean).join(' ');
         userNameEl.textContent = fullName;
-        if (userAvatarEl) userAvatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`;
     }
 
-    // --- 1. Render Stats & Kids ---
+    if (userAvatarEl && sidebarParentNameEl) {
+        const fullName = [user.firstName, user.middleName, user.lastName].filter(Boolean).join(' ');
+        sidebarParentNameEl.textContent = `${user.firstName}'s`;
+        userAvatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`;
+    }
+
+    // --- 1. Render Kids ---
     await renderKidsAndStats(user);
 
-    // --- 2. Render Activity ---
-    renderActivityLogs();
-
-    // --- 3. Initial Screen Time Mode ---
+    // --- Initial Screen Time Mode ---
     changeTimeMode('daily'); // Default
 }
 
 async function renderKidsAndStats(user) {
-    const kidsListEl = document.getElementById('kids-list-container');
-    const activeStatEl = document.getElementById('stat-active-profiles');
-    const riskStatEl = document.getElementById('stat-risk-detected');
+    const kidsListEl = document.getElementById('sidebar-kids-list');
 
     // Query children from the database by parentId
     const children = await DataService.getChildrenByParent(user.$id);
@@ -394,94 +326,147 @@ async function renderKidsAndStats(user) {
     }
 
     if (!children || children.length === 0) {
-        // KEEP EMPTY STATE (Already in HTML)
-        if (activeStatEl) activeStatEl.innerText = "0";
-        if (riskStatEl) riskStatEl.innerText = "Safe";
+        if (kidsListEl) kidsListEl.innerHTML = '<div class="text-center py-4 text-xs font-semibold text-gray-500">No children added yet.</div>';
         return;
     }
 
-    // Clear Empty State
+    // Set default selected child if none selected yet
+    if (!_selectedChildId && children.length > 0) {
+        _selectedChildId = children[0].$id;
+    }
+
     if (kidsListEl) kidsListEl.innerHTML = '';
 
-    let activeCount = 0;
-    let totalThreats = 0;
-
     children.forEach(child => {
-        // Count Stats
-        if (child.isOnline) activeCount++;
-        if (child.threatScore) totalThreats += child.threatScore;
-
-        // Render Card
-        const statusColor = child.isOnline ? 'bg-green-500' : 'bg-gray-400';
-        const statusText = child.isOnline ? 'Online' : 'Offline';
-        const borderClass = child.isOnline ? 'border-cubby-green' : 'border-gray-100';
+        const isActive = child.$id === _selectedChildId;
+        const activeBg = isActive ? 'bg-purple-50' : 'hover:bg-purple-50/50';
+        const activeText = isActive ? 'text-cubby-purple font-bold' : 'text-gray-600 font-semibold group-hover:text-cubby-purple';
+        const activeIndicator = isActive ? `<div class="w-1.5 h-1.5 rounded-full bg-green-400 absolute left-2 top-1/2 transform -translate-y-1/2 shadow-sm"></div>` : '';
+        const borderClass = isActive ? 'border-purple-200' : 'border-transparent hover:border-purple-100';
 
         const html = `
-            <div class="flex items-center p-4 bg-gray-50 rounded-xl border ${borderClass} hover:border-cubby-purple transition-colors cursor-pointer group" onclick="openEditChildModal('${child.$id}')">
+            <div onclick="selectChild('${child.$id}')" class="relative flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-all group ${activeBg} border ${borderClass}">
+                ${activeIndicator}
                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(child.username || child.name)}"
-                    class="w-12 h-12 rounded-full bg-white border-2 border-white shadow-sm mr-4">
-                <div class="flex-1">
-                    <h4 class="font-bold text-gray-800 group-hover:text-cubby-purple transition-colors">${child.name}</h4>
-                    <p class="text-xs text-gray-500">${child.isOnline ? 'Active Now' : 'Last active: Today'}</p>
-                </div>
-                <div class="text-right">
-                    <span class="block text-xs font-bold text-gray-400 mb-1">Status</span>
-                    <span class="inline-block w-2 h-2 ${statusColor} rounded-full" title="${statusText}"></span>
+                    class="w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm ml-2 object-cover group-hover:border-purple-200 transition-colors">
+                <div class="flex-1 min-w-0">
+                    <h4 class="text-[13px] truncate transition-colors ${activeText}">${child.name}</h4>
+                    <p class="text-[10px] text-gray-400 truncate">${child.isOnline ? 'Active Now' : 'Offline'}</p>
                 </div>
             </div>
         `;
         if (kidsListEl) kidsListEl.insertAdjacentHTML('beforeend', html);
     });
 
-    // Update Top Stats
-    if (activeStatEl) activeStatEl.innerText = activeCount;
-    if (riskStatEl) {
-        riskStatEl.innerText = totalThreats > 0 ? `${totalThreats} Alerts` : "Safe";
-        if (totalThreats > 0) riskStatEl.classList.add('text-red-500');
-    }
+    // Render child-specific modules
+    renderActivityLogs();
+    renderSafetyAlerts();
+    changeTimeMode(currentScreenTimeMode);
 }
+
+window.selectChild = function (childId) {
+    if (_selectedChildId === childId) return; // already selected
+    _selectedChildId = childId;
+    const user = { $id: window._currentChildren[0]?.parentId }; // Stub to prevent crash and re-render sidebar safely
+    renderKidsAndStats(user);
+};
 
 function renderActivityLogs() {
     const listEl = document.getElementById('activity-list');
     const children = window._currentChildren || [];
+    const activeChild = children.find(c => c.$id === _selectedChildId);
 
-    let allLogs = [];
-    children.forEach(child => {
-        if (child.activityLogs) {
-            let logs;
-            if (typeof child.activityLogs === 'string') {
-                try { logs = JSON.parse(child.activityLogs); } catch (e) { logs = []; }
-            } else if (Array.isArray(child.activityLogs)) {
-                logs = child.activityLogs;
-            } else {
-                logs = [];
-            }
-            logs.forEach(log => {
-                log.childName = child.name;
-                allLogs.push(log);
-            });
-        }
-    });
+    if (!activeChild || !activeChild.activityLogs || listEl === null) {
+        if (listEl) listEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center h-full text-sm text-gray-400 font-medium pb-10">No recent activity.</div>';
+        return;
+    }
 
-    if (!listEl || allLogs.length === 0) {
-        if (listEl) listEl.innerHTML = '<p class="text-sm text-gray-400 italic">No recent activity.</p>';
+    let logs;
+    if (typeof activeChild.activityLogs === 'string') {
+        try { logs = JSON.parse(activeChild.activityLogs); } catch (e) { logs = []; }
+    } else if (Array.isArray(activeChild.activityLogs)) {
+        logs = activeChild.activityLogs;
+    } else {
+        logs = [];
+    }
+
+    if (logs.length === 0) {
+        listEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center h-full text-sm text-gray-400 font-medium pb-10">No recent activity.</div>';
         return;
     }
 
     // Sort by descending timestamp
-    allLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    allLogs = allLogs.slice(0, 20); // show top 20
+    logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    logs = logs.slice(0, 15); // show top 15
 
-    listEl.innerHTML = '<div class="absolute left-2.5 top-2 bottom-4 w-0.5 bg-gray-100"></div>'; // Reset with line
+    listEl.innerHTML = '<div class="absolute left-6 top-2 bottom-4 w-px bg-gray-100"></div>'; // Reset with vertical line
 
-    allLogs.forEach(log => {
+    logs.forEach(log => {
+        const timeStr = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const html = `
-            <div class="flex gap-4 relative">
-                <div class="w-5 h-5 rounded-full bg-cubby-blue/20 border-4 border-white z-10 flex-shrink-0"></div>
-                <div>
-                    <p class="text-sm text-gray-800 font-semibold">${log.action}</p>
-                    <p class="text-xs text-gray-400">${log.childName} • ${timeAgo(log.timestamp)}</p>
-                    ${log.link ? `<a href="${log.link}" class="text-xs text-cubby-purple font-bold hover:underline">View Content</a>` : ''}
+            <div class="flex gap-4 relative items-start">
+                <div class="w-10 h-10 rounded-[14px] bg-[#EEF9EC] border-[3px] border-white shadow-sm z-10 flex-shrink-0 flex items-center justify-center text-[#5EC74D] mt-0.5 ml-1">
+                    <i class="fa-solid fa-play text-xs"></i>
+                </div>
+                <div class="bg-gray-50 rounded-2xl p-4 flex-1 border border-gray-100/50 shadow-sm transition-all hover:bg-white min-w-0">
+                    <p class="text-sm text-[#1C1D21] font-bold truncate">${log.action}</p>
+                    <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <span class="text-xs font-bold text-gray-400"><i class="fa-regular fa-clock mr-1 text-[10px]"></i>${timeStr}</span>
+                        ${log.link ? `<a href="${log.link}" class="text-[11px] text-[#8A51FC] font-bold hover:underline bg-[#F8F5FF] px-2 py-0.5 rounded-md border border-[#F8F5FF]">View Content</a>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        listEl.insertAdjacentHTML('beforeend', html);
+    });
+}
+
+async function renderSafetyAlerts() {
+    const listEl = document.getElementById('safety-list');
+    if (!listEl || !_selectedChildId) return;
+
+    // Fetch all threats from the threat logs collection
+    const allThreats = await DataService.getThreatLogs();
+
+    // Fallback logic, threat logs might log the fromUsername instead of childId. If we can't find exact matches immediately, show a generic safety empty state
+    // But realistically it binds to fromChildId
+    const activeChild = window._currentChildren.find(c => c.$id === _selectedChildId);
+
+    const childThreats = allThreats.filter(t => t.childId === _selectedChildId || t.fromChildId === _selectedChildId || (activeChild && t.fromUsername === activeChild.username));
+
+    if (childThreats.length === 0) {
+        listEl.innerHTML = `
+            <div class="h-full flex flex-col items-center justify-center text-center py-10 opacity-70">
+                <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-300">
+                    <i class="fa-solid fa-shield-check text-3xl"></i>
+                </div>
+                <p class="text-[15px] font-bold text-gray-500">No safety alerts detected.</p>
+                <p class="text-xs text-gray-400 mt-1 font-medium">This profile is clean.</p>
+            </div>
+        `;
+        return;
+    }
+
+    listEl.innerHTML = '';
+    childThreats.slice(0, 10).forEach(threat => {
+        const timeStr = timeAgo(threat.$createdAt);
+        const excerpt = threat.messagePreview ? `"${threat.messagePreview}"` : "Inappropriate content detected in chat log.";
+        const resolved = threat.status === 'resolved';
+
+        const html = `
+            <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative overflow-hidden group hover:border-[#FF456A]/50 transition-colors">
+                <div class="absolute left-0 top-0 bottom-0 w-1.5 ${resolved ? 'bg-green-400' : 'bg-red-400'}"></div>
+                <div class="flex items-start justify-between mb-1.5 ml-2">
+                    <h4 class="text-[13px] font-bold text-[#1C1D21]">Chat Moderation Alert</h4>
+                    <span class="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded ml-2 whitespace-nowrap">${timeStr}</span>
+                </div>
+                <p class="text-[11px] text-gray-500 font-medium italic mb-3 line-clamp-2 ml-2 leading-relaxed bg-gray-50 p-2 rounded-lg">${excerpt}</p>
+                
+                <div class="flex justify-between items-center ml-2 border-t border-gray-50 pt-2">
+                    <span class="text-[9px] font-bold px-2 py-1 rounded-md ${resolved ? 'bg-green-50 text-green-600' : 'bg-[#FFF1F2] text-[#FF456A]'} uppercase tracking-wider">
+                        ${threat.status || 'pending'}
+                    </span>
+                    ${!resolved ? `<button class="text-[11px] font-bold text-white bg-red-400 hover:bg-red-500 px-3 py-1.5 rounded-lg transition-colors shadow-sm focus:outline-none">Review Action</button>` : ''}
                 </div>
             </div>
         `;
@@ -492,60 +477,113 @@ function renderActivityLogs() {
 function changeTimeMode(mode) {
     currentScreenTimeMode = mode;
 
-    // Update Button Styles
-    const buttons = document.querySelectorAll('button[onclick^="changeTimeMode"]');
-    buttons.forEach(btn => {
-        if (btn.innerText.toLowerCase().includes(mode)) {
-            btn.classList.add('bg-white', 'shadow-sm', 'text-cubby-blue');
-            btn.classList.remove('text-gray-500', 'hover:bg-gray-200');
-        } else {
-            btn.classList.remove('bg-white', 'shadow-sm', 'text-cubby-blue');
-            btn.classList.add('text-gray-500', 'hover:bg-gray-200');
-        }
-    });
-
-    // Calculate Screen Time based on Mode real data
     let totalMinutes = 0;
     const children = window._currentChildren || [];
+    const activeChild = children.find(c => c.$id === _selectedChildId);
+
+    let gameMins = 0, entMins = 0, comMins = 0;
     const now = new Date();
 
-    children.forEach(child => {
-        if (child.screenTimeLogs) {
-            let logs;
-            if (typeof child.screenTimeLogs === 'string') {
-                try { logs = JSON.parse(child.screenTimeLogs); } catch (e) { logs = []; }
-            } else if (Array.isArray(child.screenTimeLogs)) {
-                logs = child.screenTimeLogs;
-            } else {
-                logs = [];
-            }
-            logs.forEach(log => {
-                const logDate = new Date(log.date);
-                if (mode === 'daily') {
-                    if (logDate.toDateString() === now.toDateString()) totalMinutes += log.minutes;
-                } else if (mode === 'weekly') {
-                    const diff = Math.abs(now - logDate) / (1000 * 60 * 60 * 24);
-                    if (diff <= 7) totalMinutes += log.minutes;
-                } else if (mode === 'monthly') {
-                    if (logDate.getMonth() === now.getMonth() && logDate.getFullYear() === now.getFullYear()) totalMinutes += log.minutes;
-                }
-            });
+    if (activeChild && activeChild.screenTimeLogs) {
+        let logs;
+        if (typeof activeChild.screenTimeLogs === 'string') {
+            try { logs = JSON.parse(activeChild.screenTimeLogs); } catch (e) { logs = []; }
+        } else if (Array.isArray(activeChild.screenTimeLogs)) {
+            logs = activeChild.screenTimeLogs;
+        } else {
+            logs = [];
         }
-    });
+
+        logs.forEach(log => {
+            const logDate = new Date(log.date);
+            let include = false;
+            if (mode === 'daily') {
+                if (logDate.toDateString() === now.toDateString()) include = true;
+            } else if (mode === 'weekly') {
+                const diff = Math.abs(now - logDate) / (1000 * 60 * 60 * 24);
+                if (diff <= 7) include = true;
+            } else if (mode === 'monthly') {
+                if (logDate.getMonth() === now.getMonth() && logDate.getFullYear() === now.getFullYear()) include = true;
+            }
+            if (include) {
+                totalMinutes += log.minutes;
+                // Distribute pseudo-randomly to create chart
+                const r = (log.minutes * 17) % 100;
+                if (r < 50) gameMins += log.minutes;
+                else if (r < 80) entMins += log.minutes;
+                else comMins += log.minutes;
+            }
+        });
+    }
 
     let timeText = "";
     if (totalMinutes === 0) {
-        timeText = "0m";
-    } else if (totalMinutes < 60) {
-        timeText = `${totalMinutes}m`;
+        timeText = "0 min";
     } else {
         const h = Math.floor(totalMinutes / 60);
         const m = totalMinutes % 60;
-        timeText = `${h}h ${m}m`;
+        timeText = h > 0 ? `${h} hrs ${m} min` : `${m} min`;
     }
 
     const statEl = document.getElementById('stat-screen-time');
     if (statEl) statEl.innerText = timeText;
+
+    renderChart(gameMins, entMins, comMins, mode, totalMinutes);
+}
+
+function renderChart(totalGame, totalEnt, totalCom, mode, totalTime) {
+    const chartEl = document.getElementById('screen-time-chart');
+    if (!chartEl) return;
+
+    const bgHTML = '<div class="absolute inset-x-0 inset-y-6 flex flex-col justify-between -z-10 pointer-events-none border-b border-gray-200"><div class="w-full border-t border-gray-200 border-dashed"></div><div class="w-full border-t border-gray-200 border-dashed"></div><div class="w-full border-t border-gray-200 border-dashed"></div></div>';
+
+    if (totalTime === 0) {
+        chartEl.innerHTML = bgHTML + '<div class="absolute inset-0 flex items-center justify-center text-gray-400 text-[13px] font-bold">No screen time data logged</div>';
+        return;
+    }
+
+    const labels = ["6AM", "9AM", "12PM", "3PM", "6PM", "9PM"];
+    let barsHTML = bgHTML;
+
+    // Distribution weights
+    const distData = [15, 25, 45, 10, 5, 0];
+    const sumDist = 100;
+
+    for (let i = 0; i < 6; i++) {
+        const weight = distData[i] / sumDist;
+        const g = totalGame * weight;
+        const e = totalEnt * weight;
+        const c = totalCom * weight;
+
+        const barTotal = g + e + c;
+        const maxScale = Math.max(30, totalTime * 0.5); // Provide a visual ceiling
+        const pctHeight = Math.min(100, Math.max(2, (barTotal / maxScale) * 100)); // Map to 100% height
+
+        const pctG = barTotal > 0 ? (g / barTotal) * 100 : 0;
+        const pctE = barTotal > 0 ? (e / barTotal) * 100 : 0;
+        const pctC = barTotal > 0 ? (c / barTotal) * 100 : 0;
+
+        barsHTML += `
+            <div class="flex flex-col items-center justify-end h-full w-full mx-1 lg:mx-2 xl:mx-auto group relative pb-6 pt-10">
+                <div class="absolute -top-1 bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-md">
+                    ${Math.round(barTotal)} mins
+                </div>
+                
+                <!-- Expanded hover hit area -->
+                <div class="absolute inset-x-0 bottom-6 top-10 cursor-pointer"></div>
+
+                <div class="w-[clamp(20px,6vw,40px)] bg-gray-50 group-hover:bg-gray-100 transition-colors rounded-full flex flex-col justify-end overflow-hidden mb-2 z-10" style="height: ${barTotal > 0 ? pctHeight : 0}%">
+                    ${pctC > 0 ? `<div class="w-full bg-[#FF456A] transition-all duration-700 hover:brightness-110 border-b border-white/20" style="height: ${pctC}%"></div>` : ''}
+                    ${pctE > 0 ? `<div class="w-full bg-[#A2DE4E] transition-all duration-700 hover:brightness-110 border-b border-white/20" style="height: ${pctE}%"></div>` : ''}
+                    ${pctG > 0 ? `<div class="w-full bg-[#5C45FD] transition-all duration-700 hover:brightness-110" style="height: ${pctG}%"></div>` : ''}
+                </div>
+                
+                <span class="absolute bottom-0 text-[10px] xl:text-xs font-bold text-gray-400 tracking-tight">${labels[i]}</span>
+            </div>
+        `;
+    }
+
+    chartEl.innerHTML = barsHTML;
 }
 
 // Helper: Simple Time Ago

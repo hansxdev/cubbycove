@@ -410,11 +410,11 @@ const DataService = {
         try {
             const result = await databases.listDocuments(DB_ID, 'login_requests', [
                 Query.equal('parentEmail', parentEmail),
-                Query.equal('status', 'pending'),
-                Query.orderDesc('requestedAt'),
-                Query.limit(20)
+                Query.limit(50)
             ]);
-            return result.documents;
+            return result.documents
+                .filter(req => req.status === 'pending')
+                .sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
         } catch (e) {
             console.warn('getPendingLoginRequests error:', e.message);
             return [];
@@ -428,23 +428,14 @@ const DataService = {
         const { databases, DB_ID } = this._getServices();
         const { Query } = Appwrite;
         try {
-            // Get approved and denied separately and merge (Appwrite free tier doesn't support OR queries)
-            const [approved, denied] = await Promise.all([
-                databases.listDocuments(DB_ID, 'login_requests', [
-                    Query.equal('parentEmail', parentEmail),
-                    Query.equal('status', 'approved'),
-                    Query.orderDesc('requestedAt'),
-                    Query.limit(10)
-                ]),
-                databases.listDocuments(DB_ID, 'login_requests', [
-                    Query.equal('parentEmail', parentEmail),
-                    Query.equal('status', 'denied'),
-                    Query.orderDesc('requestedAt'),
-                    Query.limit(10)
-                ])
+            const result = await databases.listDocuments(DB_ID, 'login_requests', [
+                Query.equal('parentEmail', parentEmail),
+                Query.limit(100)
             ]);
-            // Merge and sort by date, take most recent 15
-            return [...approved.documents, ...denied.documents]
+
+            const handled = result.documents.filter(req => req.status === 'approved' || req.status === 'denied');
+
+            return handled
                 .sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt))
                 .slice(0, 15);
         } catch (e) {
@@ -840,13 +831,17 @@ const DataService = {
         try {
             const queries = [
                 Query.equal('parentId', parentId),
-                Query.orderDesc('createdAt'),
-                Query.limit(30)
+                Query.limit(100)
             ];
-            if (unreadOnly) queries.push(Query.equal('isRead', false));
 
             const result = await databases.listDocuments(DB_ID, 'parent_notifications', queries);
-            return result.documents;
+
+            let docs = result.documents;
+            if (unreadOnly) docs = docs.filter(d => d.isRead === false);
+
+            return docs
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                .slice(0, 30);
         } catch (e) {
             console.warn('getParentNotifications error:', e.message);
             return [];

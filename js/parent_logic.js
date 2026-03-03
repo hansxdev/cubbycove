@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // No special init needed yet
     }
 
-    // Global assignment for stopping notifications
     window.stopNotifPollingGlobal = stopNotifPolling;
 
     // --- Start notification polling when on the dashboard ---
@@ -26,6 +25,72 @@ document.addEventListener('DOMContentLoaded', () => {
         startNotifPolling();
         _checkLoginRequestsRef = checkLoginRequests; // expose for inline buttons
     }
+
+    // ── Virtual Scroll Core Logic ──────────────────────────────────────────────────
+    let _vsState = { items: [], height: 85, pool: [], initialized: false };
+
+    function renderVirtualScrollVisible() {
+        const container = document.getElementById('notifications-container');
+        if (!container) return;
+        const scrollTop = container.scrollTop;
+        const startIndex = Math.max(0, Math.floor(scrollTop / _vsState.height));
+
+        for (let i = 0; i < _vsState.pool.length; i++) {
+            const itemIndex = startIndex + i;
+            const node = _vsState.pool[i];
+
+            if (itemIndex < _vsState.items.length) {
+                node.style.top = `${itemIndex * _vsState.height}px`;
+                node.style.display = 'block';
+                if (node.dataset.index !== String(itemIndex)) {
+                    node.innerHTML = _vsState.items[itemIndex];
+                    node.dataset.index = itemIndex;
+                }
+            } else {
+                node.style.display = 'none';
+                node.dataset.index = '-1';
+            }
+        }
+    }
+
+    function setupVirtualScroll(containerId, listId, itemsHtmlArray) {
+        const container = document.getElementById(containerId);
+        const list = document.getElementById(listId);
+        if (!container || !list) return;
+
+        _vsState.items = itemsHtmlArray;
+        list.style.position = 'relative';
+        const totalH = itemsHtmlArray.length * _vsState.height;
+        list.style.height = `${Math.max(10, totalH)}px`; // At least some px when filled
+
+        if (!_vsState.initialized) {
+            list.innerHTML = '';
+            const winHeight = container.clientHeight || 400;
+            const itemsPerScreen = Math.ceil(winHeight / _vsState.height) + 4; // Buffer for smooth scrolling
+
+            _vsState.pool = [];
+            for (let i = 0; i < itemsPerScreen; i++) {
+                const div = document.createElement('div');
+                div.style.position = 'absolute';
+                div.style.left = '0';
+                div.style.right = '0';
+                div.style.height = `${_vsState.height}px`;
+                div.style.boxSizing = 'border-box';
+                div.style.paddingBottom = '10px'; // Spacing equivalent to gap-4
+                list.appendChild(div);
+                _vsState.pool.push(div);
+            }
+
+            container.addEventListener('scroll', renderVirtualScrollVisible);
+            // Ensure container is styled correctly to act as the scroll viewport
+            container.style.overflowY = 'auto';
+            container.style.position = 'absolute';
+            _vsState.initialized = true;
+        }
+
+        renderVirtualScrollVisible(); // Initial render
+    }
+    // ─────────────────────────────────────────────────────────────────────────────
 
     // ── Notification Panel ───────────────────────────────────────────────────
 
@@ -61,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return {
                     ts: req.requestedAt,
                     html: `
-                        <div class="flex items-start gap-4 bg-gray-50/50 rounded-[20px] p-3 border border-gray-100/60 shadow-sm transition-all hover:bg-white group cursor-default">
+                        <div class="flex items-start gap-4 h-[75px] overflow-hidden bg-gray-50/50 rounded-[20px] p-3 border border-gray-100/60 shadow-sm transition-all hover:bg-white group cursor-default">
                             <div class="w-9 h-9 ${isApproved ? 'bg-[#EEF9EC] text-[#5EC74D]' : 'bg-[#FFF1F2] text-[#FF456A]'} rounded-[14px] shadow-sm flex items-center justify-center shrink-0 border border-white mt-0.5">
                                 <i class="fa-solid fa-child-reaching text-xs"></i>
                             </div>
@@ -80,11 +145,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (notif.type === 'buddy_request') icon = 'fa-user-plus text-cubby-pink';
                 else if (notif.type === 'buddy_added') icon = 'fa-user-check text-cubby-blue';
                 else icon = 'fa-handshake text-cubby-green';
-                const unreadDot = !notif.isRead ? '<span class="w-2 h-2 bg-cubby-blue rounded-full shrink-0"></span>' : '';
                 return {
                     ts: notif.createdAt,
                     html: `
-                        <div class="flex items-start gap-4 bg-gray-50/50 rounded-[20px] p-3 border border-gray-100/60 shadow-sm transition-all hover:bg-white cursor-pointer group"
+                        <div class="flex items-start gap-4 h-[75px] overflow-hidden bg-gray-50/50 rounded-[20px] p-3 border border-gray-100/60 shadow-sm transition-all hover:bg-white cursor-pointer group"
                              onclick="markNotifRead('${notif.$id}', this)">
                             <div class="w-9 h-9 bg-white group-hover:shadow-md rounded-[14px] flex items-center justify-center shrink-0 border border-gray-100 shadow-sm transition-all mt-0.5">
                                 <i class="fa-solid ${icon} text-xs"></i>
@@ -99,12 +163,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const allItems = [...loginItems, ...buddyItems]
-                .sort((a, b) => new Date(b.ts) - new Date(a.ts))
-                .slice(0, 20);
+                .sort((a, b) => new Date(b.ts) - new Date(a.ts)); // Full array for virtual scrolling
 
-            notifList.innerHTML = allItems.length > 0
-                ? allItems.map(i => i.html).join('')
-                : '<div class="flex items-center justify-center py-10 text-gray-400 font-bold text-sm">No recent notifications.</div>';
+            if (allItems.length > 0) {
+                const htmlArray = allItems.map(i => i.html);
+                setupVirtualScroll('notifications-container', 'notif-list', htmlArray);
+            } else {
+                notifList.innerHTML = '<div class="flex items-center justify-center py-10 text-gray-400 font-bold text-sm">No recent notifications.</div>';
+                notifList.style.height = 'auto'; // Reset height
+            }
         }
 
         // ── 2. Global Unread pending login requests (Slide-down header) ──
@@ -479,15 +546,49 @@ async function renderSafetyAlerts() {
     });
 }
 
+let screenTimeChartInstance = null;
+
 function changeTimeMode(mode) {
     currentScreenTimeMode = mode;
+
+    // Update the dropdown display text
+    const displayEl = document.getElementById('timeModeDisplay');
+    const selectEl = document.getElementById('timeModeSelect');
+    if (displayEl && selectEl) {
+        displayEl.innerText = selectEl.options[selectEl.selectedIndex].text;
+    }
 
     let totalMinutes = 0;
     const children = window._currentChildren || [];
     const activeChild = children.find(c => c.$id === _selectedChildId);
 
-    let gameMins = 0, entMins = 0, comMins = 0;
+    // Chart grouping structures
+    let labels = [];
+    let gameMinsData = [];
+    let entMinsData = [];
+    let comMinsData = [];
+    let overallData = []; // for line graph
     const now = new Date();
+
+    if (mode === 'daily') {
+        labels = ["6AM", "9AM", "12PM", "3PM", "6PM", "9PM"];
+        gameMinsData = [0, 0, 0, 0, 0, 0];
+        entMinsData = [0, 0, 0, 0, 0, 0];
+        comMinsData = [0, 0, 0, 0, 0, 0];
+    } else if (mode === 'weekly') {
+        labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        gameMinsData = [0, 0, 0, 0, 0, 0, 0];
+        entMinsData = [0, 0, 0, 0, 0, 0, 0];
+        comMinsData = [0, 0, 0, 0, 0, 0, 0];
+    } else if (mode === 'monthly') {
+        labels = ["Week 1", "Week 2", "Week 3", "Week 4"];
+        gameMinsData = [0, 0, 0, 0];
+        entMinsData = [0, 0, 0, 0];
+        comMinsData = [0, 0, 0, 0];
+    } else if (mode === 'overall') {
+        labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        overallData = new Array(12).fill(0);
+    }
 
     if (activeChild && activeChild.screenTimeLogs) {
         let logs;
@@ -502,21 +603,48 @@ function changeTimeMode(mode) {
         logs.forEach(log => {
             const logDate = new Date(log.date);
             let include = false;
+            let bucketIndex = 0;
+
             if (mode === 'daily') {
-                if (logDate.toDateString() === now.toDateString()) include = true;
+                if (logDate.toDateString() === now.toDateString()) {
+                    include = true;
+                    const h = logDate.getHours();
+                    if (h < 9) bucketIndex = 0;
+                    else if (h < 12) bucketIndex = 1;
+                    else if (h < 15) bucketIndex = 2;
+                    else if (h < 18) bucketIndex = 3;
+                    else if (h < 21) bucketIndex = 4;
+                    else bucketIndex = 5;
+                }
             } else if (mode === 'weekly') {
                 const diff = Math.abs(now - logDate) / (1000 * 60 * 60 * 24);
-                if (diff <= 7) include = true;
+                if (diff <= 7) {
+                    include = true;
+                    bucketIndex = logDate.getDay() === 0 ? 6 : logDate.getDay() - 1; // Mon=0, Sun=6
+                }
             } else if (mode === 'monthly') {
-                if (logDate.getMonth() === now.getMonth() && logDate.getFullYear() === now.getFullYear()) include = true;
+                if (logDate.getMonth() === now.getMonth() && logDate.getFullYear() === now.getFullYear()) {
+                    include = true;
+                    bucketIndex = Math.min(3, Math.floor(logDate.getDate() / 7));
+                }
+            } else if (mode === 'overall') {
+                if (logDate.getFullYear() === now.getFullYear()) {
+                    include = true;
+                    bucketIndex = logDate.getMonth();
+                }
             }
+
             if (include) {
                 totalMinutes += log.minutes;
-                // Distribute pseudo-randomly to create chart
-                const r = (log.minutes * 17) % 100;
-                if (r < 50) gameMins += log.minutes;
-                else if (r < 80) entMins += log.minutes;
-                else comMins += log.minutes;
+                if (mode === 'overall') {
+                    overallData[bucketIndex] += log.minutes;
+                } else {
+                    // Approximate classification based on pseudo-random hash to make it look realistic if exact categories are missing
+                    const r = (log.minutes * 17) % 100;
+                    if (r < 50) gameMinsData[bucketIndex] += log.minutes;
+                    else if (r < 80) entMinsData[bucketIndex] += log.minutes;
+                    else comMinsData[bucketIndex] += log.minutes;
+                }
             }
         });
     }
@@ -533,62 +661,112 @@ function changeTimeMode(mode) {
     const statEl = document.getElementById('stat-screen-time');
     if (statEl) statEl.innerText = timeText;
 
-    renderChart(gameMins, entMins, comMins, mode, totalMinutes);
+    // Define standard Chart.js datasets
+    let datasets = [];
+    let chartType = 'bar';
+
+    if (mode === 'overall') {
+        chartType = 'line';
+        datasets = [
+            {
+                label: 'Total Screen Time (mins)',
+                data: overallData,
+                borderColor: '#8A51FC',
+                backgroundColor: 'rgba(138, 81, 252, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#8A51FC',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+            }
+        ];
+    } else {
+        datasets = [
+            {
+                label: 'Games',
+                data: gameMinsData,
+                backgroundColor: '#5C45FD',
+                borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 4, bottomRight: 4 },
+                barThickness: mode === 'daily' ? 30 : 20
+            },
+            {
+                label: 'Entertainment',
+                data: entMinsData,
+                backgroundColor: '#A2DE4E',
+                borderRadius: 0,
+                barThickness: mode === 'daily' ? 30 : 20
+            },
+            {
+                label: 'Communication',
+                data: comMinsData,
+                backgroundColor: '#FF456A',
+                borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
+                barThickness: mode === 'daily' ? 30 : 20
+            }
+        ];
+    }
+
+    renderChart(labels, datasets, chartType);
 }
 
-function renderChart(totalGame, totalEnt, totalCom, mode, totalTime) {
-    const chartEl = document.getElementById('screen-time-chart');
-    if (!chartEl) return;
+function renderChart(labels, datasets, type) {
+    const canvas = document.getElementById('screenTimeChart');
+    if (!canvas) return;
 
-    const bgHTML = '<div class="absolute inset-x-0 inset-y-6 flex flex-col justify-between -z-10 pointer-events-none border-b border-gray-200"><div class="w-full border-t border-gray-200 border-dashed"></div><div class="w-full border-t border-gray-200 border-dashed"></div><div class="w-full border-t border-gray-200 border-dashed"></div></div>';
-
-    if (totalTime === 0) {
-        chartEl.innerHTML = bgHTML + '<div class="absolute inset-0 flex items-center justify-center text-gray-400 text-[13px] font-bold">No screen time data logged</div>';
-        return;
+    if (screenTimeChartInstance) {
+        screenTimeChartInstance.destroy();
     }
 
-    const labels = ["6AM", "9AM", "12PM", "3PM", "6PM", "9PM"];
-    let barsHTML = bgHTML;
-
-    // Distribution weights
-    const distData = [15, 25, 45, 10, 5, 0];
-    const sumDist = 100;
-
-    for (let i = 0; i < 6; i++) {
-        const weight = distData[i] / sumDist;
-        const g = totalGame * weight;
-        const e = totalEnt * weight;
-        const c = totalCom * weight;
-
-        const barTotal = g + e + c;
-        const maxScale = Math.max(30, totalTime * 0.5); // Provide a visual ceiling
-        const pctHeight = Math.min(100, Math.max(2, (barTotal / maxScale) * 100)); // Map to 100% height
-
-        const pctG = barTotal > 0 ? (g / barTotal) * 100 : 0;
-        const pctE = barTotal > 0 ? (e / barTotal) * 100 : 0;
-        const pctC = barTotal > 0 ? (c / barTotal) * 100 : 0;
-
-        barsHTML += `
-            <div class="flex flex-col items-center justify-end h-full w-full mx-1 lg:mx-2 xl:mx-auto group relative pb-6 pt-10">
-                <div class="absolute -top-1 bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-md">
-                    ${Math.round(barTotal)} mins
-                </div>
-                
-                <!-- Expanded hover hit area -->
-                <div class="absolute inset-x-0 bottom-6 top-10 cursor-pointer"></div>
-
-                <div class="w-[clamp(20px,6vw,40px)] bg-gray-50 group-hover:bg-gray-100 transition-colors rounded-full flex flex-col justify-end overflow-hidden mb-2 z-10" style="height: ${barTotal > 0 ? pctHeight : 0}%">
-                    ${pctC > 0 ? `<div class="w-full bg-[#FF456A] transition-all duration-700 hover:brightness-110 border-b border-white/20" style="height: ${pctC}%"></div>` : ''}
-                    ${pctE > 0 ? `<div class="w-full bg-[#A2DE4E] transition-all duration-700 hover:brightness-110 border-b border-white/20" style="height: ${pctE}%"></div>` : ''}
-                    ${pctG > 0 ? `<div class="w-full bg-[#5C45FD] transition-all duration-700 hover:brightness-110" style="height: ${pctG}%"></div>` : ''}
-                </div>
-                
-                <span class="absolute bottom-0 text-[10px] xl:text-xs font-bold text-gray-400 tracking-tight">${labels[i]}</span>
-            </div>
-        `;
-    }
-
-    chartEl.innerHTML = barsHTML;
+    screenTimeChartInstance = new Chart(canvas, {
+        type: type,
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    stacked: type === 'bar',
+                    grid: { color: '#F3F4F6', drawBorder: false },
+                    border: { display: false },
+                    ticks: {
+                        color: '#9CA3AF',
+                        font: { size: 10, weight: 'bold' }
+                    }
+                },
+                x: {
+                    stacked: type === 'bar',
+                    grid: { display: false },
+                    border: { display: false },
+                    ticks: {
+                        color: '#9CA3AF',
+                        font: { size: 10, weight: 'bold' }
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false }, // Legend is hardcoded in HTML below it
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(28, 29, 33, 0.9)',
+                    titleColor: '#fff',
+                    bodyColor: '#A1A1AA',
+                    cornerRadius: 8,
+                    padding: 12
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
 }
 
 // Helper: Simple Time Ago

@@ -17,6 +17,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../js/tailwind-config.js"></script>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <!-- Custom Styles -->
     <link rel="stylesheet" href="../css/style.css">
 </head>
@@ -179,26 +182,22 @@
                                             id="stat-screen-time">0 hrs 0 min</div>
                                     </div>
                                     <div
-                                        class="bg-[#F8F5FF] text-[#8A51FC] px-4 py-2 rounded-2xl text-sm font-bold flex items-center gap-2 cursor-pointer hover:bg-purple-100 transition-colors shadow-sm">
-                                        Today <i class="fa-solid fa-chevron-down text-[10px] ml-1"></i>
+                                        class="bg-[#F8F5FF] text-[#8A51FC] px-4 py-2 rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-purple-100 transition-colors shadow-sm relative overflow-hidden">
+                                        <select id="timeModeSelect" onchange="changeTimeMode(this.value)"
+                                            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer font-bold">
+                                            <option value="daily">Today</option>
+                                            <option value="weekly">This Week</option>
+                                            <option value="monthly">This Month</option>
+                                            <option value="overall">Overall</option>
+                                        </select>
+                                        <span id="timeModeDisplay">Today</span> <i
+                                            class="fa-solid fa-chevron-down text-[10px] ml-1"></i>
                                     </div>
                                 </div>
 
-                                <!-- Custom Stacked Bar Chart -->
-                                <div class="flex-1 flex items-end justify-between gap-1 xl:gap-3 mt-auto h-[220px] relative px-2"
-                                    id="screen-time-chart">
-                                    <!-- Y-Axis Lines -->
-                                    <div
-                                        class="absolute inset-0 flex flex-col justify-between -z-10 py-6 pointer-events-none opacity-40">
-                                        <div class="w-full border-t border-gray-200 border-dashed"></div>
-                                        <div class="w-full border-t border-gray-200 border-dashed"></div>
-                                        <div class="w-full border-t border-gray-200 border-dashed"></div>
-                                    </div>
-
-                                    <!-- Dynamic Bars will be rendered here via JS -->
-                                    <div
-                                        class="w-full h-full flex items-center justify-center text-gray-400 text-sm font-medium">
-                                        No screen time data</div>
+                                <!-- Chart Container -->
+                                <div class="flex-1 w-full mt-auto relative" style="min-height: 220px;">
+                                    <canvas id="screenTimeChart"></canvas>
                                 </div>
 
                                 <!-- Legends -->

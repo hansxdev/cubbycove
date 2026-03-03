@@ -5,7 +5,7 @@ let currentScreenTimeMode = 'daily';
 document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Dashboard Logic — detect by a stable unique element
-    const dashboardMain = document.getElementById('tab-overview');
+    const dashboardMain = document.getElementById('sidebar'); // tab-overview was removed
     if (dashboardMain) {
         console.log("Parent Dashboard Loaded");
         loadDashboardData();
@@ -107,32 +107,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 : '<div class="flex items-center justify-center py-10 text-gray-400 font-bold text-sm">No recent notifications.</div>';
         }
 
-        // ── 2. Unread pending login requests (Inline tile) ──
-        const unreadList = document.getElementById('unread-requests-list');
+        // ── 2. Global Unread pending login requests (Slide-down header) ──
+        const unreadList = document.getElementById('global-unread-list');
+        const slideHeader = document.getElementById('global-login-request-header');
 
-        if (!unreadList) return;
+        if (!unreadList || !slideHeader) return;
 
         if (pending.length === 0) {
+            slideHeader.classList.add('-translate-y-full');
             unreadList.innerHTML = '';
             return;
         }
 
+        // We have pending requests; slide it down
+        slideHeader.classList.remove('-translate-y-full');
+
         unreadList.innerHTML = pending.map(req => {
             const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             return `
-                <div class="bg-[#FFF8DF] border border-[#FBEAC5] rounded-[24px] p-4 shadow-sm relative overflow-hidden group mb-4">
-                    <div class="flex items-center gap-3 relative z-10">
-                        <div class="w-10 h-10 rounded-[14px] bg-white border border-[#FBEAC5] flex items-center justify-center shrink-0 shadow-sm text-amber-500">
-                            <i class="fa-solid fa-bell-ring animate-pulse text-sm"></i>
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between bg-[#FFF8DF] border border-[#FBEAC5] rounded-[20px] p-3 md:p-4 shadow-sm gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-[16px] bg-white border border-[#FBEAC5] flex items-center justify-center shrink-0 shadow-sm text-amber-500">
+                            <i class="fa-solid fa-bell-ring animate-pulse text-lg"></i>
                         </div>
-                        <div class="flex-1 min-w-0 mr-1">
-                            <p class="font-extrabold text-[#1C1D21] text-[14px] leading-tight tracking-tight">${req.childUsername}</p>
-                            <p class="text-[10px] font-bold text-amber-600/70 uppercase tracking-widest mt-1">Requested login at ${time}</p>
+                        <div class="min-w-0">
+                            <p class="font-extrabold text-[#1C1D21] text-[15px] leading-tight tracking-tight">${req.childUsername} is requesting access</p>
+                            <p class="text-[11px] font-bold text-amber-600/70 uppercase tracking-widest mt-1">Requested at ${time}</p>
                         </div>
                     </div>
-                    <div class="flex gap-2 mt-4 relative z-10 pl-13">
-                        <button onclick="inlineApprove('${req.$id}', this)" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-[12px] font-extrabold py-2.5 rounded-xl shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1">Approve</button>
-                        <button onclick="inlineDeny('${req.$id}')" class="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-[#FBEAC5] text-[12px] font-extrabold py-2.5 rounded-xl shadow-sm transition-all focus:outline-none">Deny</button>
+                    <div class="flex gap-2 w-full md:w-auto shrink-0">
+                        <button onclick="inlineApprove('${req.$id}', this)" class="flex-1 md:flex-none px-6 bg-amber-500 hover:bg-amber-600 text-white text-[13px] font-extrabold py-3 rounded-[14px] shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1">Approve</button>
+                        <button onclick="inlineDeny('${req.$id}')" class="flex-1 md:flex-none px-6 bg-white hover:bg-gray-50 text-gray-700 border border-[#FBEAC5] text-[13px] font-extrabold py-3 rounded-[14px] shadow-sm transition-all focus:outline-none">Deny</button>
                     </div>
                 </div>
             `;

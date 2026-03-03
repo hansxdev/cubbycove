@@ -2,10 +2,190 @@
 
 let currentScreenTimeMode = 'daily';
 
+// ── Virtual Scroll Core Logic ──────────────────────────────────────────────────
+let _vsState = { items: [], height: 85, pool: [], initialized: false };
+
+function renderVirtualScrollVisible() {
+    const container = document.getElementById('notifications-container');
+    if (!container) return;
+    const scrollTop = container.scrollTop;
+    const startIndex = Math.max(0, Math.floor(scrollTop / _vsState.height));
+
+    for (let i = 0; i < _vsState.pool.length; i++) {
+        const itemIndex = startIndex + i;
+        const node = _vsState.pool[i];
+
+        if (itemIndex < _vsState.items.length) {
+            node.style.top = `${itemIndex * _vsState.height}px`;
+            node.style.display = 'block';
+            if (node.dataset.index !== String(itemIndex)) {
+                node.innerHTML = _vsState.items[itemIndex];
+                node.dataset.index = itemIndex;
+            }
+        } else {
+            node.style.display = 'none';
+            node.dataset.index = '-1';
+        }
+    }
+}
+
+function setupVirtualScroll(containerId, listId, itemsHtmlArray) {
+    const container = document.getElementById(containerId);
+    const list = document.getElementById(listId);
+    if (!container || !list) return;
+
+    _vsState.items = itemsHtmlArray;
+    list.style.position = 'relative';
+    const totalH = itemsHtmlArray.length * _vsState.height;
+    list.style.height = `${Math.max(10, totalH)}px`;
+
+    if (!_vsState.initialized) {
+        list.innerHTML = '';
+        const winHeight = container.clientHeight || 400;
+        const itemsPerScreen = Math.ceil(winHeight / _vsState.height) + 4;
+
+        _vsState.pool = [];
+        for (let i = 0; i < itemsPerScreen; i++) {
+            const div = document.createElement('div');
+            div.style.position = 'absolute';
+            div.style.left = '0';
+            div.style.right = '0';
+            div.style.height = `${_vsState.height}px`;
+            div.style.boxSizing = 'border-box';
+            div.style.paddingBottom = '10px';
+            list.appendChild(div);
+            _vsState.pool.push(div);
+        }
+
+        container.addEventListener('scroll', renderVirtualScrollVisible);
+        container.style.overflowY = 'auto';
+        container.style.position = 'absolute';
+        _vsState.initialized = true;
+    }
+
+    renderVirtualScrollVisible();
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Notification Polling ─────────────────────────────────────────────────────
+let _notifPollInterval = null;
+
+function startNotifPolling() {
+    checkLoginRequests(); // run once immediately
+    _notifPollInterval = setInterval(checkLoginRequests, 10000); // then every 10s
+}
+
+function stopNotifPolling() {
+    clearInterval(_notifPollInterval);
+}
+
+async function checkLoginRequests() {
+    const user = await DataService.getCurrentUser();
+    if (!user || !user.email) return;
+
+    const [pending, handled, buddyNotifs] = await Promise.all([
+        DataService.getPendingLoginRequests(user.email),
+        DataService.getHandledLoginRequests(user.email),
+        DataService.getParentNotifications(user.$id, false)
+    ]);
+
+    // ── 1. Bell panel (tile) — login history + buddy notifications ────────────
+    const notifList = document.getElementById('notif-list');
+    if (notifList) {
+        const loginItems = handled.map(req => {
+            const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const isApproved = req.status === 'approved';
+            return {
+                ts: req.requestedAt,
+                html: `
+                    <div class="flex items-start gap-4 h-[75px] overflow-hidden bg-gray-50/50 rounded-[20px] p-3 border border-gray-100/60 shadow-sm transition-all hover:bg-white group cursor-default">
+                        <div class="w-9 h-9 ${isApproved ? 'bg-[#EEF9EC] text-[#5EC74D]' : 'bg-[#FFF1F2] text-[#FF456A]'} rounded-[14px] shadow-sm flex items-center justify-center shrink-0 border border-white mt-0.5">
+                            <i class="fa-solid fa-child-reaching text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-[#1C1D21] text-[13px] truncate leading-tight">${req.childUsername} — Login ${isApproved ? 'Approved' : 'Denied'}</p>
+                            <p class="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wider">${time}</p>
+                        </div>
+                    </div>`
+            };
+        });
+
+        const buddyItems = buddyNotifs.map(notif => {
+            const time = new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            let icon;
+            if (notif.type === 'buddy_request') icon = 'fa-user-plus text-cubby-pink';
+            else if (notif.type === 'buddy_added') icon = 'fa-user-check text-cubby-blue';
+            else icon = 'fa-handshake text-cubby-green';
+            return {
+                ts: notif.createdAt,
+                html: `
+                    <div class="flex items-start gap-4 h-[75px] overflow-hidden bg-gray-50/50 rounded-[20px] p-3 border border-gray-100/60 shadow-sm transition-all hover:bg-white cursor-pointer group"
+                         onclick="markNotifRead('${notif.$id}', this)">
+                        <div class="w-9 h-9 bg-white group-hover:shadow-md rounded-[14px] flex items-center justify-center shrink-0 border border-gray-100 shadow-sm transition-all mt-0.5">
+                            <i class="fa-solid ${icon} text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0 pr-2 relative">
+                            <p class="font-bold text-[#1C1D21] text-[12px] leading-snug">${notif.message}</p>
+                            <p class="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wider">${time}</p>
+                            ${!notif.isRead ? `<div class="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#8A51FC] rounded-full ring-2 ring-white"></div>` : ''}
+                        </div>
+                    </div>`
+            };
+        });
+
+        const allItems = [...loginItems, ...buddyItems]
+            .sort((a, b) => new Date(b.ts) - new Date(a.ts));
+
+        if (allItems.length > 0) {
+            const htmlArray = allItems.map(i => i.html);
+            setupVirtualScroll('notifications-container', 'notif-list', htmlArray);
+        } else {
+            notifList.innerHTML = '<div class="flex items-center justify-center py-10 text-gray-400 font-bold text-sm">No recent notifications.</div>';
+            notifList.style.height = 'auto';
+        }
+    }
+
+    // ── 2. Global Unread pending login requests (Slide-down header) ───────────
+    const unreadList = document.getElementById('global-unread-list');
+    const slideHeader = document.getElementById('global-login-request-header');
+
+    if (!unreadList || !slideHeader) return;
+
+    if (pending.length === 0) {
+        slideHeader.classList.add('-translate-y-full');
+        unreadList.innerHTML = '';
+        return;
+    }
+
+    slideHeader.classList.remove('-translate-y-full');
+
+    unreadList.innerHTML = pending.map(req => {
+        const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return `
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between bg-[#FFF8DF] border border-[#FBEAC5] rounded-[20px] p-3 md:p-4 shadow-sm gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-[16px] bg-white border border-[#FBEAC5] flex items-center justify-center shrink-0 shadow-sm text-amber-500">
+                        <i class="fa-solid fa-bell-ring animate-pulse text-lg"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="font-extrabold text-[#1C1D21] text-[15px] leading-tight tracking-tight">${req.childUsername} is requesting access</p>
+                        <p class="text-[11px] font-bold text-amber-600/70 uppercase tracking-widest mt-1">Requested at ${time}</p>
+                    </div>
+                </div>
+                <div class="flex gap-2 w-full md:w-auto shrink-0">
+                    <button onclick="inlineApprove('${req.$id}', this)" class="flex-1 md:flex-none px-6 bg-amber-500 hover:bg-amber-600 text-white text-[13px] font-extrabold py-3 rounded-[14px] shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1">Approve</button>
+                    <button onclick="inlineDeny('${req.$id}')" class="flex-1 md:flex-none px-6 bg-white hover:bg-gray-50 text-gray-700 border border-[#FBEAC5] text-[13px] font-extrabold py-3 rounded-[14px] shadow-sm transition-all focus:outline-none">Deny</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Dashboard Logic — detect by a stable unique element
-    const dashboardMain = document.getElementById('sidebar'); // tab-overview was removed
+    const dashboardMain = document.getElementById('sidebar');
     if (dashboardMain) {
         console.log("Parent Dashboard Loaded");
         loadDashboardData();
@@ -26,200 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         _checkLoginRequestsRef = checkLoginRequests; // expose for inline buttons
     }
 
-    // ── Virtual Scroll Core Logic ──────────────────────────────────────────────────
-    let _vsState = { items: [], height: 85, pool: [], initialized: false };
-
-    function renderVirtualScrollVisible() {
-        const container = document.getElementById('notifications-container');
-        if (!container) return;
-        const scrollTop = container.scrollTop;
-        const startIndex = Math.max(0, Math.floor(scrollTop / _vsState.height));
-
-        for (let i = 0; i < _vsState.pool.length; i++) {
-            const itemIndex = startIndex + i;
-            const node = _vsState.pool[i];
-
-            if (itemIndex < _vsState.items.length) {
-                node.style.top = `${itemIndex * _vsState.height}px`;
-                node.style.display = 'block';
-                if (node.dataset.index !== String(itemIndex)) {
-                    node.innerHTML = _vsState.items[itemIndex];
-                    node.dataset.index = itemIndex;
-                }
-            } else {
-                node.style.display = 'none';
-                node.dataset.index = '-1';
-            }
-        }
-    }
-
-    function setupVirtualScroll(containerId, listId, itemsHtmlArray) {
-        const container = document.getElementById(containerId);
-        const list = document.getElementById(listId);
-        if (!container || !list) return;
-
-        _vsState.items = itemsHtmlArray;
-        list.style.position = 'relative';
-        const totalH = itemsHtmlArray.length * _vsState.height;
-        list.style.height = `${Math.max(10, totalH)}px`; // At least some px when filled
-
-        if (!_vsState.initialized) {
-            list.innerHTML = '';
-            const winHeight = container.clientHeight || 400;
-            const itemsPerScreen = Math.ceil(winHeight / _vsState.height) + 4; // Buffer for smooth scrolling
-
-            _vsState.pool = [];
-            for (let i = 0; i < itemsPerScreen; i++) {
-                const div = document.createElement('div');
-                div.style.position = 'absolute';
-                div.style.left = '0';
-                div.style.right = '0';
-                div.style.height = `${_vsState.height}px`;
-                div.style.boxSizing = 'border-box';
-                div.style.paddingBottom = '10px'; // Spacing equivalent to gap-4
-                list.appendChild(div);
-                _vsState.pool.push(div);
-            }
-
-            container.addEventListener('scroll', renderVirtualScrollVisible);
-            // Ensure container is styled correctly to act as the scroll viewport
-            container.style.overflowY = 'auto';
-            container.style.position = 'absolute';
-            _vsState.initialized = true;
-        }
-
-        renderVirtualScrollVisible(); // Initial render
-    }
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    // ── Notification Panel ───────────────────────────────────────────────────
-
-    let _currentRequestId = null;
-    let _notifPollInterval = null;
-
-    function startNotifPolling() {
-        checkLoginRequests(); // run once immediately
-        _notifPollInterval = setInterval(checkLoginRequests, 10000); // then every 10s
-    }
-
-    function stopNotifPolling() {
-        clearInterval(_notifPollInterval);
-    }
-
-    async function checkLoginRequests() {
-        const user = await DataService.getCurrentUser();
-        if (!user || !user.email) return;
-
-        const [pending, handled, buddyNotifs] = await Promise.all([
-            DataService.getPendingLoginRequests(user.email),
-            DataService.getHandledLoginRequests(user.email),
-            DataService.getParentNotifications(user.$id, false) // all notifs (read + unread)
-        ]);
-
-        // ── 1. Bell panel (tile) — login history + buddy notifications ─────────────────
-        const notifList = document.getElementById('notif-list');
-        if (notifList) {
-            // Build login history items
-            const loginItems = handled.map(req => {
-                const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const isApproved = req.status === 'approved';
-                return {
-                    ts: req.requestedAt,
-                    html: `
-                        <div class="flex items-start gap-4 h-[75px] overflow-hidden bg-gray-50/50 rounded-[20px] p-3 border border-gray-100/60 shadow-sm transition-all hover:bg-white group cursor-default">
-                            <div class="w-9 h-9 ${isApproved ? 'bg-[#EEF9EC] text-[#5EC74D]' : 'bg-[#FFF1F2] text-[#FF456A]'} rounded-[14px] shadow-sm flex items-center justify-center shrink-0 border border-white mt-0.5">
-                                <i class="fa-solid fa-child-reaching text-xs"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="font-bold text-[#1C1D21] text-[13px] truncate leading-tight">${req.childUsername} — Login ${isApproved ? 'Approved' : 'Denied'}</p>
-                                <p class="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wider">${time}</p>
-                            </div>
-                        </div>`
-                };
-            });
-
-            // Build buddy notification items
-            const buddyItems = buddyNotifs.map(notif => {
-                const time = new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                let icon;
-                if (notif.type === 'buddy_request') icon = 'fa-user-plus text-cubby-pink';
-                else if (notif.type === 'buddy_added') icon = 'fa-user-check text-cubby-blue';
-                else icon = 'fa-handshake text-cubby-green';
-                return {
-                    ts: notif.createdAt,
-                    html: `
-                        <div class="flex items-start gap-4 h-[75px] overflow-hidden bg-gray-50/50 rounded-[20px] p-3 border border-gray-100/60 shadow-sm transition-all hover:bg-white cursor-pointer group"
-                             onclick="markNotifRead('${notif.$id}', this)">
-                            <div class="w-9 h-9 bg-white group-hover:shadow-md rounded-[14px] flex items-center justify-center shrink-0 border border-gray-100 shadow-sm transition-all mt-0.5">
-                                <i class="fa-solid ${icon} text-xs"></i>
-                            </div>
-                            <div class="flex-1 min-w-0 pr-2 relative">
-                                <p class="font-bold text-[#1C1D21] text-[12px] leading-snug">${notif.message}</p>
-                                <p class="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wider">${time}</p>
-                                ${!notif.isRead ? `<div class="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#8A51FC] rounded-full ring-2 ring-white"></div>` : ''}
-                            </div>
-                        </div>`
-                };
-            });
-
-            const allItems = [...loginItems, ...buddyItems]
-                .sort((a, b) => new Date(b.ts) - new Date(a.ts)); // Full array for virtual scrolling
-
-            if (allItems.length > 0) {
-                const htmlArray = allItems.map(i => i.html);
-                setupVirtualScroll('notifications-container', 'notif-list', htmlArray);
-            } else {
-                notifList.innerHTML = '<div class="flex items-center justify-center py-10 text-gray-400 font-bold text-sm">No recent notifications.</div>';
-                notifList.style.height = 'auto'; // Reset height
-            }
-        }
-
-        // ── 2. Global Unread pending login requests (Slide-down header) ──
-        const unreadList = document.getElementById('global-unread-list');
-        const slideHeader = document.getElementById('global-login-request-header');
-
-        if (!unreadList || !slideHeader) return;
-
-        if (pending.length === 0) {
-            slideHeader.classList.add('-translate-y-full');
-            unreadList.innerHTML = '';
-            return;
-        }
-
-        // We have pending requests; slide it down
-        slideHeader.classList.remove('-translate-y-full');
-
-        unreadList.innerHTML = pending.map(req => {
-            const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            return `
-                <div class="flex flex-col md:flex-row items-start md:items-center justify-between bg-[#FFF8DF] border border-[#FBEAC5] rounded-[20px] p-3 md:p-4 shadow-sm gap-4">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-[16px] bg-white border border-[#FBEAC5] flex items-center justify-center shrink-0 shadow-sm text-amber-500">
-                            <i class="fa-solid fa-bell-ring animate-pulse text-lg"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <p class="font-extrabold text-[#1C1D21] text-[15px] leading-tight tracking-tight">${req.childUsername} is requesting access</p>
-                            <p class="text-[11px] font-bold text-amber-600/70 uppercase tracking-widest mt-1">Requested at ${time}</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2 w-full md:w-auto shrink-0">
-                        <button onclick="inlineApprove('${req.$id}', this)" class="flex-1 md:flex-none px-6 bg-amber-500 hover:bg-amber-600 text-white text-[13px] font-extrabold py-3 rounded-[14px] shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1">Approve</button>
-                        <button onclick="inlineDeny('${req.$id}')" class="flex-1 md:flex-none px-6 bg-white hover:bg-gray-50 text-gray-700 border border-[#FBEAC5] text-[13px] font-extrabold py-3 rounded-[14px] shadow-sm transition-all focus:outline-none">Deny</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    // Mark a buddy notification as read (removes the blue dot)
-    window.markNotifRead = async function (notifId, el) {
-        await DataService.markNotificationRead(notifId);
-        // Remove the blue dot from this item
-        const dot = el?.querySelector('.bg-cubby-blue.rounded-full');
-        if (dot) dot.remove();
-        // Refresh badge count
-        await checkLoginRequests();
-    };
+    // (Virtual scroll, polling vars, and checkLoginRequests are now at module scope above)
 
     // ── All onclick handlers are top-level function declarations below the
     // DOMContentLoaded block — see bottom of this file. ──────────────────────

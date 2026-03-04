@@ -872,7 +872,27 @@ const DataService = {
      */
     reportMessage: async function (messageId, conversationId, reporterId, reportedId, text, violationType) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { ID } = Appwrite;
+        const { ID, Query } = Appwrite;
+
+        // Helper: get parent email for a child doc (handles mismatched parentId / doc.$id)
+        const getParentEmail = async (child) => {
+            if (!child || !child.parentId) return '';
+            try {
+                // Try direct document lookup first (fastest if IDs match)
+                const parent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, child.parentId);
+                return parent.email || '';
+            } catch (e) {
+                // Fallback: query users by the parentId to handle Auth-ID vs doc-ID mismatch
+                try {
+                    const list = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                        Query.equal('$id', child.parentId),
+                        Query.limit(1)
+                    ]);
+                    if (list.documents.length > 0) return list.documents[0].email || '';
+                } catch (_) { /* ignore */ }
+                return '';
+            }
+        };
 
         // Enrich with child + parent info by looking up both children
         let reporterChildName = reporterId || 'Unknown';
@@ -884,24 +904,12 @@ const DataService = {
             if (reporterId) {
                 const rChild = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, reporterId);
                 reporterChildName = rChild.username || rChild.name || reporterId;
-                // Get reporter parent email
-                if (rChild.parentId) {
-                    try {
-                        const rParent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, rChild.parentId);
-                        reporterParentEmail = rParent.email || '';
-                    } catch (e) { /* ignore */ }
-                }
+                reporterParentEmail = await getParentEmail(rChild);
             }
             if (reportedId) {
                 const dChild = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, reportedId);
                 reportedChildName = dChild.username || dChild.name || reportedId;
-                // Get reported parent email
-                if (dChild.parentId) {
-                    try {
-                        const dParent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, dChild.parentId);
-                        reportedParentEmail = dParent.email || '';
-                    } catch (e) { /* ignore */ }
-                }
+                reportedParentEmail = await getParentEmail(dChild);
             }
         } catch (e) {
             console.warn('reportMessage child lookup error:', e.message);

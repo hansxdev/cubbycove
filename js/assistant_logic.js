@@ -396,12 +396,52 @@ async function loadChatReports() {
 
         updateBadge('moderation', reports.length);
 
-        // Store reports in a map so onclick handlers can look them up without
-        // passing complex data through HTML attribute strings (which breaks quoting)
-        _reportMap.clear();
-        reports.forEach(report => _reportMap.set(report.$id, report));
+        // Helper: does this string look like a raw Appwrite document ID (hex, 20+ chars, no spaces)?
+        const looksLikeId = s => s && s.length >= 16 && /^[a-zA-Z0-9]+$/.test(s) && !s.includes(' ');
 
-        reports.forEach(report => {
+        // Live-enrich reports whose reported child name/email is missing or is a raw ID
+        const { databases, DB_ID, COLLECTIONS } = DataService._getServices();
+        const { Query } = Appwrite;
+
+        const enriched = await Promise.all(reports.map(async report => {
+            const r = { ...report };
+
+            // Enrich reported child (sender) if name is missing or looks like an ID
+            const needsName = !r.reportedChildName || looksLikeId(r.reportedChildName);
+            const needsEmail = !r.reportedParentEmail || r.reportedParentEmail === 'N/A';
+            const reportedLookupId = r.reportedChildId || r.childId;
+
+            if ((needsName || needsEmail) && reportedLookupId) {
+                try {
+                    const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, reportedLookupId);
+                    if (needsName) r.reportedChildName = child.username || child.name || reportedLookupId;
+                    if (needsEmail && child.parentId) {
+                        // Try direct lookup, then listDocuments fallback
+                        let email = '';
+                        try {
+                            const p = await databases.getDocument(DB_ID, COLLECTIONS.USERS, child.parentId);
+                            email = p.email || '';
+                        } catch (_) {
+                            try {
+                                const pl = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                                    Query.equal('$id', child.parentId), Query.limit(1)
+                                ]);
+                                if (pl.documents.length > 0) email = pl.documents[0].email || '';
+                            } catch (__) { /* ignore */ }
+                        }
+                        if (email) r.reportedParentEmail = email;
+                    }
+                } catch (_) { /* if child doc not found, leave as-is */ }
+            }
+
+            return r;
+        }));
+
+        // Store enriched reports in the map for use by onclick handlers
+        _reportMap.clear();
+        enriched.forEach(report => _reportMap.set(report.$id, report));
+
+        enriched.forEach(report => {
             const violationBadge = report.violationType
                 ? `<span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">${report.violationType}</span>`
                 : `<span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">Reported</span>`;
@@ -424,7 +464,7 @@ async function loadChatReports() {
                         </div>
                         <div class="bg-red-50 border border-red-100 rounded-xl p-3">
                             <p class="text-[10px] font-bold text-red-400 uppercase tracking-wider mb-1">Reported (Sender) Child</p>
-                            <p class="font-bold text-gray-800 text-sm">${report.reportedChildName || report.childId || 'Unknown'}</p>
+                            <p class="font-bold text-gray-800 text-sm">${report.reportedChildName || 'Unknown'}</p>
                             <p class="text-xs text-gray-500">${report.reportedParentEmail || 'N/A'}</p>
                         </div>
                     </div>

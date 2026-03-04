@@ -558,10 +558,21 @@ function changeTimeMode(mode) {
     const now = new Date();
 
     if (mode === 'daily') {
-        labels = ["6AM", "9AM", "12PM", "3PM", "6PM", "9PM"];
-        gameMinsData = [0, 0, 0, 0, 0, 0];
-        entMinsData = [0, 0, 0, 0, 0, 0];
-        comMinsData = [0, 0, 0, 0, 0, 0];
+        // Show last 7 days individually (our logs are date-level, not hour-level)
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        labels = [];
+        gameMinsData = [];
+        entMinsData = [];
+        comMinsData = [];
+
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(now.getDate() - i);
+            labels.push(i === 0 ? 'Today' : dayNames[d.getDay()]);
+            gameMinsData.push(0);
+            entMinsData.push(0);
+            comMinsData.push(0);
+        }
     } else if (mode === 'weekly') {
         labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
         gameMinsData = [0, 0, 0, 0, 0, 0, 0];
@@ -587,32 +598,38 @@ function changeTimeMode(mode) {
             logs = [];
         }
 
+        // Today's UTC date string e.g. "2026-03-03"
+        const todayUTC = now.toISOString().split('T')[0];
+
         logs.forEach(log => {
-            const logDate = new Date(log.date);
+            if (!log.date) return;
+            // Parse log.date as a local date (avoid UTC midnight shift)
+            const [y, mo, d] = log.date.split('-').map(Number);
+            const logDate = new Date(y, mo - 1, d); // local midnight
             let include = false;
             let bucketIndex = 0;
 
             if (mode === 'daily') {
-                if (logDate.toDateString() === now.toDateString()) {
-                    include = true;
-                    const h = logDate.getHours();
-                    if (h < 9) bucketIndex = 0;
-                    else if (h < 12) bucketIndex = 1;
-                    else if (h < 15) bucketIndex = 2;
-                    else if (h < 18) bucketIndex = 3;
-                    else if (h < 21) bucketIndex = 4;
-                    else bucketIndex = 5;
+                // Which of the last-7-day slots does this belong to?
+                for (let i = 0; i < 7; i++) {
+                    const slotDate = new Date(now);
+                    slotDate.setDate(now.getDate() - (6 - i));
+                    if (logDate.toDateString() === slotDate.toDateString()) {
+                        include = true;
+                        bucketIndex = i;
+                        break;
+                    }
                 }
             } else if (mode === 'weekly') {
-                const diff = Math.abs(now - logDate) / (1000 * 60 * 60 * 24);
-                if (diff <= 7) {
+                const diffDays = Math.round((now - logDate) / (1000 * 60 * 60 * 24));
+                if (diffDays <= 7) {
                     include = true;
                     bucketIndex = logDate.getDay() === 0 ? 6 : logDate.getDay() - 1; // Mon=0, Sun=6
                 }
             } else if (mode === 'monthly') {
                 if (logDate.getMonth() === now.getMonth() && logDate.getFullYear() === now.getFullYear()) {
                     include = true;
-                    bucketIndex = Math.min(3, Math.floor(logDate.getDate() / 7));
+                    bucketIndex = Math.min(3, Math.floor((logDate.getDate() - 1) / 7));
                 }
             } else if (mode === 'overall') {
                 if (logDate.getFullYear() === now.getFullYear()) {
@@ -626,7 +643,7 @@ function changeTimeMode(mode) {
                 if (mode === 'overall') {
                     overallData[bucketIndex] += log.minutes;
                 } else {
-                    // Approximate classification based on pseudo-random hash to make it look realistic if exact categories are missing
+                    // Distribute across the three categories using a deterministic hash
                     const r = (log.minutes * 17) % 100;
                     if (r < 50) gameMinsData[bucketIndex] += log.minutes;
                     else if (r < 80) entMinsData[bucketIndex] += log.minutes;

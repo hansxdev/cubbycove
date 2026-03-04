@@ -1239,6 +1239,63 @@ const DataService = {
             console.warn("Threat Logs fetch error (Collection might be missing):", error);
             return [];
         }
+    },
+
+    /**
+     * Appends a screen-time session to a child's screenTimeLogs field.
+     *
+     * @param {string} childId   - The Appwrite document $id of the child.
+     * @param {number} minutes   - How many minutes were spent in this session (float, will be Math.round'd).
+     *
+     * The field is stored as a JSON string in Appwrite:
+     *   screenTimeLogs = '[{"date":"2026-03-03","minutes":25}, ...]'
+     *
+     * We accumulate entries by date — if today already has an entry we add to it
+     * rather than creating a duplicate row.
+     */
+    logScreenTime: async function (childId, minutes) {
+        if (!childId) return;
+        const mins = Math.round(minutes);
+        if (mins < 1) return; // ignore sessions shorter than 1 minute
+
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+
+        try {
+            // 1. Fetch current child doc to get existing logs
+            const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+
+            // 2. Parse existing logs (stored as JSON string or as array)
+            let logs = [];
+            if (child.screenTimeLogs) {
+                if (typeof child.screenTimeLogs === 'string') {
+                    try { logs = JSON.parse(child.screenTimeLogs); } catch (e) { logs = []; }
+                } else if (Array.isArray(child.screenTimeLogs)) {
+                    logs = child.screenTimeLogs;
+                }
+            }
+
+            // 3. Accumulate by today's date
+            const todayStr = new Date().toISOString().split('T')[0]; // e.g. "2026-03-03"
+            const existing = logs.find(l => l.date === todayStr);
+            if (existing) {
+                existing.minutes = (existing.minutes || 0) + mins;
+            } else {
+                logs.push({ date: todayStr, minutes: mins });
+            }
+
+            // 4. Keep last 90 days to avoid unbounded growth
+            if (logs.length > 90) logs = logs.slice(logs.length - 90);
+
+            // 5. Write back as JSON string
+            await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
+                screenTimeLogs: JSON.stringify(logs)
+            });
+
+            console.log(`⏱️ [ScreenTime] Logged ${mins} min for child ${childId} on ${todayStr}`);
+        } catch (err) {
+            // Non-fatal — don't crash the kid's page if this fails
+            console.warn('logScreenTime error:', err.message);
+        }
     }
 };
 

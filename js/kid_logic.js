@@ -1,6 +1,68 @@
 // Logic for kid/home_logged_in.html AND kid/games.html AND kid/chat.html
-// Ensure we have DataService available
-// If not included in HTML, this will fail, so we must add it to HTML files.
+// Ensure we have DataService available.
+
+// ── Screen Time Tracking ──────────────────────────────────────────────────────
+// We record when the kid session page loads and flush accumulated minutes
+// to Appwrite on unload / visibility-change / logout.
+
+let _screenTimeStart = Date.now(); // Reset each page navigation
+let _screenTimeFlushed = false;    // Guard to avoid double-saving per page
+
+/**
+ * Saves elapsed minutes since _screenTimeStart to Appwrite.
+ * Safe to call multiple times — silently returns if already flushed this page load.
+ */
+async function flushScreenTime() {
+    if (_screenTimeFlushed) return;
+    _screenTimeFlushed = true;
+
+    const session = _getChildSession();
+    if (!session || !session.$id) return;
+
+    const elapsedMs = Date.now() - _screenTimeStart;
+    const elapsedMinutes = elapsedMs / 60000; // convert ms → minutes
+
+    if (elapsedMinutes < 0.5) return; // less than 30 seconds — skip
+
+    try {
+        await DataService.logScreenTime(session.$id, elapsedMinutes);
+    } catch (e) {
+        // Non-fatal
+        console.warn('[ScreenTime] flush error:', e.message);
+    }
+}
+
+/** Reads the child session stored by kidLoginFromApproved() */
+function _getChildSession() {
+    try {
+        const raw = sessionStorage.getItem('cubby_child_session');
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// Listen for page unload (tab closed, navigate away, refresh)
+window.addEventListener('beforeunload', () => {
+    // Use sendBeacon-style synchronous Fire & Forget.
+    // We can't await here, but DataService.logScreenTime is a fetch operation
+    // that will complete before the browser kills the page in most cases.
+    flushScreenTime();
+});
+
+// Listen for tab becoming hidden (user switches tabs / minimises / goes to another app)
+// This is more reliable than beforeunload on mobile.
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        flushScreenTime();
+    } else if (document.visibilityState === 'visible') {
+        // Kid came back — restart the timer for this segment
+        _screenTimeStart = Date.now();
+        _screenTimeFlushed = false;
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Auth Check
@@ -10,6 +72,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 2. Update Header
         updateHeader(user);
     }
+
+    // 3. Record session start time (fresh for each page load/navigation)
+    _screenTimeStart = Date.now();
+    _screenTimeFlushed = false;
 });
 
 async function checkAuth() {
@@ -28,11 +94,9 @@ async function checkAuth() {
         }
 
         // Role guard: only kids/children may use these pages.
-        // Parents have their own dashboard, staff have theirs.
         const allowedRoles = ['kid', 'child'];
         if (!allowedRoles.includes(user.role)) {
             console.warn(`Role '${user.role}' is not allowed on Kid pages. Redirecting.`);
-            // Redirect parents to parent dashboard, staff to staff portal
             if (user.role === 'parent') {
                 window.location.href = '../parent/dashboard.html';
             } else {
@@ -50,27 +114,17 @@ async function checkAuth() {
 }
 
 function updateHeader(user) {
-    // Update Header Profile
     const headerProfile = document.querySelector('.group .font-bold.text-gray-700');
-    const headerAvatars = document.querySelectorAll('.group img'); // Select all avatars in the group container
+    const headerAvatars = document.querySelectorAll('.group img');
 
-    // Default Name extraction
     let displayName = user.firstName || "Kid";
-    if (user.role === 'parent') displayName = user.firstName; // Parent viewing kid view?
-    // If we had a child object concept separate from user, we'd use that.
-    // For now, assuming user is the 'kid' (or parent logged in as kid)
-
-    // In our schema, Children are not yet full 'Users' with sessions in the strict sense 
-    // unless we logged in as them.
-    // If we are logged in as Parent, we might be seeing this view?
-    // Let's assume the session user is the one to display.
+    if (user.role === 'parent') displayName = user.firstName;
 
     if (headerProfile) {
         headerProfile.textContent = `Hi, ${displayName}!`;
-        headerProfile.classList.remove('hidden'); // Ensure visible
+        headerProfile.classList.remove('hidden');
     }
 
-    // Update Avatar
     const avatarSeed = user.avatar || user.firstName || 'Felix';
     const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed)}`;
 
@@ -84,8 +138,11 @@ if (typeof DataService === 'undefined') {
     console.warn("CRITICAL: DataService.js is missing from this page!");
 }
 
-// Expose a proper logout that deletes the Appwrite session before navigating
+// Expose a proper logout that saves screen time THEN deletes the Appwrite session
 window.handleKidLogout = async function () {
+    // Flush time before leaving
+    await flushScreenTime();
+
     try {
         await DataService.logout();
     } catch (e) {

@@ -690,11 +690,25 @@ function changeTimeMode(mode) {
                 if (mode === 'overall') {
                     overallData[bucketIndex] += log.minutes;
                 } else {
-                    // Distribute across the three categories using a deterministic hash
-                    const r = (log.minutes * 17) % 100;
-                    if (r < 50) gameMinsData[bucketIndex] += log.minutes;
-                    else if (r < 80) entMinsData[bucketIndex] += log.minutes;
-                    else comMinsData[bucketIndex] += log.minutes;
+                    // Split minutes across the 3 categories.
+                    // If a 'category' is stored on the log entry, use it directly.
+                    // Otherwise fall back to an even 3-way split so no single
+                    // category is shown as 100% of the time.
+                    const cat = (log.category || '').toLowerCase();
+                    if (cat === 'games' || cat === 'game') {
+                        gameMinsData[bucketIndex] += log.minutes;
+                    } else if (cat === 'entertainment' || cat === 'ent') {
+                        entMinsData[bucketIndex] += log.minutes;
+                    } else if (cat === 'communication' || cat === 'com' || cat === 'chat') {
+                        comMinsData[bucketIndex] += log.minutes;
+                    } else {
+                        // No category stored — distribute evenly over 3 segments
+                        const third = Math.floor(log.minutes / 3);
+                        const remainder = log.minutes - third * 3;
+                        gameMinsData[bucketIndex] += third;
+                        entMinsData[bucketIndex] += third;
+                        comMinsData[bucketIndex] += third + remainder; // remainder goes to communication
+                    }
                 }
             }
         });

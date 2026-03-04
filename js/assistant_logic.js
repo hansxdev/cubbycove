@@ -396,6 +396,11 @@ async function loadChatReports() {
 
         updateBadge('moderation', reports.length);
 
+        // Store reports in a map so onclick handlers can look them up without
+        // passing complex data through HTML attribute strings (which breaks quoting)
+        _reportMap.clear();
+        reports.forEach(report => _reportMap.set(report.$id, report));
+
         reports.forEach(report => {
             const violationBadge = report.violationType
                 ? `<span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">${report.violationType}</span>`
@@ -435,7 +440,7 @@ async function loadChatReports() {
                         <button onclick="handleDenyReport('${report.$id}')" class="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition-colors text-sm">
                             <i class="fa-solid fa-xmark mr-1"></i> Deny
                         </button>
-                        <button onclick="openViolationPicker('${report.$id}', '${report.reportedChildId || report.childId || ''}', '${report.reporterChildId || ''}', ${JSON.stringify((report.messageContent || report.content || '')).replace(/'/g, '&apos;')})"
+                        <button onclick="openViolationPicker('${report.$id}')"
                             class="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors shadow-sm text-sm">
                             <i class="fa-solid fa-gavel mr-1"></i> Confirm Violation
                         </button>
@@ -450,17 +455,27 @@ async function loadChatReports() {
     }
 }
 
+// Map of report $id → full report doc — avoids embedding complex data in onclick attributes
+const _reportMap = new Map();
+
 // State for violation picker
 let _vpReportId = '', _vpReportedId = '', _vpReporterId = '', _vpMsgText = '';
 
-window.openViolationPicker = function (reportId, reportedId, reporterId, msgText) {
-    _vpReportId = reportId;
-    _vpReportedId = reportedId;
-    _vpReporterId = reporterId;
-    _vpMsgText = msgText;
+window.openViolationPicker = function (reportId) {
+    const report = _reportMap.get(reportId);
+    if (!report) {
+        alert('Report data not found. Please reload the page.');
+        return;
+    }
+    _vpReportId = report.$id;
+    _vpReportedId = report.reportedChildId || report.childId || '';
+    _vpReporterId = report.reporterChildId || '';
+    _vpMsgText = report.messageContent || report.content || '';
+
     document.querySelectorAll('input[name="mute-duration"]').forEach(r => r.checked = false);
     const modal = document.getElementById('violation-picker-modal');
     if (modal) modal.classList.remove('hidden');
+    else alert('Violation picker modal not found in HTML.');
 };
 
 window.submitViolationPicker = function () {

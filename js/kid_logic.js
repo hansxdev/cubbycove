@@ -9,6 +9,19 @@ let _screenTimeStart = Date.now(); // Reset each page navigation
 let _screenTimeFlushed = false;    // Guard to avoid double-saving per page
 
 /**
+ * Detects the screen time category based on the current page URL.
+ * - games.html / games folder → 'games'
+ * - chat.html / chat folder   → 'communication'
+ * - anything else             → 'entertainment'
+ */
+function _getPageCategory() {
+    const path = window.location.pathname.toLowerCase();
+    if (path.includes('game')) return 'games';
+    if (path.includes('chat')) return 'communication';
+    return 'entertainment';
+}
+
+/**
  * Saves elapsed minutes since _screenTimeStart to Appwrite.
  * Safe to call multiple times — silently returns if already flushed this page load.
  */
@@ -24,8 +37,10 @@ async function flushScreenTime() {
 
     if (elapsedMinutes < 0.5) return; // less than 30 seconds — skip
 
+    const category = _getPageCategory();
+
     try {
-        await DataService.logScreenTime(session.$id, elapsedMinutes);
+        await DataService.logScreenTime(session.$id, elapsedMinutes, category);
     } catch (e) {
         // Non-fatal
         console.warn('[ScreenTime] flush error:', e.message);

@@ -112,6 +112,7 @@
         { key: 'childId', size: 50 },
         { key: 'date', size: 20 },  // "2026-03-04"
         { key: 'minutes', type: 'float' },
+        { key: 'category', size: 50 },  // 'games' | 'entertainment' | 'communication'
     ];
 
     for (const f of screenTimeFields) {

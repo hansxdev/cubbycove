@@ -354,13 +354,58 @@ const DataService = {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Step 1 (Kid side): Create a login request document.
-     * The login_requests collection must allow 'any' create + read.
+     * Step 1 (Kid side): Validate credentials FIRST, then create a login request.
+     *
+     * Checks (in order):
+     *  1. Child username exists in the children collection
+     *  2. The supplied parentEmail matches the parent linked to that child
+     *  3. The supplied password matches the child's stored password
+     *
+     * Throws a user-friendly Error if any check fails (caught by auth.js → shown as alert).
+     * Only creates the pending document if all checks pass.
      */
     createLoginRequest: async function (username, parentEmail, password) {
-        const { databases, DB_ID } = this._getServices();
-        const { ID } = Appwrite;
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID, Query } = Appwrite;
 
+        const GENERIC_ERROR = 'Invalid credentials. Please check your username, parent\'s email, and password.';
+
+        // ── 1. Find child by username ────────────────────────────────────────────
+        let child;
+        try {
+            const childList = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
+                Query.equal('username', username),
+                Query.limit(1)
+            ]);
+            if (childList.documents.length === 0) throw new Error(GENERIC_ERROR);
+            child = childList.documents[0];
+        } catch (e) {
+            if (e.message === GENERIC_ERROR) throw e;
+            throw new Error(GENERIC_ERROR);
+        }
+
+        // ── 2. Verify the parent email matches this child's parent ───────────────
+        if (!child.parentId) throw new Error(GENERIC_ERROR);
+        let parent;
+        try {
+            parent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, child.parentId);
+        } catch (e) {
+            throw new Error(GENERIC_ERROR);
+        }
+        // Case-insensitive email comparison
+        if ((parent.email || '').toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
+            throw new Error(GENERIC_ERROR);
+        }
+
+        // ── 3. Verify password ───────────────────────────────────────────────────
+        // Children have a `password` field (plain or hashed) stored on creation.
+        // We perform an exact match here (the field is set by the parent when adding the child).
+        const storedPassword = child.password || '';
+        if (!storedPassword || storedPassword !== password) {
+            throw new Error(GENERIC_ERROR);
+        }
+
+        // ── 4. All checks passed — create the pending request ───────────────────
         const deviceInfo = `${navigator.platform || 'Unknown'} · ${navigator.userAgent.split(')')[0].split('(')[1] || 'Unknown Browser'}`;
         const now = new Date().toISOString();
         const expires = new Date(Date.now() + 5 * 60 * 1000).toISOString();
@@ -372,16 +417,10 @@ const DataService = {
             requestedAt: now,
             expiresAt: expires,
             deviceInfo: deviceInfo.slice(0, 499),
-            // Store hashed password so parent-side can verify without exposing raw DB
-            // For this MVP we store a simple marker; actual verification happens via parent
-            childName: '',
-            childId: '',
-            parentId: ''
+            childName: child.name || child.username || '',
+            childId: child.$id,
+            parentId: parent.$id
         });
-
-        // Cache the password locally so the parent approval can cross-check it
-        // We use sessionStorage with the requestId as key (only lives in this tab)
-        sessionStorage.setItem('cubby_login_req_pass_' + doc.$id, password);
 
         console.log('📨 [Kid Login] Request created:', doc.$id);
         return doc;
@@ -1381,10 +1420,11 @@ const DataService = {
      * Kids don't have an Appwrite Auth session so they cannot call updateDocument.
      * The parent dashboard reads and aggregates these log entries.
      *
-     * @param {string} childId  - The child's Appwrite document $id (from sessionStorage)
-     * @param {number} minutes  - Minutes spent (float, will be rounded)
+     * @param {string} childId   - The child's Appwrite document $id (from sessionStorage)
+     * @param {number} minutes   - Minutes spent (float, will be rounded)
+     * @param {string} [category] - 'games' | 'entertainment' | 'communication' (optional)
      */
-    logScreenTime: async function (childId, minutes) {
+    logScreenTime: async function (childId, minutes, category) {
         if (!childId) return;
         const mins = Math.round(minutes);
         if (mins < 1) return; // skip sessions under 1 minute
@@ -1395,12 +1435,11 @@ const DataService = {
         const todayStr = new Date().toISOString().split('T')[0]; // "2026-03-04"
 
         try {
-            await databases.createDocument(DB_ID, 'screen_time_logs', ID.unique(), {
-                childId,
-                date: todayStr,
-                minutes: mins
-            });
-            console.log(`⏱️ [ScreenTime] Logged ${mins} min for child ${childId} on ${todayStr}`);
+            const data = { childId, date: todayStr, minutes: mins };
+            if (category) data.category = category;
+
+            await databases.createDocument(DB_ID, 'screen_time_logs', ID.unique(), data);
+            console.log(`⏱️ [ScreenTime] Logged ${mins} min (${category || 'general'}) for child ${childId} on ${todayStr}`);
         } catch (err) {
             console.warn('logScreenTime error:', err.message);
         }

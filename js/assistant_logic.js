@@ -201,21 +201,16 @@ async function loadPendingParents() {
 
 async function updateParentStatus(userId, status) {
     const action = status === 'active' ? 'Approve' : 'Reject';
-    if (confirm(`${action} this parent? Their verification photos will be deleted after.`)) {
+    showConfirm(`${action} this parent? Their verification photos will be deleted after.`, async () => {
         try {
-            // 1. Update the status (approve or reject)
             await DataService.updateUserStatus(userId, status);
-
-            // 2. Delete their ID photo & face selfie from Storage (frees up space + protects privacy)
             await DataService.cleanupParentVerificationFiles(userId);
-
-            // 3. Reload UI
             loadPendingParents();
             loadOverviewStats();
         } catch (error) {
-            alert("Error updating status: " + error.message);
+            alert('Error updating status: ' + error.message);
         }
-    }
+    });
 }
 
 // --- VIDEO REVIEW ---
@@ -362,15 +357,16 @@ async function loadPendingVideos() {
 }
 
 async function updateVideoStatus(videoId, status) {
-    if (confirm(`Check this video as ${status}?`)) {
+    const label = status === 'approved' ? 'Approve' : 'Reject';
+    showConfirm(`${label} this video?`, async () => {
         try {
             await DataService.updateVideoStatus(videoId, status);
             loadPendingVideos();
             loadOverviewStats();
         } catch (error) {
-            alert("Error updating status: " + error.message);
+            alert('Error updating status: ' + error.message);
         }
-    }
+    });
 }
 
 // --- CHAT MODERATION ---
@@ -383,7 +379,6 @@ async function loadChatReports() {
 
     try {
         const reports = await DataService.getThreatLogs('pending');
-
         container.innerHTML = '';
 
         if (reports.length === 0) {
@@ -392,10 +387,9 @@ async function loadChatReports() {
                     <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-500 text-2xl">
                         <i class="fa-solid fa-shield-halved"></i>
                     </div>
-                    <h3 class="text-lg font-bold text-gray-800">Safe & Sound!</h3>
-                    <p class="text-gray-500">No chat reports or threats pending review.</p>
-                </div>
-            `;
+                    <h3 class="text-lg font-bold text-gray-800">Safe &amp; Sound!</h3>
+                    <p class="text-gray-500">No chat reports pending review.</p>
+                </div>`;
             updateBadge('moderation', 0);
             return;
         }
@@ -403,86 +397,144 @@ async function loadChatReports() {
         updateBadge('moderation', reports.length);
 
         reports.forEach(report => {
+            const violationBadge = report.violationType
+                ? `<span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">${report.violationType}</span>`
+                : `<span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">Reported</span>`;
+
             const html = `
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 dashboard-card mb-4" id="report-${report.$id}">
+
+                    <!-- Header -->
                     <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="font-bold text-gray-800">Flagged Message</h3>
-                            <p class="text-xs text-gray-500">Reason: <span class="text-red-500 font-bold">${report.reason || 'Keyword Detetced'}</span></p>
-                            <p class="text-xs text-gray-400 mt-1">From: ${report.senderId || 'Unknown'} -> To: ${report.receiverId || 'Global'}</p>
-                        </div>
-                        <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">High Priority</span>
+                        <h3 class="font-bold text-gray-800">Chat Report</h3>
+                        ${violationBadge}
                     </div>
-                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 space-y-3 mb-6">
-                        <div class="flex gap-2 p-2 bg-red-50 border border-red-100 rounded-md">
-                            <span class="text-xs font-bold text-red-500">Message:</span>
-                            <span class="text-xs text-red-700 font-bold">${report.messageContent}</span>
+
+                    <!-- 5 Required Info Fields -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                            <p class="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-1">Reporter (Victim) Child</p>
+                            <p class="font-bold text-gray-800 text-sm">${report.reporterChildName || 'Unknown'}</p>
+                            <p class="text-xs text-gray-500">${report.reporterParentEmail || 'N/A'}</p>
                         </div>
-                    </div>
-                    <div class="flex justify-between items-center bg-gray-50 border-t border-gray-100 p-4 -mx-6 -mb-6 mt-4">
-                        <div class="flex gap-2 items-center bg-white p-1.5 rounded-lg border border-gray-200">
-                            <select id="ban-time-${report.$id}" class="text-xs border-none bg-transparent focus:ring-0 text-gray-600 font-bold outline-none cursor-pointer">
-                                <option value="3600000">1 hour</option>
-                                <option value="18000000">5 hours</option>
-                                <option value="86400000">1 day</option>
-                                <option value="604800000">1 week</option>
-                                <option value="2592000000">1 month</option>
-                            </select>
-                            <button onclick="handleBanUser('${report.$id}', '${report.senderId}', document.getElementById('ban-time-${report.$id}').value)" class="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-red-600 transition-colors">Ban Sender</button>
-                        </div>
-                        
-                        <div class="flex gap-2">
-                            <button onclick="resolveReport('${report.$id}', 'dismissed')" class="text-sm font-bold text-gray-500 hover:text-gray-700 px-3 py-2">Dismiss</button>
-                            <button onclick="handleAlertParents('${report.$id}', '${report.senderId}', '${report.receiverId}')" class="bg-blue-100 text-blue-600 text-sm font-bold px-4 py-2 rounded-lg hover:bg-blue-200 transition-colors"><i class="fa-solid fa-bell mr-1"></i> Alert Parents</button>
+                        <div class="bg-red-50 border border-red-100 rounded-xl p-3">
+                            <p class="text-[10px] font-bold text-red-400 uppercase tracking-wider mb-1">Reported (Sender) Child</p>
+                            <p class="font-bold text-gray-800 text-sm">${report.reportedChildName || report.childId || 'Unknown'}</p>
+                            <p class="text-xs text-gray-500">${report.reportedParentEmail || 'N/A'}</p>
                         </div>
                     </div>
-                </div>
-            `;
+
+                    <!-- Reported Message -->
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                        <p class="text-[10px] font-bold text-red-400 uppercase tracking-wider mb-1">Reported Message</p>
+                        <p class="text-sm text-red-800 font-semibold break-words">&ldquo;${(report.messageContent || report.content || 'No content').replace(/</g, '&lt;').replace(/>/g, '&gt;')}&rdquo;</p>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-3 border-t border-gray-100 pt-4">
+                        <button onclick="handleDenyReport('${report.$id}')" class="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition-colors text-sm">
+                            <i class="fa-solid fa-xmark mr-1"></i> Deny
+                        </button>
+                        <button onclick="openViolationPicker('${report.$id}', '${report.reportedChildId || report.childId || ''}', '${report.reporterChildId || ''}', ${JSON.stringify((report.messageContent || report.content || '')).replace(/'/g, '&apos;')})"
+                            class="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors shadow-sm text-sm">
+                            <i class="fa-solid fa-gavel mr-1"></i> Confirm Violation
+                        </button>
+                    </div>
+                </div>`;
             container.insertAdjacentHTML('beforeend', html);
         });
 
     } catch (error) {
-        console.error("Error loading chat reports:", error);
+        console.error('Error loading chat reports:', error);
         container.innerHTML = `<div class="bg-red-50 text-red-500 p-4 rounded-lg">Error loading data: ${error.message}</div>`;
     }
 }
 
-async function resolveReport(reportId, action) {
-    if (!confirm("Resolve this report as " + action + "?")) return;
+// State for violation picker
+let _vpReportId = '', _vpReportedId = '', _vpReporterId = '', _vpMsgText = '';
 
-    try {
-        await DataService.updateThreatLog(reportId, 'resolved', action);
-        loadChatReports();
-        loadOverviewStats();
-    } catch (e) {
-        alert("Error: " + e.message);
-    }
+window.openViolationPicker = function (reportId, reportedId, reporterId, msgText) {
+    _vpReportId = reportId;
+    _vpReportedId = reportedId;
+    _vpReporterId = reporterId;
+    _vpMsgText = msgText;
+    document.querySelectorAll('input[name="mute-duration"]').forEach(r => r.checked = false);
+    const modal = document.getElementById('violation-picker-modal');
+    if (modal) modal.classList.remove('hidden');
+};
+
+window.submitViolationPicker = function () {
+    const sel = document.querySelector('input[name="mute-duration"]:checked');
+    if (!sel) { alert('Please choose a mute duration.'); return; }
+    const { value: durationMs, dataset: { label: durationLabel } } = sel;
+    document.getElementById('violation-picker-modal').classList.add('hidden');
+
+    showConfirm(`Mute this child for ${durationLabel} and notify both parents?`, async () => {
+        try {
+            await DataService.banChildFromChat(_vpReportedId, parseInt(durationMs));
+            await DataService.alertParentsOfReport(_vpReportedId, _vpReporterId, _vpMsgText, durationLabel);
+            await DataService.updateThreatLog(_vpReportId, 'resolved', `muted:${durationLabel}`);
+            loadChatReports();
+            loadOverviewStats();
+            alert('Violation confirmed. Child muted and parents notified.');
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    });
+};
+
+window.handleDenyReport = function (reportId) {
+    showConfirm('Are you sure you want to deny this report? No action will be taken.', async () => {
+        try {
+            await DataService.updateThreatLog(reportId, 'resolved', 'dismissed');
+            loadChatReports();
+            loadOverviewStats();
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    });
+};
+
+async function resolveReport(reportId, action) {
+    showConfirm('Resolve this report as ' + action + '?', async () => {
+        try {
+            await DataService.updateThreatLog(reportId, 'resolved', action);
+            loadChatReports();
+            loadOverviewStats();
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    });
 }
 
-async function handleAlertParents(reportId, senderId, receiverId) {
-    if (!confirm("Alert both parents about this report?")) return;
-    try {
-        await DataService.alertParentsOfReport(senderId, receiverId);
-        await DataService.updateThreatLog(reportId, 'resolved', 'alerted parents');
-        loadChatReports();
-        loadOverviewStats();
-        alert("Parents have been successfully alerted.");
-    } catch (e) {
-        alert("Error: " + e.message);
-    }
+// Legacy kept for backward compat
+async function handleAlertParents(reportId, reportedId, reporterId) {
+    showConfirm('Alert both parents about this report?', async () => {
+        try {
+            const report = { $id: reportId, reportedChildId: reportedId, reporterChildId: reporterId, messageContent: '' };
+            await DataService.alertParentsOfReport(reportedId, reporterId, '', '');
+            await DataService.updateThreatLog(reportId, 'resolved', 'alerted parents');
+            loadChatReports();
+            loadOverviewStats();
+            alert('Parents have been successfully alerted.');
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    });
 }
 
 async function handleBanUser(reportId, senderId, durationMs) {
-    if (!confirm("Ban this user from chatting for the selected duration?")) return;
-    try {
-        await DataService.banChildFromChat(senderId, parseInt(durationMs));
-        await DataService.updateThreatLog(reportId, 'resolved', 'banned user');
-        loadChatReports();
-        loadOverviewStats();
-        alert("User banned and their parent notified.");
-    } catch (e) {
-        alert("Error: " + e.message);
-    }
+    showConfirm('Mute this user from chatting for the selected duration?', async () => {
+        try {
+            await DataService.banChildFromChat(senderId, parseInt(durationMs));
+            await DataService.updateThreatLog(reportId, 'resolved', 'banned user');
+            loadChatReports();
+            loadOverviewStats();
+            alert('User muted successfully.');
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    });
 }
 
 function updateBadge(tab, count) {
@@ -500,3 +552,4 @@ window.updateVideoStatus = updateVideoStatus;
 window.resolveReport = resolveReport;
 window.handleAlertParents = handleAlertParents;
 window.handleBanUser = handleBanUser;
+window.loadChatReports = loadChatReports;

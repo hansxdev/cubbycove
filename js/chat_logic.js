@@ -9,6 +9,11 @@ let _lastMessageTime = null;
 let _knownMessageIds = new Set();
 let _lastRenderedMsg = null;
 
+// Report state
+let _pendingReportMsgId = '';
+let _pendingReportText = '';
+let _pendingViolationType = '';
+
 const POLL_MS = 2000;
 const GROUP_MS = 60000;
 
@@ -251,19 +256,35 @@ function renderMessage(msg) {
     if (isMe) {
         div.innerHTML = `<div class="max-w-[75%] bg-cubby-green rounded-2xl ${bubbleClass} rounded-br-none px-4 py-2 text-white text-sm font-medium break-words overflow-wrap-anywhere">${escapeHtml(msg.text)}</div>`;
     } else {
+        const safeText = escapeHtml(msg.text);
+        const safeTextAttr = msg.text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
         const avatarHtml = isGrouped ? '<div class="w-8 shrink-0"></div>' : `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.fromUsername || _buddyName)}" class="w-8 h-8 rounded-full bg-white border border-gray-200 shrink-0">`;
-        div.innerHTML = `${avatarHtml}<div class="max-w-[75%] bg-white rounded-2xl ${bubbleClass} rounded-bl-none px-4 py-2 shadow-sm text-gray-800 text-sm relative group break-words overflow-wrap-anywhere">${escapeHtml(msg.text)}<button onclick="reportChatMessage('${msg.$id}', '${escapeHtml(msg.text.replace(/'/g, "\\'"))}')" class="absolute -right-8 top-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-flag"></i></button></div>`;
+        div.innerHTML = `${avatarHtml}<div class="max-w-[75%] bg-white rounded-2xl ${bubbleClass} rounded-bl-none px-4 py-2 shadow-sm text-gray-800 text-sm relative group break-words overflow-wrap-anywhere">${safeText}<button onclick="openReportModal('${msg.$id}', '${safeTextAttr}')" class="absolute -right-8 top-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Report this message"><i class="fa-solid fa-flag"></i></button></div>`;
     }
     container.appendChild(div);
     _lastRenderedMsg = { fromChildId: msg.fromChildId, sentAt: msg.sentAt };
 }
 
-// Processes and sends a user's text message after passing a safety check.
+// Processes and sends a user's text message after passing a safety check and mute check.
 async function sendMessage() {
     const input = $('message-input');
     const sendBtn = $('send-btn');
     const text = input.value.trim();
     if (!text || !_conversationId || !_currentChild) return;
+
+    // ── MUTE CHECK ──────────────────────────────────────────────
+    try {
+        const muteStatus = await DataService.isChildMuted(_currentChild.$id);
+        if (muteStatus.muted) {
+            const durEl = $('mute-duration-text');
+            if (durEl) durEl.textContent = muteStatus.durationStr;
+            $('mute-modal').classList.remove('hidden');
+            return;
+        }
+    } catch (e) {
+        console.warn('mute check error:', e.message);
+    }
+    // ─────────────────────────────────────────────────────────────
 
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>';
@@ -303,17 +324,75 @@ function showSafetyWarning(msg) {
     setTimeout(() => toast.classList.add('hidden'), 3000);
 }
 
-// Submits a message report to the administrative moderation team.
-window.reportChatMessage = async function (msgId, text) {
-    if (confirm("Do you want to report this message to the safety team?")) {
-        try {
-            await DataService.reportMessage(msgId, _conversationId, _currentChild.$id, _buddyId, text);
-            showSafetyWarning("Message reported to safety team. Thank you! 🛡️");
-        } catch (e) {
-            showSafetyWarning("Failed to report message. Try again later.");
-        }
+// ── REPORT MODAL FLOW ──────────────────────────────────────────────────────────
+
+/** Step 1: Open the report modal for a specific message. */
+window.openReportModal = function (msgId, text) {
+    _pendingReportMsgId = msgId;
+    _pendingReportText = text;
+    _pendingViolationType = '';
+
+    // Reset radio buttons
+    document.querySelectorAll('input[name="violation"]').forEach(r => r.checked = false);
+
+    const preview = $('report-message-preview');
+    if (preview) preview.textContent = `"${text.slice(0, 120)}${text.length > 120 ? '…' : ''}"`;
+
+    $('report-modal').classList.remove('hidden');
+};
+
+/** Step 2: User picks violation type and clicks "Submit Report" → show confirmation modal. */
+window.submitReportViolationType = function () {
+    const selected = document.querySelector('input[name="violation"]:checked');
+    if (!selected) {
+        alert('Please select a violation type before reporting.');
+        return;
     }
-}
+    _pendingViolationType = selected.value;
+
+    // Close report modal, open confirm modal
+    $('report-modal').classList.add('hidden');
+    const cvt = $('confirm-violation-text');
+    if (cvt) cvt.textContent = `Violation: ${_pendingViolationType}`;
+    $('confirm-report-modal').classList.remove('hidden');
+};
+
+/** Step 3: User confirms → actually submit the report. */
+window.finalizeReport = async function () {
+    const btn = $('finalize-report-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Reporting…'; }
+
+    try {
+        await DataService.reportMessage(
+            _pendingReportMsgId,
+            _conversationId,
+            _currentChild.$id,   // reporter = me
+            _buddyDocId || _buddyId, // reported = the buddy
+            _pendingReportText,
+            _pendingViolationType
+        );
+        $('confirm-report-modal').classList.add('hidden');
+        showSafetyWarning('Message reported to safety team. Thank you! 🛡️');
+    } catch (e) {
+        $('confirm-report-modal').classList.add('hidden');
+        showSafetyWarning('Failed to report. Please try again later.');
+        console.error('finalizeReport error:', e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Yes, Report!'; }
+    }
+};
+
+window.closeReportModal = function () {
+    $('report-modal').classList.add('hidden');
+};
+window.closeConfirmReportModal = function () {
+    $('confirm-report-modal').classList.add('hidden');
+};
+
+// Keep old entry point working (called from the nav flag button if wired up elsewhere)
+window.reportChatMessage = window.openReportModal;
+
+// ──────────────────────────────────────────────────────────────────────────────
 
 // Forces the chat message container to scroll to the most recent message.
 function scrollToBottom() {

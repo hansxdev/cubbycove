@@ -484,16 +484,31 @@ async function renderSafetyAlerts() {
     const listEl = document.getElementById('safety-list');
     if (!listEl || !_selectedChildId) return;
 
-    // Fetch all threats from the threat logs collection
-    const allThreats = await DataService.getThreatLogs();
+    const activeChild = window._currentChildren?.find(c => c.$id === _selectedChildId);
 
-    // Fallback logic, threat logs might log the fromUsername instead of childId. If we can't find exact matches immediately, show a generic safety empty state
-    // But realistically it binds to fromChildId
-    const activeChild = window._currentChildren.find(c => c.$id === _selectedChildId);
+    // Fetch both threat logs AND parent safety alert notifications
+    const [allThreats, safetyNotifs] = await Promise.all([
+        DataService.getThreatLogs().catch(() => []),
+        activeChild?.parentId
+            ? DataService.getParentNotifications(activeChild.parentId, false).catch(() => [])
+            : Promise.resolve([])
+    ]);
 
-    const childThreats = allThreats.filter(t => t.childId === _selectedChildId || t.fromChildId === _selectedChildId || (activeChild && t.fromUsername === activeChild.username));
+    // Filter threat logs for this child
+    const childThreats = allThreats.filter(t =>
+        t.childId === _selectedChildId ||
+        t.fromChildId === _selectedChildId ||
+        t.reporterChildId === _selectedChildId ||
+        t.reportedChildId === _selectedChildId ||
+        (activeChild && t.fromUsername === activeChild.username)
+    );
 
-    if (childThreats.length === 0) {
+    // Filter safety_alert notifications for THIS child
+    const childSafetyNotifs = safetyNotifs.filter(n =>
+        n.type === 'safety_alert' && n.childId === _selectedChildId
+    );
+
+    if (childThreats.length === 0 && childSafetyNotifs.length === 0) {
         listEl.innerHTML = `
             <div class="h-full flex flex-col items-center justify-center text-center py-10 opacity-70">
                 <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-300">
@@ -507,9 +522,36 @@ async function renderSafetyAlerts() {
     }
 
     listEl.innerHTML = '';
+
+    // ── Purple safety_alert notifications ─────────────────────────────────────
+    childSafetyNotifs.slice(0, 5).forEach(notif => {
+        const timeStr = timeAgo(notif.createdAt);
+        // Split the message to find the note (last line after \n\n)
+        const parts = (notif.message || '').split('\n');
+        const lastLine = parts[parts.length - 1] || '';
+        const mainMsg = parts.slice(0, parts.length - 1).join('\n').trim();
+
+        const html = `
+            <div class="bg-white rounded-2xl p-4 border border-purple-100 shadow-sm relative overflow-hidden group hover:border-cubby-purple/40 transition-colors">
+                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-cubby-purple rounded-l-2xl"></div>
+                <div class="flex items-start justify-between mb-1.5 ml-2">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-shield-cat text-cubby-purple text-sm"></i>
+                        <h4 class="text-[13px] font-bold text-cubby-purple">Safety Alert</h4>
+                    </div>
+                    <span class="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded ml-2 whitespace-nowrap">${timeStr}</span>
+                </div>
+                <p class="text-[11px] text-gray-700 font-medium italic mb-2 ml-2 leading-relaxed bg-purple-50 p-2 rounded-lg border border-purple-100 whitespace-pre-wrap break-words">${escHtml(mainMsg)}</p>
+                ${lastLine ? `<p class="text-[11px] font-bold text-cubby-purple ml-2 mt-1">${escHtml(lastLine)}</p>` : ''}
+            </div>
+        `;
+        listEl.insertAdjacentHTML('beforeend', html);
+    });
+
+    // ── Legacy threat log alerts ───────────────────────────────────────────────
     childThreats.slice(0, 10).forEach(threat => {
         const timeStr = timeAgo(threat.$createdAt);
-        const excerpt = threat.messagePreview ? `"${threat.messagePreview}"` : "Inappropriate content detected in chat log.";
+        const excerpt = threat.messageContent || threat.messagePreview || 'Inappropriate content detected.';
         const resolved = threat.status === 'resolved';
 
         const html = `
@@ -519,19 +561,24 @@ async function renderSafetyAlerts() {
                     <h4 class="text-[13px] font-bold text-[#1C1D21]">Chat Moderation Alert</h4>
                     <span class="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded ml-2 whitespace-nowrap">${timeStr}</span>
                 </div>
-                <p class="text-[11px] text-gray-500 font-medium italic mb-3 line-clamp-2 ml-2 leading-relaxed bg-gray-50 p-2 rounded-lg">${excerpt}</p>
-                
+                <p class="text-[11px] text-gray-500 font-medium italic mb-3 line-clamp-2 ml-2 leading-relaxed bg-gray-50 p-2 rounded-lg">"${escHtml(excerpt)}"</p>
                 <div class="flex justify-between items-center ml-2 border-t border-gray-50 pt-2">
                     <span class="text-[9px] font-bold px-2 py-1 rounded-md ${resolved ? 'bg-green-50 text-green-600' : 'bg-[#FFF1F2] text-[#FF456A]'} uppercase tracking-wider">
                         ${threat.status || 'pending'}
                     </span>
-                    ${!resolved ? `<button class="text-[11px] font-bold text-white bg-red-400 hover:bg-red-500 px-3 py-1.5 rounded-lg transition-colors shadow-sm focus:outline-none">Review Action</button>` : ''}
                 </div>
             </div>
         `;
         listEl.insertAdjacentHTML('beforeend', html);
     });
 }
+
+function escHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
+
 
 let screenTimeChartInstance = null;
 

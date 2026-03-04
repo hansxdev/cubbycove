@@ -789,17 +789,65 @@ const DataService = {
         return doc;
     },
 
-    reportMessage: async function (messageId, conversationId, reporterId, reportedId, text) {
+    /**
+     * Report a chat message. Enriches the report with child/parent info.
+     * @param {string} messageId - The chat message doc $id
+     * @param {string} conversationId - The conversation ID
+     * @param {string} reporterId - Child ID of the reporter (the one who was hurt)
+     * @param {string} reportedId - Child ID of the reported sender (the one who said bad things)
+     * @param {string} text - The offending message text
+     * @param {string} violationType - e.g. 'Profanity', 'Cyberbullying', etc.
+     */
+    reportMessage: async function (messageId, conversationId, reporterId, reportedId, text, violationType) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         const { ID } = Appwrite;
 
+        // Enrich with child + parent info by looking up both children
+        let reporterChildName = reporterId || 'Unknown';
+        let reporterParentEmail = '';
+        let reportedChildName = reportedId || 'Unknown';
+        let reportedParentEmail = '';
+
+        try {
+            if (reporterId) {
+                const rChild = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, reporterId);
+                reporterChildName = rChild.username || rChild.name || reporterId;
+                // Get reporter parent email
+                if (rChild.parentId) {
+                    try {
+                        const rParent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, rChild.parentId);
+                        reporterParentEmail = rParent.email || '';
+                    } catch (e) { /* ignore */ }
+                }
+            }
+            if (reportedId) {
+                const dChild = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, reportedId);
+                reportedChildName = dChild.username || dChild.name || reportedId;
+                // Get reported parent email
+                if (dChild.parentId) {
+                    try {
+                        const dParent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, dChild.parentId);
+                        reportedParentEmail = dParent.email || '';
+                    } catch (e) { /* ignore */ }
+                }
+            }
+        } catch (e) {
+            console.warn('reportMessage child lookup error:', e.message);
+        }
+
         const doc = await databases.createDocument(DB_ID, COLLECTIONS.THREAT_LOGS, ID.unique(), {
-            childId: reportedId || 'Unknown',
+            childId: reportedId || '',
             content: text || 'No text provided',
-            reason: 'User Reported',
-            senderId: reportedId || 'Unknown',
-            receiverId: reporterId || 'Global',
-            messageContent: text || 'No text provided',
+            resolved: false,
+            reason: violationType || 'User Reported',
+            reporterChildId: reporterId || '',
+            reporterChildName,
+            reporterParentEmail,
+            reportedChildId: reportedId || '',
+            reportedChildName,
+            reportedParentEmail,
+            messageContent: (text || 'No text provided').slice(0, 2000),
+            violationType: violationType || 'Unspecified',
             status: 'pending',
             timestamp: new Date().toISOString()
         });
@@ -879,28 +927,36 @@ const DataService = {
         }
     },
 
-    alertParentsOfReport: async function (senderId, receiverId) {
+    /**
+     * Alert both parents about a confirmed report.
+     * @param {string} reportedId  - childId of the bad-message SENDER
+     * @param {string} reporterId  - childId of the REPORTER (victim)
+     * @param {string} messageText - the offending message
+     * @param {string} muteDuration - human-readable mute duration e.g. "1-24 hours"
+     */
+    alertParentsOfReport: async function (reportedId, reporterId, messageText, muteDuration) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         try {
-            // Get children
-            const sender = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, senderId);
-            const receiver = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, receiverId);
+            const badSender = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, reportedId);
+            const reporter = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, reporterId);
+            const msgSnippet = (messageText || '[No message text]').slice(0, 300);
+            const muteStr = muteDuration || 'a set period of time';
 
-            // Alert sender's parent
-            if (sender.parentId) {
-                await this._createParentNotification(sender.parentId, {
-                    type: 'alert',
-                    message: `${sender.username || sender.name} has sent suspected foul words to their buddies, please guide them accordingly.`,
-                    childId: sender.$id
+            // ❶ Notify the REPORTER's parent (purple safety alert — their child received bad msg)
+            if (reporter.parentId) {
+                await this._createParentNotification(reporter.parentId, {
+                    type: 'safety_alert',
+                    message: `🛡️ Safety Alert\n\nYour child received a bad message from their buddy:\n"${msgSnippet}"\n\nYour child has received some bad messages from their buddy, please advise them.`,
+                    childId: reporter.$id
                 });
             }
 
-            // Alert receiver's parent
-            if (receiver.parentId) {
-                await this._createParentNotification(receiver.parentId, {
-                    type: 'alert',
-                    message: `${receiver.username || receiver.name} received a suspected foul message from their buddy, please advice them accordingly.`,
-                    childId: receiver.$id
+            // ❷ Notify the BAD SENDER's parent (their child sent bad messages)
+            if (badSender.parentId) {
+                await this._createParentNotification(badSender.parentId, {
+                    type: 'safety_alert',
+                    message: `⚠️ Safety Alert\n\nYour child sent a reported message to their buddy:\n"${msgSnippet}"\n\nYour child has sent some bad messages to their buddy, please advise them accordingly. They have been muted for ${muteStr}.`,
+                    childId: badSender.$id
                 });
             }
         } catch (e) {
@@ -911,31 +967,56 @@ const DataService = {
     banChildFromChat: async function (childId, durationMs) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         try {
-            const childDoc = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
             const banUntil = Date.now() + durationMs;
 
-            // In our system, we update allowChat and threatScore to store ban info
+            // Store ban expiry in threatScore (no extra schema needed)
             await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
                 allowChat: false,
-                threatScore: banUntil // hacky but stores ban timestamp without schema change
+                threatScore: banUntil
             });
-
-            if (childDoc.parentId) {
-                let durationStr = "a set amount of time";
-                if (durationMs === 3600000) durationStr = "1 hour";
-                else if (durationMs === 18000000) durationStr = "5 hours";
-                else if (durationMs === 86400000) durationStr = "1 day";
-                else if (durationMs === 604800000) durationStr = "1 week";
-                else if (durationMs > 2500000000) durationStr = "1 month";
-
-                await this._createParentNotification(childDoc.parentId, {
-                    type: 'alert',
-                    message: `Your child ${childDoc.username || childDoc.name} has been banned from chatting for ${durationStr}, please advice them.`,
-                    childId: childDoc.$id
-                });
-            }
         } catch (e) {
             console.error('banChildFromChat error:', e);
+        }
+    },
+
+    /**
+     * Check if a child is currently muted from chat.
+     * Returns { muted: bool, until: Date|null, durationStr: string }
+     */
+    isChildMuted: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+            if (child.allowChat === true) return { muted: false, until: null, durationStr: '' };
+
+            const banUntilMs = child.threatScore || 0;
+            const now = Date.now();
+
+            if (banUntilMs && banUntilMs > now) {
+                const remaining = banUntilMs - now;
+                let durationStr;
+                if (remaining > 86400000 * 2) {
+                    durationStr = Math.ceil(remaining / 86400000) + ' days';
+                } else if (remaining > 3600000) {
+                    durationStr = Math.ceil(remaining / 3600000) + ' hours';
+                } else {
+                    durationStr = Math.ceil(remaining / 60000) + ' minutes';
+                }
+                return { muted: true, until: new Date(banUntilMs), durationStr };
+            }
+
+            // Ban expired — re-enable chat
+            if (banUntilMs && banUntilMs <= now) {
+                try {
+                    await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
+                        allowChat: true, threatScore: 0
+                    });
+                } catch (e) { /* non-fatal */ }
+            }
+            return { muted: false, until: null, durationStr: '' };
+        } catch (e) {
+            console.warn('isChildMuted error:', e.message);
+            return { muted: false, until: null, durationStr: '' };
         }
     },
 
@@ -1174,7 +1255,7 @@ const DataService = {
         const { Query } = Appwrite;
 
         try {
-            // Resolve real DB doc ID same way as createChild
+            // Resolve real DB doc ID
             let resolvedParentId = parentId;
             try {
                 await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
@@ -1192,7 +1273,60 @@ const DataService = {
                 Query.equal('parentId', resolvedParentId),
                 Query.orderDesc('$createdAt')
             ]);
-            return result.documents;
+
+            const children = result.documents;
+
+            // Aggregate screen_time_logs entries per child and merge into screenTimeLogs field
+            try {
+                // Fetch all screen time logs for this parent's children in one query
+                const childIds = children.map(c => c.$id);
+                if (childIds.length > 0) {
+                    const logsResult = await databases.listDocuments(DB_ID, 'screen_time_logs', [
+                        Query.limit(500)
+                    ]);
+                    const rawLogs = logsResult.documents;
+
+                    // Group by childId and aggregate by date
+                    const byChild = {};
+                    rawLogs.forEach(log => {
+                        if (!childIds.includes(log.childId)) return;
+                        if (!byChild[log.childId]) byChild[log.childId] = {};
+                        const date = log.date || new Date().toISOString().split('T')[0];
+                        byChild[log.childId][date] = (byChild[log.childId][date] || 0) + (log.minutes || 0);
+                    });
+
+                    // Merge into each child document
+                    children.forEach(child => {
+                        const dateMap = byChild[child.$id];
+                        if (!dateMap) return;
+
+                        // Parse any existing logs from child doc
+                        let existingLogs = [];
+                        if (child.screenTimeLogs) {
+                            try {
+                                existingLogs = typeof child.screenTimeLogs === 'string'
+                                    ? JSON.parse(child.screenTimeLogs) : child.screenTimeLogs;
+                            } catch (e) { existingLogs = []; }
+                        }
+                        // Build a date→minutes map from existing
+                        const combined = {};
+                        existingLogs.forEach(l => { if (l.date) combined[l.date] = (combined[l.date] || 0) + (l.minutes || 0); });
+                        // Merge in the screen_time_logs entries
+                        Object.entries(dateMap).forEach(([date, mins]) => {
+                            combined[date] = (combined[date] || 0) + mins;
+                        });
+                        // Sort and write back
+                        const merged = Object.entries(combined)
+                            .map(([date, minutes]) => ({ date, minutes }))
+                            .sort((a, b) => a.date.localeCompare(b.date));
+                        child.screenTimeLogs = JSON.stringify(merged);
+                    });
+                }
+            } catch (e) {
+                console.warn('screen_time_logs aggregation error (non-fatal):', e.message);
+            }
+
+            return children;
         } catch (error) {
             console.error("Get Children Error:", error);
             return [];
@@ -1242,58 +1376,32 @@ const DataService = {
     },
 
     /**
-     * Appends a screen-time session to a child's screenTimeLogs field.
+     * Logs screen time for a child.
+     * Writes to the 'screen_time_logs' collection which allows any-write (no auth needed).
+     * Kids don't have an Appwrite Auth session so they cannot call updateDocument.
+     * The parent dashboard reads and aggregates these log entries.
      *
-     * @param {string} childId   - The Appwrite document $id of the child.
-     * @param {number} minutes   - How many minutes were spent in this session (float, will be Math.round'd).
-     *
-     * The field is stored as a JSON string in Appwrite:
-     *   screenTimeLogs = '[{"date":"2026-03-03","minutes":25}, ...]'
-     *
-     * We accumulate entries by date — if today already has an entry we add to it
-     * rather than creating a duplicate row.
+     * @param {string} childId  - The child's Appwrite document $id (from sessionStorage)
+     * @param {number} minutes  - Minutes spent (float, will be rounded)
      */
     logScreenTime: async function (childId, minutes) {
         if (!childId) return;
         const mins = Math.round(minutes);
-        if (mins < 1) return; // ignore sessions shorter than 1 minute
+        if (mins < 1) return; // skip sessions under 1 minute
 
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+
+        const todayStr = new Date().toISOString().split('T')[0]; // "2026-03-04"
 
         try {
-            // 1. Fetch current child doc to get existing logs
-            const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
-
-            // 2. Parse existing logs (stored as JSON string or as array)
-            let logs = [];
-            if (child.screenTimeLogs) {
-                if (typeof child.screenTimeLogs === 'string') {
-                    try { logs = JSON.parse(child.screenTimeLogs); } catch (e) { logs = []; }
-                } else if (Array.isArray(child.screenTimeLogs)) {
-                    logs = child.screenTimeLogs;
-                }
-            }
-
-            // 3. Accumulate by today's date
-            const todayStr = new Date().toISOString().split('T')[0]; // e.g. "2026-03-03"
-            const existing = logs.find(l => l.date === todayStr);
-            if (existing) {
-                existing.minutes = (existing.minutes || 0) + mins;
-            } else {
-                logs.push({ date: todayStr, minutes: mins });
-            }
-
-            // 4. Keep last 90 days to avoid unbounded growth
-            if (logs.length > 90) logs = logs.slice(logs.length - 90);
-
-            // 5. Write back as JSON string
-            await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
-                screenTimeLogs: JSON.stringify(logs)
+            await databases.createDocument(DB_ID, 'screen_time_logs', ID.unique(), {
+                childId,
+                date: todayStr,
+                minutes: mins
             });
-
             console.log(`⏱️ [ScreenTime] Logged ${mins} min for child ${childId} on ${todayStr}`);
         } catch (err) {
-            // Non-fatal — don't crash the kid's page if this fails
             console.warn('logScreenTime error:', err.message);
         }
     }

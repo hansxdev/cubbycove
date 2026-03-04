@@ -219,6 +219,67 @@
         </div>
     </div>
 
+    <!-- ══════════════════════════════════════════════════════════
+         VIOLATION PICKER MODAL — Assistant selects mute duration
+    ══════════════════════════════════════════════════════════ -->
+    <div id="violation-picker-modal"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 relative">
+            <button onclick="document.getElementById('violation-picker-modal').classList.add('hidden')"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">
+                <i class="fa-solid fa-times"></i>
+            </button>
+            <div class="text-center mb-6">
+                <div
+                    class="w-14 h-14 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
+                    <i class="fa-solid fa-gavel"></i>
+                </div>
+                <h3 class="text-xl font-extrabold text-gray-800">Confirm Violation</h3>
+                <p class="text-sm text-gray-500 mt-1">Select a mute duration for the reported child.</p>
+            </div>
+
+            <!-- Duration options -->
+            <div class="space-y-3 mb-6">
+                <label
+                    class="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-red-300 cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                    <input type="radio" name="mute-duration" value="86400000" data-label="1–24 hours"
+                        class="accent-red-500">
+                    <div>
+                        <p class="font-bold text-gray-800 text-sm">1–24 Hours</p>
+                        <p class="text-xs text-gray-400">Minor first-time violations</p>
+                    </div>
+                </label>
+                <label
+                    class="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-red-300 cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                    <input type="radio" name="mute-duration" value="259200000" data-label="3 days"
+                        class="accent-red-500">
+                    <div>
+                        <p class="font-bold text-gray-800 text-sm">3 Days</p>
+                        <p class="text-xs text-gray-400">Repeated or moderate violations</p>
+                    </div>
+                </label>
+                <label
+                    class="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-red-300 cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                    <input type="radio" name="mute-duration" value="604800000" data-label="1 week"
+                        class="accent-red-500">
+                    <div>
+                        <p class="font-bold text-gray-800 text-sm">1 Week</p>
+                        <p class="text-xs text-gray-400">Severe or persistent violations</p>
+                    </div>
+                </label>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('violation-picker-modal').classList.add('hidden')"
+                    class="flex-1 py-3 border-2 border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 transition-colors text-sm">Cancel</button>
+                <button onclick="submitViolationPicker()"
+                    class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors shadow-sm text-sm">
+                    <i class="fa-solid fa-gavel mr-1"></i> Confirm Mute
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
     <script src="../js/appwrite_config.js"></script>
     <script src="../js/data_service.js"></script>

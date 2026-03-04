@@ -80,6 +80,58 @@ try {
         modal.classList.remove('hidden');
     };
 
+    /**
+     * window.showConfirm(message, onConfirm, onCancel?)
+     * Non-blocking replacement for native confirm().
+     * onConfirm is called when user clicks "OK".
+     * onCancel  is called (optionally) if user cancels.
+     */
+    window.showConfirm = function (message, onConfirm, onCancel) {
+        let modal = document.getElementById('global-confirm-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'global-confirm-modal';
+            modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4 transition-opacity duration-300';
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-cubby-yellow/20 text-cubby-yellow rounded-full flex items-center justify-center text-3xl mx-auto mb-4 shadow-md">
+                            <i class="fa-solid fa-circle-question"></i>
+                        </div>
+                        <h3 class="text-xl font-extrabold text-gray-800 mb-2">Please Confirm</h3>
+                        <p id="global-confirm-message" class="text-gray-600 mb-6 font-medium whitespace-pre-wrap break-words text-sm"></p>
+                        <div class="flex gap-3">
+                            <button id="global-confirm-cancel" class="flex-1 py-3 border-2 border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+                            <button id="global-confirm-ok" class="flex-1 py-3 bg-cubby-blue hover:bg-blue-500 text-white font-bold rounded-xl transition-colors shadow-sm">Confirm</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            if (document.body) {
+                document.body.appendChild(modal);
+            } else {
+                window.addEventListener('DOMContentLoaded', () => document.body.appendChild(modal));
+            }
+        }
+
+        modal.querySelector('#global-confirm-message').textContent = message;
+        modal.classList.remove('hidden');
+
+        const hide = () => modal.classList.add('hidden');
+
+        const okBtn = modal.querySelector('#global-confirm-ok');
+        const cancelBtn = modal.querySelector('#global-confirm-cancel');
+
+        // Clone to remove stale listeners
+        const newOk = okBtn.cloneNode(true);
+        const newCancel = cancelBtn.cloneNode(true);
+        okBtn.replaceWith(newOk);
+        cancelBtn.replaceWith(newCancel);
+
+        newOk.addEventListener('click', () => { hide(); if (onConfirm) onConfirm(); });
+        newCancel.addEventListener('click', () => { hide(); if (onCancel) onCancel(); });
+    };
+
 } catch (error) {
     console.error("❌ [Appwrite] SDK not loaded. Ensure the script is included in your HTML.");
 }

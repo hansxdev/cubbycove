@@ -74,9 +74,29 @@ async function handleKidLogin() {
 
     const btn = document.querySelector('#form-kid button[type="submit"]');
     const form = document.getElementById('form-kid');
-    const originalHTML = form ? form.innerHTML : '';
 
-    // Show "waiting for approval" screen inside the form area
+    // ── Step 1: Show a loading state on the button (but keep the form visible) ──
+    if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Checking credentials...';
+        btn.disabled = true;
+    }
+
+    // ── Step 2: Validate credentials — this throws if anything is wrong ──────────
+    let request;
+    try {
+        request = await DataService.createLoginRequest(username, guardianEmail, password);
+    } catch (err) {
+        // Restore the button so the kid can try again
+        if (btn) {
+            btn.innerHTML = "LET'S PLAY! 🚀";
+            btn.disabled = false;
+        }
+        alert(err.message || 'Invalid credentials. Please try again.');
+        return;
+    }
+
+    // ── Step 3: Credentials OK — NOW replace the form with the waiting screen ────
+    const originalHTML = form ? form.innerHTML : '';
     if (form) {
         form.innerHTML = `
             <div class="text-center py-6 space-y-6" id="waiting-screen">
@@ -95,15 +115,6 @@ async function handleKidLogin() {
                 </button>
             </div>
         `;
-    }
-
-    let request;
-    try {
-        request = await DataService.createLoginRequest(username, guardianEmail, password);
-    } catch (err) {
-        if (form) form.innerHTML = originalHTML;
-        alert('Could not send login request: ' + err.message);
-        return;
     }
 
     // Countdown timer (5 min)

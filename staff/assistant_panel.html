@@ -239,29 +239,48 @@
             </div>
 
             <!-- Duration options -->
-            <div class="space-y-3 mb-6">
-                <label
-                    class="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-red-300 cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
-                    <input type="radio" name="mute-duration" value="86400000" data-label="1–24 hours"
-                        class="accent-red-500">
-                    <div>
-                        <p class="font-bold text-gray-800 text-sm">1–24 Hours</p>
-                        <p class="text-xs text-gray-400">Minor first-time violations</p>
+            <div class="space-y-3 mb-6" id="mute-options">
+
+                <!-- Option 1: 1-24 Hours (with expandable hour picker) -->
+                <div class="rounded-xl border-2 border-gray-100 overflow-hidden transition-all duration-200"
+                    id="opt-hourly-wrap">
+                    <label class="flex items-center gap-4 p-4 cursor-pointer hover:border-red-300 transition-all"
+                        onclick="toggleHourPicker()" id="opt-hourly-label">
+                        <input type="radio" name="mute-duration" value="" data-label="" id="radio-hourly"
+                            class="accent-red-500">
+                        <div>
+                            <p class="font-bold text-gray-800 text-sm">1–24 Hours</p>
+                            <p class="text-xs text-gray-400">Minor first-time violations</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-down ml-auto text-gray-400 text-xs transition-transform duration-300"
+                            id="chevron-hourly"></i>
+                    </label>
+
+                    <!-- Hour grid — hidden by default, slides down when option selected -->
+                    <div id="hour-picker" style="max-height:0;overflow:hidden;transition:max-height 0.35s ease"
+                        class="px-4 pb-0">
+                        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Choose number of
+                            hours:</p>
+                        <div class="grid grid-cols-6 gap-1.5 mb-4" id="hour-grid"></div>
                     </div>
-                </label>
+                </div>
+
+                <!-- Option 2: 3 Days -->
                 <label
                     class="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-red-300 cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
                     <input type="radio" name="mute-duration" value="259200000" data-label="3 days"
-                        class="accent-red-500">
+                        class="accent-red-500" onchange="onFixedDurationChange()">
                     <div>
                         <p class="font-bold text-gray-800 text-sm">3 Days</p>
                         <p class="text-xs text-gray-400">Repeated or moderate violations</p>
                     </div>
                 </label>
+
+                <!-- Option 3: 1 Week -->
                 <label
                     class="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-red-300 cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
                     <input type="radio" name="mute-duration" value="604800000" data-label="1 week"
-                        class="accent-red-500">
+                        class="accent-red-500" onchange="onFixedDurationChange()">
                     <div>
                         <p class="font-bold text-gray-800 text-sm">1 Week</p>
                         <p class="text-xs text-gray-400">Severe or persistent violations</p>
@@ -279,6 +298,111 @@
             </div>
         </div>
     </div>
+
+    <style>
+        /* Hour button styles */
+        .hour-btn {
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: all .15s;
+            border: 2px solid #f3f4f6;
+            background: #fafafa;
+            color: #374151;
+        }
+
+        .hour-btn:hover {
+            border-color: #fca5a5;
+            background: #fff1f2;
+            color: #ef4444;
+        }
+
+        .hour-btn.selected {
+            border-color: #ef4444;
+            background: #ef4444;
+            color: #fff;
+        }
+
+        #opt-hourly-wrap.active {
+            border-color: #ef4444;
+            background: #fff5f5;
+        }
+
+        #opt-hourly-wrap.active #opt-hourly-label {
+            background: #fff1f2;
+        }
+    </style>
+
+    <script>
+            // Build hour grid 1–24
+            (function buildHourGrid() {
+                const grid = document.getElementById('hour-grid');
+                if (!grid) return;
+                for (let h = 1; h <= 24; h++) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'hour-btn';
+                    btn.textContent = h + 'h';
+                    btn.dataset.hours = h;
+                    btn.onclick = function () {
+                        // Mark selected
+                        document.querySelectorAll('.hour-btn').forEach(b => b.classList.remove('selected'));
+                        btn.classList.add('selected');
+                        // Set the radio value + label
+                        const radio = document.getElementById('radio-hourly');
+                        radio.value = h * 3600000;
+                        radio.dataset.label = h + (h === 1 ? ' hour' : ' hours');
+                        radio.checked = true;
+                    };
+                    grid.appendChild(btn);
+                }
+            })();
+
+        function toggleHourPicker() {
+            const picker = document.getElementById('hour-picker');
+            const wrap = document.getElementById('opt-hourly-wrap');
+            const radio = document.getElementById('radio-hourly');
+            const chev = document.getElementById('chevron-hourly');
+            const isOpen = picker.style.maxHeight !== '0px' && picker.style.maxHeight !== '';
+
+            if (isOpen) {
+                picker.style.maxHeight = '0';
+                picker.style.paddingBottom = '0';
+                chev.style.transform = '';
+                wrap.classList.remove('active');
+                radio.checked = false;
+                radio.value = '';
+                radio.dataset.label = '';
+                document.querySelectorAll('.hour-btn').forEach(b => b.classList.remove('selected'));
+            } else {
+                // Close any other fixed option
+                document.querySelectorAll('input[name="mute-duration"]').forEach(r => { if (r !== radio) r.checked = false; });
+                picker.style.maxHeight = '260px';
+                picker.style.paddingBottom = '12px';
+                chev.style.transform = 'rotate(180deg)';
+                wrap.classList.add('active');
+                radio.checked = true;
+            }
+        }
+
+        function onFixedDurationChange() {
+            // When a fixed-duration is selected, collapse the hour picker
+            const picker = document.getElementById('hour-picker');
+            const wrap = document.getElementById('opt-hourly-wrap');
+            const radio = document.getElementById('radio-hourly');
+            const chev = document.getElementById('chevron-hourly');
+            picker.style.maxHeight = '0';
+            picker.style.paddingBottom = '0';
+            chev.style.transform = '';
+            wrap.classList.remove('active');
+            radio.value = '';
+            radio.dataset.label = '';
+            document.querySelectorAll('.hour-btn').forEach(b => b.classList.remove('selected'));
+        }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
     <script src="../js/appwrite_config.js"></script>

@@ -385,16 +385,49 @@ const DataService = {
         }
 
         // ── 2. Verify the parent email matches this child's parent ───────────────
+        // Strategy: look up the parent by the email the kid entered and verify that
+        // the parent's document $id matches the child's parentId field.
+        // (Using listDocuments avoids 404s from $id vs Auth-ID mismatches.)
         if (!child.parentId) throw new Error(GENERIC_ERROR);
+
         let parent;
         try {
-            parent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, child.parentId);
+            // Look up the parent user by the email entered — case-insensitive
+            const parentList = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                Query.equal('email', parentEmail.toLowerCase().trim()),
+                Query.equal('role', 'parent'),
+                Query.limit(1)
+            ]);
+
+            if (parentList.documents.length === 0) throw new Error(GENERIC_ERROR);
+            parent = parentList.documents[0];
         } catch (e) {
+            if (e.message === GENERIC_ERROR) throw e;
             throw new Error(GENERIC_ERROR);
         }
-        // Case-insensitive email comparison
-        if ((parent.email || '').toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
-            throw new Error(GENERIC_ERROR);
+
+        // Make sure this parent actually owns the child
+        // child.parentId should equal parent.$id (or in some setups the Auth user $id)
+        if (child.parentId !== parent.$id) {
+            // Fallback: try matching by parentId directly in case child stores Auth ID
+            // which might differ from the users doc $id
+            // Re-query users by document that HAS this $id or try email match
+            // The parent email check above already confirms the email is correct.
+            // Just check: does the parent doc's $id appear somewhere in the child's hierarchy?
+            // We rely on: the found child (by username) must belong to the parent (by email).
+            // Since we can't do a direct $id match reliably, we verify via a secondary query.
+            const childCheck = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
+                Query.equal('username', username),
+                Query.equal('parentId', parent.$id),
+                Query.limit(1)
+            ]).catch(() => ({ documents: [] }));
+
+            if (childCheck.documents.length === 0) {
+                // The username exists under a different parent — wrong parent email
+                throw new Error(GENERIC_ERROR);
+            }
+            // Use the verified child doc
+            child = childCheck.documents[0];
         }
 
         // ── 3. Verify password ───────────────────────────────────────────────────

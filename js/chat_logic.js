@@ -367,7 +367,7 @@ window.finalizeReport = async function () {
             _pendingReportMsgId,
             _conversationId,
             _currentChild.$id,   // reporter = me
-            _buddyDocId || _buddyId, // reported = the buddy
+            _buddyId,                // reported = the buddy (child ID, NOT the buddies-doc ID)
             _pendingReportText,
             _pendingViolationType
         );

@@ -77,6 +77,9 @@ async function initCreatorStudio() {
 
     // Initial Load
     loadMyUploads();
+
+    // Start real-time listeners
+    initRealtimeSubscriptions();
 }
 
 async function handleUpload(e) {
@@ -215,4 +218,33 @@ async function loadMyUploads() {
         console.error("Load Videos Error:", e);
         container.innerHTML = `<div class="text-center p-8 text-red-500">Error loading videos.</div>`;
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// REAL-TIME SUBSCRIPTIONS
+// ─────────────────────────────────────────────────────────────────────────
+
+function initRealtimeSubscriptions() {
+    const svc = window.AppwriteService;
+    if (!svc || !svc.client) {
+        console.warn('[Realtime] AppwriteService not ready — skipping subscriptions.');
+        return;
+    }
+
+    const { client, DB_ID } = svc;
+
+    function debounce(fn, ms) {
+        let timer;
+        return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+    }
+
+    const refreshUploads = debounce(loadMyUploads, 600);
+
+    // ── videos collection → reload uploads when status changes (approved/rejected) ──
+    client.subscribe(
+        `databases.${DB_ID}.collections.videos.documents`,
+        refreshUploads
+    );
+
+    console.log('✅ [Realtime] Creator studio subscriptions active.');
 }

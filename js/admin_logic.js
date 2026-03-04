@@ -74,6 +74,9 @@ async function initAdminDashboard() {
             await loadStaffList();
         }
 
+        // Start real-time listeners
+        initRealtimeSubscriptions();
+
     } catch (error) {
         console.error("Dashboard Init Error:", error);
         // window.location.href = '../staff_access.html';
@@ -353,7 +356,7 @@ window.openManageStaffModal = function (id, name, role, email, status) {
     const btnArchive = document.getElementById('archive-staff-btn');
     const btnUnarchive = document.getElementById('unarchive-staff-btn');
     const archiveHint = document.getElementById('archive-staff-hint');
-    
+
     if (btnArchive && btnUnarchive) {
         if (status === 'archived') {
             btnArchive.classList.add('hidden');
@@ -622,4 +625,64 @@ function setupKeyboardShortcuts() {
             }
         }
     });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// REAL-TIME SUBSCRIPTIONS
+// ─────────────────────────────────────────────────────────────────────────
+
+function initRealtimeSubscriptions() {
+    const svc = window.AppwriteService;
+    if (!svc || !svc.client) {
+        console.warn('[Realtime] AppwriteService not ready — skipping subscriptions.');
+        return;
+    }
+
+    const { client, DB_ID } = svc;
+
+    function debounce(fn, ms) {
+        let timer;
+        return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+    }
+
+    const refreshStats = debounce(loadStats, 600);
+    const refreshUsers = debounce(loadUserList, 600);
+
+    // Helper: is the users tab currently visible?
+    const isUsersTabVisible = () => {
+        const el = document.getElementById('tab-users');
+        return el && !el.classList.contains('hidden');
+    };
+
+    // ── users collection → stats + user list ─────────────────────────
+    client.subscribe(
+        `databases.${DB_ID}.collections.users.documents`,
+        () => {
+            refreshStats();
+            if (isUsersTabVisible()) refreshUsers();
+        }
+    );
+
+    // ── children collection → stats + user list ───────────────────────
+    client.subscribe(
+        `databases.${DB_ID}.collections.children.documents`,
+        () => {
+            refreshStats();
+            if (isUsersTabVisible()) refreshUsers();
+        }
+    );
+
+    // ── videos collection → stats ────────────────────────────────────
+    client.subscribe(
+        `databases.${DB_ID}.collections.videos.documents`,
+        refreshStats
+    );
+
+    // ── threat_logs collection → stats ──────────────────────────────
+    client.subscribe(
+        `databases.${DB_ID}.collections.threat_logs.documents`,
+        refreshStats
+    );
+
+    console.log('✅ [Realtime] Admin dashboard subscriptions active.');
 }

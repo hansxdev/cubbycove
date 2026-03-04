@@ -61,6 +61,9 @@ async function initAssistantPanel() {
 
     // Initial Load
     loadOverviewStats();
+
+    // Start real-time listeners
+    initRealtimeSubscriptions();
 }
 
 function handleLogout() {
@@ -608,3 +611,63 @@ window.resolveReport = resolveReport;
 window.handleAlertParents = handleAlertParents;
 window.handleBanUser = handleBanUser;
 window.loadChatReports = loadChatReports;
+
+// ─────────────────────────────────────────────────────────────────────────
+// REAL-TIME SUBSCRIPTIONS
+// ─────────────────────────────────────────────────────────────────────────
+
+function initRealtimeSubscriptions() {
+    const svc = window.AppwriteService;
+    if (!svc || !svc.client) {
+        console.warn('[Realtime] AppwriteService not ready — skipping subscriptions.');
+        return;
+    }
+
+    const { client, DB_ID } = svc;
+
+    // Debounce helper so rapid successive events only cause one refresh
+    function debounce(fn, ms) {
+        let timer;
+        return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+    }
+
+    const refreshStats = debounce(loadOverviewStats, 600);
+    const refreshVerify = debounce(loadPendingParents, 600);
+    const refreshReports = debounce(loadChatReports, 600);
+    const refreshContent = debounce(loadPendingVideos, 600);
+
+    // Helper: is a given tab currently visible?
+    const isTabVisible = (tabId) => {
+        const el = document.getElementById(tabId);
+        return el && !el.classList.contains('hidden');
+    };
+
+    // ── users collection → verification + overview ──────────────────────
+    client.subscribe(
+        `databases.${DB_ID}.collections.users.documents`,
+        () => {
+            refreshStats();
+            if (isTabVisible('tab-verification')) refreshVerify();
+        }
+    );
+
+    // ── threat_logs collection → chat reports + overview ────────────────
+    client.subscribe(
+        `databases.${DB_ID}.collections.threat_logs.documents`,
+        () => {
+            refreshStats();
+            if (isTabVisible('tab-moderation')) refreshReports();
+        }
+    );
+
+    // ── videos collection → content review + overview ───────────────────
+    client.subscribe(
+        `databases.${DB_ID}.collections.videos.documents`,
+        () => {
+            refreshStats();
+            if (isTabVisible('tab-content')) refreshContent();
+        }
+    );
+
+    console.log('✅ [Realtime] Assistant panel subscriptions active.');
+}

@@ -18,8 +18,63 @@
     <script src="../js/tailwind-config.js"></script>
     <script src="../js/security_utils.js"></script>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/staff_theme.css">
+
+    <style>
+        /* Hour button styles (violation picker) */
+        .hour-btn {
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: all .15s;
+            border: 2px solid #f3f4f6;
+            background: #fafafa;
+            color: #374151;
+        }
+
+        .hour-btn:hover {
+            border-color: #fca5a5;
+            background: #fff1f2;
+            color: #ef4444;
+        }
+
+        .hour-btn.selected {
+            border-color: #ef4444;
+            background: #ef4444;
+            color: #fff;
+        }
+
+        #opt-hourly-wrap.active {
+            border-color: #ef4444;
+            background: #fff5f5;
+        }
+
+        #opt-hourly-wrap.active #opt-hourly-label {
+            background: #fff1f2;
+        }
+
+        /* Chart container */
+        .chart-card {
+            background: #fff;
+            border-radius: 1rem;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+            padding: 1.5rem;
+        }
+
+        .chart-card canvas {
+            max-height: 200px;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-100 text-gray-800 font-sans antialiased">
@@ -40,22 +95,50 @@
                     <i class="fa-solid fa-gauge-high w-5 text-center"></i> Dashboard
                 </a>
 
-                <!-- Standard Admin Links (Visible to Admin & Super Admin) -->
+                <!-- Standard Admin Links -->
                 <a href="#" onclick="switchView('users')" id="nav-users"
                     class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
                     <i class="fa-solid fa-users w-5 text-center"></i> Users
                 </a>
                 <a href="#" onclick="switchView('content')" id="nav-content"
                     class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
-                    <i class="fa-solid fa-video w-5 text-center"></i> Content
+                    <i class="fa-solid fa-video w-5 text-center"></i> Add Content
                 </a>
-                <a href="#" onclick="switchView('analytics')" id="nav-analytics"
-                    class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
-                    <i class="fa-solid fa-chart-line w-5 text-center"></i> Analytics
+
+                <!-- Divider: Assistant Functions -->
+                <div class="pt-4 pb-1">
+                    <p class="px-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Moderation</p>
+                </div>
+
+                <a href="#" onclick="switchView('verification')" id="nav-verification"
+                    class="nav-item flex items-center justify-between px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-id-card w-5 text-center"></i> Verification
+                    </div>
+                    <span id="badge-verification"
+                        class="bg-cubby-blue text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                </a>
+
+                <a href="#" onclick="switchView('moderation')" id="nav-moderation"
+                    class="nav-item flex items-center justify-between px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-flag w-5 text-center"></i> Chat Reports
+                    </div>
+                    <span id="badge-moderation"
+                        class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                </a>
+
+                <a href="#" onclick="switchView('video-review')" id="nav-video-review"
+                    class="nav-item flex items-center justify-between px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-film w-5 text-center"></i> Video Review
+                    </div>
+                    <span id="badge-video-review"
+                        class="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
                 </a>
 
                 <!-- Super Admin Only -->
-                <a href="#" id="menu-staff" onclick="switchView('staff')" id="nav-staff"
+                <a href="#" id="menu-staff" onclick="switchView('staff')"
                     class="nav-item hidden flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 border-transparent border-l-4 hover:text-white rounded-lg transition-colors">
                     <i class="fa-solid fa-user-shield w-5 text-center text-yellow-500"></i> Manage Staff
                 </a>
@@ -65,7 +148,6 @@
                     <div class="pt-4 pb-2">
                         <p class="px-4 text-xs font-bold text-gray-600 uppercase tracking-widest">Views</p>
                     </div>
-
                     <a href="#" onclick="switchDashboardMode('admin')"
                         class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
                         <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Admin View
@@ -97,16 +179,14 @@
                 <button class="text-gray-500 hover:text-gray-700 focus:outline-none lg:hidden">
                     <i class="fa-solid fa-bars text-xl"></i>
                 </button>
-                <h2 class="text-lg font-bold text-gray-700">Overview</h2>
+                <h2 class="text-lg font-bold text-gray-700" id="page-title">Dashboard</h2>
                 <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-4">
-                        <div class="flex items-center gap-2">
-                            <img id="header-avatar" src="" class="w-8 h-8 rounded-full bg-gray-200">
-                            <div class="flex flex-col text-right">
-                                <span id="header-name" class="text-sm font-bold text-gray-600">Loading...</span>
-                                <span id="header-role"
-                                    class="text-xs text-cubby-blue font-semibold uppercase">Checking...</span>
-                            </div>
+                    <div class="flex items-center gap-2">
+                        <img id="header-avatar" src="" class="w-8 h-8 rounded-full bg-gray-200">
+                        <div class="flex flex-col text-right">
+                            <span id="header-name" class="text-sm font-bold text-gray-600">Loading...</span>
+                            <span id="header-role"
+                                class="text-xs text-cubby-blue font-semibold uppercase">Checking...</span>
                         </div>
                     </div>
                 </div>
@@ -115,11 +195,13 @@
             <!-- DASHBOARD CONTENT -->
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 relative">
 
-                <!-- TAB: DASHBOARD -->
-                <div id="tab-dashboard" class="space-y-8">
-                    <!-- Stats Cards -->
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                        <!-- Card 1 -->
+                <!-- ══════════════════════════════════════════════
+                     TAB: DASHBOARD (stats + charts)
+                ══════════════════════════════════════════════ -->
+                <div id="tab-dashboard" class="space-y-6">
+
+                    <!-- Stat Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-cubby-blue">
                             <div class="flex items-center justify-between">
                                 <div>
@@ -130,7 +212,6 @@
                                         class="fa-solid fa-user-shield text-xl"></i></div>
                             </div>
                         </div>
-                        <!-- Card 2 -->
                         <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-cubby-purple">
                             <div class="flex items-center justify-between">
                                 <div>
@@ -141,7 +222,6 @@
                                         class="fa-solid fa-child text-xl"></i></div>
                             </div>
                         </div>
-                        <!-- Card 3 -->
                         <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
                             <div class="flex items-center justify-between">
                                 <div>
@@ -152,7 +232,6 @@
                                         class="fa-solid fa-play text-xl"></i></div>
                             </div>
                         </div>
-                        <!-- Card 4 -->
                         <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
                             <div class="flex items-center justify-between">
                                 <div>
@@ -160,16 +239,115 @@
                                     <h3 id="stat-reports" class="text-2xl font-extrabold text-gray-800">0</h3>
                                 </div>
                                 <div class="bg-red-50 text-red-500 p-3 rounded-lg"><i
-                                        class="fa-solid fa-flag text-xl"></i>
+                                        class="fa-solid fa-flag text-xl"></i></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Header + Controls -->
+                    <div class="bg-white rounded-xl shadow-sm p-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                            <div>
+                                <h3 class="font-extrabold text-gray-800 text-lg">Analytics</h3>
+                                <p class="text-xs text-gray-400 mt-0.5">Real-time data · auto-refreshes</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <!-- Period selector -->
+                                <div class="flex bg-gray-100 rounded-lg p-0.5 text-xs font-bold">
+                                    <button id="period-day" onclick="setChartPeriod('day')"
+                                        class="px-3 py-1.5 rounded-md bg-cubby-blue text-white transition-colors">Day</button>
+                                    <button id="period-week" onclick="setChartPeriod('week')"
+                                        class="px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors">Week</button>
+                                    <button id="period-month" onclick="setChartPeriod('month')"
+                                        class="px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors">Month</button>
                                 </div>
+                                <!-- Export buttons -->
+                                <button onclick="exportCSV()"
+                                    class="flex items-center gap-2 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg transition-colors">
+                                    <i class="fa-solid fa-file-csv"></i> CSV
+                                </button>
+                                <button onclick="exportPDF()"
+                                    class="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors">
+                                    <i class="fa-solid fa-file-pdf"></i> PDF
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 4 Charts Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <!-- Chart 1: Registrations -->
+                            <div class="chart-card border border-gray-100">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Account
+                                            Registrations</p>
+                                        <p id="chart-reg-total" class="text-2xl font-extrabold text-cubby-blue">—</p>
+                                    </div>
+                                    <div
+                                        class="w-10 h-10 bg-blue-50 text-cubby-blue rounded-xl flex items-center justify-center">
+                                        <i class="fa-solid fa-user-plus"></i>
+                                    </div>
+                                </div>
+                                <canvas id="chartRegistrations"></canvas>
+                            </div>
+
+                            <!-- Chart 2: Logins -->
+                            <div class="chart-card border border-gray-100">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Login
+                                            Activity</p>
+                                        <p id="chart-login-total" class="text-2xl font-extrabold text-cubby-purple">—
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="w-10 h-10 bg-purple-50 text-cubby-purple rounded-xl flex items-center justify-center">
+                                        <i class="fa-solid fa-right-to-bracket"></i>
+                                    </div>
+                                </div>
+                                <canvas id="chartLogins"></canvas>
+                            </div>
+
+                            <!-- Chart 3: Reports -->
+                            <div class="chart-card border border-gray-100">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Chat Reports
+                                        </p>
+                                        <p id="chart-reports-total" class="text-2xl font-extrabold text-red-500">—</p>
+                                    </div>
+                                    <div
+                                        class="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                    </div>
+                                </div>
+                                <canvas id="chartReports"></canvas>
+                            </div>
+
+                            <!-- Chart 4: Premium -->
+                            <div class="chart-card border border-gray-100">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Premium
+                                            Purchases</p>
+                                        <p id="chart-premium-total" class="text-2xl font-extrabold text-yellow-500">—
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="w-10 h-10 bg-yellow-50 text-yellow-500 rounded-xl flex items-center justify-center">
+                                        <i class="fa-solid fa-crown"></i>
+                                    </div>
+                                </div>
+                                <canvas id="chartPremium"></canvas>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- TAB: USERS -->
+                <!-- ══════════════════════════════════════════════
+                     TAB: USERS
+                ══════════════════════════════════════════════ -->
                 <div id="tab-users" class="hidden space-y-8 max-w-6xl mx-auto">
-                    <!-- USER MANAGEMENT TABLE -->
                     <div class="bg-white rounded-xl shadow-sm p-6">
                         <div class="flex justify-between items-center mb-4 border-b pb-2">
                             <h3 class="font-bold text-lg text-gray-800">User Management</h3>
@@ -195,7 +373,6 @@
                                     class="text-xs bg-gray-50 border border-gray-300 rounded-full px-3 py-1 focus:outline-none focus:ring-1 focus:ring-cubby-blue">
                             </div>
                         </div>
-
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
@@ -206,9 +383,7 @@
                                         <th class="text-xs font-bold text-gray-400 uppercase p-2 text-right">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody class="text-sm" id="user-list-body">
-                                    <!-- Populated by JS -->
-                                </tbody>
+                                <tbody class="text-sm" id="user-list-body"></tbody>
                             </table>
                         </div>
                         <div class="pt-4 flex items-center justify-between border-t border-gray-100 mt-2">
@@ -223,9 +398,10 @@
                     </div>
                 </div>
 
-                <!-- TAB: CONTENT -->
+                <!-- ══════════════════════════════════════════════
+                     TAB: ADD CONTENT (Video Upload)
+                ══════════════════════════════════════════════ -->
                 <div id="tab-content" class="hidden space-y-8 max-w-4xl mx-auto">
-                    <!-- ADD VIDEO FORM -->
                     <div class="bg-white rounded-xl shadow-sm p-6">
                         <h3 class="font-bold text-lg text-gray-800 mb-4 border-b pb-2">Add Safe Video</h3>
                         <form id="addVideoForm" class="space-y-4">
@@ -237,8 +413,7 @@
                                         placeholder="e.g. YouTube ID/Link OR select a local file"
                                         class="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cubby-blue">
                                     <div class="relative flex-shrink-0 cursor-pointer">
-                                        <input type="file" id="localVideoUpload"
-                                            accept="video/mp4,video/x-m4v,video/*,application/youtube-url"
+                                        <input type="file" id="localVideoUpload" accept="video/mp4,video/x-m4v,video/*"
                                             class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                                         <button type="button"
                                             class="bg-cubby-blue hover:bg-blue-400 text-white px-4 py-2 rounded-lg font-bold text-xs"><i
@@ -272,11 +447,27 @@
                     </div>
                 </div>
 
-                <!-- TAB: ANALYTICS -->
-                <div id="tab-analytics" class="hidden space-y-8 max-w-4xl mx-auto">
-                    <div class="bg-white rounded-xl shadow-sm p-6 text-center text-gray-400">
-                        <i class="fa-solid fa-chart-line text-4xl mb-4"></i>
-                        <p>Analytics coming soon!</p>
+                <!-- ══════════════════════════════════════════════
+                     TAB: VERIFICATION (Pending Parents)
+                ══════════════════════════════════════════════ -->
+                <div id="tab-verification" class="hidden space-y-4 max-w-4xl mx-auto">
+                    <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cubby-blue text-4xl"></i>
+                    </div>
+                </div>
+
+                <!-- ══════════════════════════════════════════════
+                     TAB: CHAT MODERATION
+                ══════════════════════════════════════════════ -->
+                <div id="tab-moderation" class="hidden space-y-4 max-w-4xl mx-auto">
+                    <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cubby-blue text-4xl"></i>
+                    </div>
+                </div>
+
+                <!-- ══════════════════════════════════════════════
+                     TAB: VIDEO REVIEW
+                ══════════════════════════════════════════════ -->
+                <div id="tab-video-review" class="hidden space-y-4 max-w-4xl mx-auto">
+                    <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cubby-blue text-4xl"></i>
                     </div>
                 </div>
 
@@ -293,13 +484,11 @@
                                 class="bg-gray-50 border border-gray-300 rounded-lg px-4 py-2">
                             <input type="password" id="staffPass" placeholder="Temporary Password" required
                                 class="bg-gray-50 border border-gray-300 rounded-lg px-4 py-2">
-
                             <select id="staffRole" class="bg-gray-50 border border-gray-300 rounded-lg px-4 py-2">
                                 <option value="admin">Admin</option>
                                 <option value="assistant">Assistant</option>
                                 <option value="creator">Creator</option>
                             </select>
-
                             <button type="submit"
                                 class="bg-cubby-purple text-white font-bold py-2 rounded-lg hover:bg-purple-700 transition-colors">
                                 <i class="fa-solid fa-plus mr-2"></i> Create Staff
@@ -323,9 +512,7 @@
                                         <th class="text-xs font-bold text-gray-400 uppercase p-2">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody id="staff-list-body" class="text-sm">
-                                    <!-- Populated by JS -->
-                                </tbody>
+                                <tbody id="staff-list-body" class="text-sm"></tbody>
                             </table>
                         </div>
                         <div class="pt-4 flex items-center justify-between border-t border-gray-100 mt-2">
@@ -341,47 +528,167 @@
                 </div>
 
             </main>
-
-            <!-- Manage Staff Modal -->
-            <div id="manage-staff-modal"
-                class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-                <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
-                    <button onclick="closeManageStaffModal()"
-                        class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i
-                            class="fa-solid fa-times text-xl"></i></button>
-                    <h3 class="text-xl font-bold mb-4">Manage Staff Member</h3>
-                    <div id="manage-staff-info" class="mb-4 text-sm text-gray-600 font-bold"></div>
-
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Change Role</label>
-                            <select id="manage-staff-role"
-                                class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-cubby-purple">
-                                <option value="super_admin">Poweruser (Super Admin)</option>
-                                <option value="admin">Admin</option>
-                                <option value="assistant">Assistant</option>
-                                <option value="creator">Creator</option>
-                            </select>
-                        </div>
-                        <button onclick="submitStaffRoleChange()"
-                            class="w-full bg-cubby-purple text-white font-bold py-2 rounded-lg hover:bg-purple-700 transition-colors">Update
-                            Role</button>
-                        <div class="pt-2">
-                            <button id="archive-staff-btn" onclick="archiveStaffAccount()"
-                                class="w-full border-2 border-red-500 text-red-500 font-bold py-2 rounded-lg hover:bg-red-50 transition-colors">Archive
-                                Account</button>
-                            <button id="unarchive-staff-btn" onclick="unarchiveStaffAccount()"
-                                class="w-full border-2 border-green-500 text-green-500 font-bold py-2 rounded-lg hover:bg-green-50 transition-colors hidden">Unarchive
-                                Account</button>
-                            <p id="archive-staff-hint" class="text-xs text-gray-400 mt-2 text-center">Archived accounts
-                                cannot log in.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         </div>
     </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         MANAGE STAFF MODAL
+    ══════════════════════════════════════════════════════════ -->
+    <div id="manage-staff-modal"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
+            <button onclick="closeManageStaffModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i
+                    class="fa-solid fa-times text-xl"></i></button>
+            <h3 class="text-xl font-bold mb-4">Manage Staff Member</h3>
+            <div id="manage-staff-info" class="mb-4 text-sm text-gray-600 font-bold"></div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Change Role</label>
+                    <select id="manage-staff-role"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-cubby-purple">
+                        <option value="super_admin">Poweruser (Super Admin)</option>
+                        <option value="admin">Admin</option>
+                        <option value="assistant">Assistant</option>
+                        <option value="creator">Creator</option>
+                    </select>
+                </div>
+                <button onclick="submitStaffRoleChange()"
+                    class="w-full bg-cubby-purple text-white font-bold py-2 rounded-lg hover:bg-purple-700 transition-colors">Update
+                    Role</button>
+                <div class="pt-2">
+                    <button id="archive-staff-btn" onclick="archiveStaffAccount()"
+                        class="w-full border-2 border-red-500 text-red-500 font-bold py-2 rounded-lg hover:bg-red-50 transition-colors">Archive
+                        Account</button>
+                    <button id="unarchive-staff-btn" onclick="unarchiveStaffAccount()"
+                        class="w-full border-2 border-green-500 text-green-500 font-bold py-2 rounded-lg hover:bg-green-50 transition-colors hidden">Unarchive
+                        Account</button>
+                    <p id="archive-staff-hint" class="text-xs text-gray-400 mt-2 text-center">Archived accounts cannot
+                        log in.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         VIOLATION PICKER MODAL
+    ══════════════════════════════════════════════════════════ -->
+    <div id="violation-picker-modal"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 relative">
+            <button onclick="document.getElementById('violation-picker-modal').classList.add('hidden')"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"><i
+                    class="fa-solid fa-times"></i></button>
+            <div class="text-center mb-6">
+                <div
+                    class="w-14 h-14 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
+                    <i class="fa-solid fa-gavel"></i></div>
+                <h3 class="text-xl font-extrabold text-gray-800">Confirm Violation</h3>
+                <p class="text-sm text-gray-500 mt-1">Select a mute duration for the reported child.</p>
+            </div>
+            <div class="space-y-3 mb-6" id="mute-options">
+                <!-- Option 1: 1-24 Hours -->
+                <div class="rounded-xl border-2 border-gray-100 overflow-hidden transition-all duration-200"
+                    id="opt-hourly-wrap">
+                    <label class="flex items-center gap-4 p-4 cursor-pointer hover:border-red-300 transition-all"
+                        onclick="toggleHourPicker()" id="opt-hourly-label">
+                        <input type="radio" name="mute-duration" value="" data-label="" id="radio-hourly"
+                            class="accent-red-500">
+                        <div>
+                            <p class="font-bold text-gray-800 text-sm">1–24 Hours</p>
+                            <p class="text-xs text-gray-400">Minor first-time violations</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-down ml-auto text-gray-400 text-xs transition-transform duration-300"
+                            id="chevron-hourly"></i>
+                    </label>
+                    <div id="hour-picker" style="max-height:0;overflow:hidden;transition:max-height 0.35s ease"
+                        class="px-4 pb-0">
+                        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Choose number of
+                            hours:</p>
+                        <div class="grid grid-cols-6 gap-1.5 mb-4" id="hour-grid"></div>
+                    </div>
+                </div>
+                <!-- Option 2: 3 Days -->
+                <label
+                    class="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-red-300 cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                    <input type="radio" name="mute-duration" value="259200000" data-label="3 days"
+                        class="accent-red-500" onchange="onFixedDurationChange()">
+                    <div>
+                        <p class="font-bold text-gray-800 text-sm">3 Days</p>
+                        <p class="text-xs text-gray-400">Repeated or moderate violations</p>
+                    </div>
+                </label>
+                <!-- Option 3: 1 Week -->
+                <label
+                    class="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-red-300 cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                    <input type="radio" name="mute-duration" value="604800000" data-label="1 week"
+                        class="accent-red-500" onchange="onFixedDurationChange()">
+                    <div>
+                        <p class="font-bold text-gray-800 text-sm">1 Week</p>
+                        <p class="text-xs text-gray-400">Severe or persistent violations</p>
+                    </div>
+                </label>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('violation-picker-modal').classList.add('hidden')"
+                    class="flex-1 py-3 border-2 border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 transition-colors text-sm">Cancel</button>
+                <button onclick="submitViolationPicker()"
+                    class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors shadow-sm text-sm"><i
+                        class="fa-solid fa-gavel mr-1"></i> Confirm Mute</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Violation Picker JS (same as assistant_panel.html) -->
+    <script>
+        (function buildHourGrid() {
+            const grid = document.getElementById('hour-grid');
+            if (!grid) return;
+            for (let h = 1; h <= 24; h++) {
+                const btn = document.createElement('button');
+                btn.type = 'button'; btn.className = 'hour-btn'; btn.textContent = h + 'h';
+                btn.dataset.hours = h;
+                btn.onclick = function () {
+                    document.querySelectorAll('.hour-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    const radio = document.getElementById('radio-hourly');
+                    radio.value = h * 3600000;
+                    radio.dataset.label = h + (h === 1 ? ' hour' : ' hours');
+                    radio.checked = true;
+                };
+                grid.appendChild(btn);
+            }
+        })();
+
+        function toggleHourPicker() {
+            const picker = document.getElementById('hour-picker');
+            const wrap = document.getElementById('opt-hourly-wrap');
+            const radio = document.getElementById('radio-hourly');
+            const chev = document.getElementById('chevron-hourly');
+            const isOpen = picker.style.maxHeight !== '0px' && picker.style.maxHeight !== '';
+            if (isOpen) {
+                picker.style.maxHeight = '0'; picker.style.paddingBottom = '0';
+                chev.style.transform = ''; wrap.classList.remove('active');
+                radio.checked = false; radio.value = ''; radio.dataset.label = '';
+                document.querySelectorAll('.hour-btn').forEach(b => b.classList.remove('selected'));
+            } else {
+                document.querySelectorAll('input[name="mute-duration"]').forEach(r => { if (r !== radio) r.checked = false; });
+                picker.style.maxHeight = '260px'; picker.style.paddingBottom = '12px';
+                chev.style.transform = 'rotate(180deg)'; wrap.classList.add('active'); radio.checked = true;
+            }
+        }
+
+        function onFixedDurationChange() {
+            const picker = document.getElementById('hour-picker');
+            const wrap = document.getElementById('opt-hourly-wrap');
+            const radio = document.getElementById('radio-hourly');
+            const chev = document.getElementById('chevron-hourly');
+            picker.style.maxHeight = '0'; picker.style.paddingBottom = '0';
+            chev.style.transform = ''; wrap.classList.remove('active');
+            radio.value = ''; radio.dataset.label = '';
+            document.querySelectorAll('.hour-btn').forEach(b => b.classList.remove('selected'));
+        }
+    </script>
 
     <!-- Import Logic -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>

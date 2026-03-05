@@ -178,6 +178,11 @@
 
                 _pendingDoc = result.documents[0];
 
+                if (_pendingDoc.isClaimed) {
+                    showError('This account has already been claimed. Please log in at the Staff Portal instead.');
+                    return;
+                }
+
                 document.getElementById('staff-name').textContent = `${_pendingDoc.firstName} ${_pendingDoc.lastName}`;
                 document.getElementById('staff-role').textContent = _pendingDoc.role.replace('_', ' ');
                 document.getElementById('staff-email-display').textContent = _pendingDoc.email;
@@ -229,11 +234,13 @@
                     }
                 }
 
-                // 4. Delete the pending_staff record (claimed — no longer needed)
+                // 4. Update the pending_staff record (mark as claimed)
                 try {
-                    await databases.deleteDocument(DB_ID, COLLECTIONS.PENDING_STAFF, _pendingDoc.$id);
+                    await databases.updateDocument(DB_ID, COLLECTIONS.PENDING_STAFF, _pendingDoc.$id, {
+                        isClaimed: true
+                    });
                 } catch (e) {
-                    console.warn('Could not delete pending_staff record:', e.message);
+                    console.warn('Could not update pending_staff record:', e.message);
                 }
 
                 // 5. Show success with Staff ID

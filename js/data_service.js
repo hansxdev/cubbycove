@@ -1274,7 +1274,8 @@ const DataService = {
                 lastName: newStaffData.lastName,
                 role: newStaffData.role,
                 staffId,
-                usersDocId: doc.$id  // reference so claim page can update the users doc
+                usersDocId: doc.$id,  // reference so claim page can update the users doc
+                isClaimed: false
             });
         } catch (e) {
             console.warn('Could not write to pending_staff (collection may not exist yet):', e.message);
@@ -1291,7 +1292,7 @@ const DataService = {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         const { Query } = Appwrite;
         try {
-            const result = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.PENDING_STAFF, [
                 Query.equal('staffId', staffId.toUpperCase()),
                 Query.limit(1)
             ]);

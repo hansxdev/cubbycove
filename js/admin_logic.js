@@ -1,5 +1,19 @@
 // Logic for staff/admin_dashboard.html
 
+// ─── EmailJS Configuration ────────────────────────────────────────────────
+// Sign up at https://www.emailjs.com, create a service + template, then fill in:
+const EMAILJS_PUBLIC_KEY = 'bu5PysfqwXeXaEOhU';      // Account → API Keys
+const EMAILJS_SERVICE_ID = 'service_4sdis7b';      // Email Services tab
+const EMAILJS_TEMPLATE_ID = 'template_ioda61h';     // Email Templates tab
+// ─── Template variables your EmailJS template should use: ─────────────────
+//  {{to_name}}    — staff member's full name
+//  {{to_email}}   — staff member's email (EmailJS "To Email" field)
+//  {{role}}       — their assigned role
+//  {{staff_id}}   — their generated #STF-XXXXXX id
+//  {{claim_link}} — link to staff_claim.html
+// ──────────────────────────────────────────────────────────────────────────
+
+
 let currentUser = null;
 let currentPeriod = 'day'; // 'day' | 'week' | 'month'
 
@@ -877,8 +891,33 @@ window.confirmCreateStaff = async function () {
         const doc = await DataService.createStaffAccount(currentUser.email, _pendingStaffData);
         SecurityUtils.recordAction('staff_create');
 
-        // Show success with Staff ID
-        alert(`✅ Staff account created!\n\nName: ${_pendingStaffData.firstName} ${_pendingStaffData.lastName}\nEmail: ${_pendingStaffData.email}\nStaff ID: ${doc.staffId || 'N/A'}\n\nAn invitation email will be sent to the staff member.`);
+        const staffId = doc.staffId || 'N/A';
+        const claimUrl = `${window.location.origin}/staff_claim.html`;
+
+        // ── Send invitation email via EmailJS ────────────────────────────
+        let emailSent = false;
+        if (EMAILJS_PUBLIC_KEY !== 'YOUR_PUBLIC_KEY') {
+            try {
+                emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+                await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+                    to_name: `${_pendingStaffData.firstName} ${_pendingStaffData.lastName}`,
+                    to_email: _pendingStaffData.email,
+                    role: _pendingStaffData.role.replace('_', ' '),
+                    staff_id: staffId,
+                    claim_link: claimUrl
+                });
+                emailSent = true;
+            } catch (emailErr) {
+                console.warn('EmailJS send failed (non-fatal):', emailErr.message);
+            }
+        }
+
+        // ── Success alert ─────────────────────────────────────────────────
+        const emailNote = emailSent
+            ? '📧 An invitation email has been sent.'
+            : '⚠️ Email not sent — check your EmailJS configuration.';
+
+        alert(`✅ Staff account created!\n\nName: ${_pendingStaffData.firstName} ${_pendingStaffData.lastName}\nEmail: ${_pendingStaffData.email}\nRole: ${_pendingStaffData.role}\nStaff ID: ${staffId}\n\n${emailNote}`);
 
         _pendingStaffData = null;
         document.getElementById('createStaffForm').reset();

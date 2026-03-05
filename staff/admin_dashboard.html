@@ -582,7 +582,8 @@
             <div class="text-center mb-6">
                 <div
                     class="w-14 h-14 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
-                    <i class="fa-solid fa-gavel"></i></div>
+                    <i class="fa-solid fa-gavel"></i>
+                </div>
                 <h3 class="text-xl font-extrabold text-gray-800">Confirm Violation</h3>
                 <p class="text-sm text-gray-500 mt-1">Select a mute duration for the reported child.</p>
             </div>
@@ -639,7 +640,69 @@
         </div>
     </div>
 
-    <!-- Violation Picker JS (same as assistant_panel.html) -->
+    <!-- ══════════════════════════════════════════════════════════
+         STAFF CREATION CONFIRMATION MODAL
+    ══════════════════════════════════════════════════════════ -->
+    <div id="staff-confirm-modal"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 relative">
+            <button onclick="cancelCreateStaff()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">
+                <i class="fa-solid fa-times"></i>
+            </button>
+            <div class="text-center mb-6">
+                <div
+                    class="w-14 h-14 bg-cubby-blue/10 text-cubby-blue rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <h3 class="text-xl font-extrabold text-gray-800">Confirm Staff Account</h3>
+                <p class="text-sm text-gray-400 mt-1">Please review before proceeding.</p>
+            </div>
+            <!-- Summary card -->
+            <div class="bg-gray-50 rounded-2xl p-5 space-y-3 mb-6 border border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 bg-purple-100 text-cubby-purple rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-user text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Full Name</p>
+                        <p id="confirm-staff-name" class="font-extrabold text-gray-800 text-sm"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 bg-blue-100 text-cubby-blue rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-envelope text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Email</p>
+                        <p id="confirm-staff-email" class="font-extrabold text-gray-800 text-sm break-all"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-tag text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Role</p>
+                        <p id="confirm-staff-role" class="font-extrabold text-gray-800 text-sm capitalize"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="cancelCreateStaff()"
+                    class="flex-1 py-3 border-2 border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 text-sm">Cancel</button>
+                <button onclick="confirmCreateStaff()"
+                    class="flex-1 py-3 bg-cubby-blue hover:bg-cyan-400 text-cubby-dark font-bold rounded-xl text-sm">
+                    <i class="fa-solid fa-check mr-1"></i> Proceed
+                </button>
+            </div>
+        </div>
+    </div>
+
+
     <script>
         (function buildHourGrid() {
             const grid = document.getElementById('hour-grid');

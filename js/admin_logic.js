@@ -837,32 +837,65 @@ window.unarchiveStaffAccount = async function () {
     } catch (e) { alert('Error: ' + e.message); }
 };
 
+// Stores pending staff data while the confirmation modal is open
+let _pendingStaffData = null;
+
 async function handleCreateStaff(e) {
     e.preventDefault();
     const rateCheck = SecurityUtils.checkRateLimit('staff_create', 15);
     if (!rateCheck.allowed) { alert(`Wait ${rateCheck.waitTime}s before creating another staff.`); return; }
 
-    const fname = document.getElementById('staffFname').value;
-    const lname = document.getElementById('staffLname').value;
-    const email = document.getElementById('staffEmail').value;
+    const fname = document.getElementById('staffFname').value.trim();
+    const lname = document.getElementById('staffLname').value.trim();
+    const email = document.getElementById('staffEmail').value.trim();
     const pass = document.getElementById('staffPass').value;
     const role = document.getElementById('staffRole').value;
+
+    if (!fname || !lname || !email) { alert('Please fill in all fields.'); return; }
 
     const passCheck = SecurityUtils.validatePassword(pass);
     if (!passCheck.isValid) { alert(passCheck.error); return; }
 
+    // Store and show confirmation modal
+    _pendingStaffData = { firstName: fname, lastName: lname, email, password: pass, role };
+
+    document.getElementById('confirm-staff-name').textContent = `${fname} ${lname}`;
+    document.getElementById('confirm-staff-email').textContent = email;
+    document.getElementById('confirm-staff-role').textContent = role.replace('_', ' ');
+    document.getElementById('staff-confirm-modal').classList.remove('hidden');
+}
+
+window.confirmCreateStaff = async function () {
+    if (!_pendingStaffData) return;
+    document.getElementById('staff-confirm-modal').classList.add('hidden');
+
     const btn = document.querySelector('#createStaffForm button[type="submit"]');
-    const orig = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...'; btn.disabled = true;
+    const orig = btn ? btn.innerHTML : '';
+    if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...'; btn.disabled = true; }
+
     try {
-        await DataService.createStaffAccount(currentUser.email, { firstName: fname, lastName: lname, email, password: pass, role });
+        const doc = await DataService.createStaffAccount(currentUser.email, _pendingStaffData);
         SecurityUtils.recordAction('staff_create');
-        alert(`New ${role} created: ${email}`);
+
+        // Show success with Staff ID
+        alert(`✅ Staff account created!\n\nName: ${_pendingStaffData.firstName} ${_pendingStaffData.lastName}\nEmail: ${_pendingStaffData.email}\nStaff ID: ${doc.staffId || 'N/A'}\n\nAn invitation email will be sent to the staff member.`);
+
+        _pendingStaffData = null;
         document.getElementById('createStaffForm').reset();
         await loadStaffList();
-    } catch (e) { alert('Error: ' + e.message); }
-    finally { btn.innerHTML = orig; btn.disabled = false; }
-}
+    } catch (err) {
+        alert('Error: ' + err.message);
+    } finally {
+        if (btn) { btn.innerHTML = orig; btn.disabled = false; }
+    }
+};
+
+window.cancelCreateStaff = function () {
+    _pendingStaffData = null;
+    document.getElementById('staff-confirm-modal').classList.add('hidden');
+};
+
+
 
 async function handleAddVideo(e) {
     e.preventDefault();

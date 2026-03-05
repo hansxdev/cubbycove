@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claim Your Staff Account - CubbyCove</title>
+    <link rel="icon" type="image/png" href="images/closedlogo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Nunito', 'sans-serif'] },
+                    colors: { 'cubby-dark': '#1A1A2E', 'cubby-blue': '#4CC9F0', 'cubby-purple': '#7209B7' }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center font-sans p-4">
+
+    <div class="w-full max-w-md">
+
+        <!-- Card -->
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
+
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-cubby-dark to-[#16213E] p-8 text-center">
+                <div class="w-16 h-16 bg-cubby-blue/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-shield-cat text-cubby-blue text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-extrabold text-white">Claim Your Account</h1>
+                <p class="text-gray-400 text-sm mt-1">You've been invited to join CubbyCove staff</p>
+            </div>
+
+            <div class="p-8">
+
+                <!-- Step 1: Loading / Verifying token -->
+                <div id="step-loading" class="text-center py-6">
+                    <i class="fa-solid fa-spinner fa-spin text-cubby-blue text-3xl mb-3"></i>
+                    <p class="text-gray-500 font-semibold">Verifying your invitation link...</p>
+                </div>
+
+                <!-- Step 2: Invalid link -->
+                <div id="step-error" class="hidden text-center py-4">
+                    <div class="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fa-solid fa-circle-exclamation text-red-500 text-2xl"></i>
+                    </div>
+                    <h2 class="text-lg font-extrabold text-gray-800 mb-2">Invalid or Expired Link</h2>
+                    <p id="error-detail" class="text-sm text-gray-500 mb-6">This invitation link is no longer valid.
+                        Please ask your administrator to resend the invitation.</p>
+                    <a href="staff_access.html" class="text-cubby-blue font-bold hover:underline text-sm">← Back to
+                        Staff Login</a>
+                </div>
+
+                <!-- Step 3: Set password form -->
+                <div id="step-set-password" class="hidden space-y-5">
+                    <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm">
+                        <p class="font-bold text-gray-700 mb-1">Welcome, <span id="staff-name"
+                                class="text-cubby-blue">Staff Member</span>!</p>
+                        <p class="text-gray-500">Role: <span id="staff-role"
+                                class="font-bold text-gray-700 capitalize"></span></p>
+                        <p class="text-gray-500">Email: <span id="staff-email" class="font-bold text-gray-700"></span>
+                        </p>
+                    </div>
+
+                    <p class="text-sm text-gray-600 font-semibold">Set a password to activate your account:</p>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">New Password</label>
+                        <div class="relative">
+                            <input type="password" id="newPassword" placeholder="Min. 8 characters"
+                                class="w-full border border-gray-200 rounded-xl py-3 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-cubby-blue text-sm">
+                            <button type="button"
+                                onclick="const p=document.getElementById('newPassword'); p.type=p.type==='password'?'text':'password'; this.querySelector('i').className=p.type==='password'?'fa-solid fa-eye':'fa-solid fa-eye-slash';"
+                                class="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Confirm Password</label>
+                        <input type="password" id="confirmPassword" placeholder="Repeat password"
+                            class="w-full border border-gray-200 rounded-xl py-3 pl-4 pr-4 focus:outline-none focus:ring-2 focus:ring-cubby-blue text-sm">
+                    </div>
+
+                    <button onclick="claimAccount()"
+                        class="w-full bg-cubby-blue hover:bg-cyan-400 text-cubby-dark font-extrabold py-3 rounded-xl shadow-md transition-all active:scale-95"
+                        id="claim-btn">
+                        <i class="fa-solid fa-lock-open mr-2"></i> Activate My Account
+                    </button>
+                </div>
+
+                <!-- Step 4: Success — show Staff ID -->
+                <div id="step-success" class="hidden text-center py-4 space-y-5">
+                    <div class="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center mx-auto">
+                        <i class="fa-solid fa-circle-check text-green-500 text-3xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-extrabold text-gray-800">Account Activated!</h2>
+                        <p class="text-sm text-gray-500 mt-1">Welcome to the CubbyCove team.</p>
+                    </div>
+
+                    <!-- Staff ID display -->
+                    <div class="bg-cubby-dark rounded-2xl p-6 text-center">
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Your Staff ID</p>
+                        <div class="flex items-center justify-center gap-3">
+                            <p id="display-staff-id" class="text-3xl font-extrabold text-cubby-blue tracking-wider"></p>
+                            <button onclick="copyStaffId()"
+                                class="text-gray-500 hover:text-cubby-blue transition-colors" title="Copy ID">
+                                <i class="fa-solid fa-copy" id="copy-icon"></i>
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-3">
+                            <i class="fa-solid fa-triangle-exclamation text-yellow-400 mr-1"></i>
+                            Save this ID — you'll use it to log in instead of your email.
+                        </p>
+                    </div>
+
+                    <a href="staff_access.html"
+                        class="block w-full bg-cubby-blue hover:bg-cyan-400 text-cubby-dark font-extrabold py-3 rounded-xl text-center transition-all">
+                        <i class="fa-solid fa-right-to-bracket mr-2"></i> Go to Staff Login
+                    </a>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
+    <script src="js/appwrite_config.js"></script>
+    <script src="js/data_service.js"></script>
+    <script>
+        let _staffDoc = null;
+        let _userId = null;
+        let _secret = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            _userId = params.get('userId');
+            _secret = params.get('secret');
+
+            if (!_userId || !_secret) {
+                show('step-error');
+                return;
+            }
+
+            // Look up the invitation details from the DB doc by userId
+            try {
+                const svc = window.AppwriteService;
+                const { databases, DB_ID, COLLECTIONS } = svc;
+
+                // Fetch the staff doc using the Appwrite userId
+                // (the doc $id was set to a unique id, but email is stored — we query by doc $id if possible)
+                let doc = null;
+                try {
+                    doc = await databases.getDocument(DB_ID, COLLECTIONS.USERS, _userId);
+                } catch {
+                    // Fallback: staff doc $id may not match userId, search is not possible without staffId index
+                    // In this case show a generic welcome
+                }
+
+                if (doc && doc.status === 'pending_claim') {
+                    _staffDoc = doc;
+                    document.getElementById('staff-name').textContent = `${doc.firstName} ${doc.lastName}`;
+                    document.getElementById('staff-role').textContent = doc.role.replace('_', ' ');
+                    document.getElementById('staff-email').textContent = doc.email;
+                } else if (doc && doc.status !== 'pending_claim') {
+                    show('step-error');
+                    document.getElementById('error-detail').textContent = 'This account has already been claimed. Please log in instead.';
+                    return;
+                }
+
+                show('step-set-password');
+            } catch (e) {
+                // Still show the form — email verification will fail cleanly if invalid
+                show('step-set-password');
+                console.warn('Could not prefetch staff doc:', e.message);
+            }
+        });
+
+        async function claimAccount() {
+            const newPw = document.getElementById('newPassword').value;
+            const confirmPw = document.getElementById('confirmPassword').value;
+
+            if (!newPw || newPw.length < 8) {
+                alert('Password must be at least 8 characters.');
+                return;
+            }
+            if (newPw !== confirmPw) {
+                alert('Passwords do not match.');
+                return;
+            }
+
+            const btn = document.getElementById('claim-btn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Activating...';
+            btn.disabled = true;
+
+            try {
+                const svc = window.AppwriteService;
+                const { account, databases, DB_ID, COLLECTIONS } = svc;
+                const { ID } = Appwrite;
+
+                // Step 1: Verify the email token (from the Appwrite invitation link)
+                await account.updateVerification(_userId, _secret);
+
+                // Step 2: Create the Appwrite Auth account for this staff member
+                // (they didn't have one before — the power user only created a DB doc)
+                const staffEmail = _staffDoc?.email;
+                if (staffEmail) {
+                    try {
+                        await account.create(_staffDoc?.$id || ID.unique(), staffEmail, newPw,
+                            `${_staffDoc?.firstName || ''} ${_staffDoc?.lastName || ''}`.trim());
+                    } catch (createErr) {
+                        // If account already exists (e.g., retry), just update the password
+                        if (createErr.code !== 409) throw createErr;
+                    }
+                }
+
+                // Step 3: Update the DB doc status to 'active'
+                if (_staffDoc) {
+                    await databases.updateDocument(DB_ID, COLLECTIONS.USERS, _staffDoc.$id, {
+                        status: 'active'
+                    });
+                }
+
+                // Step 4: Show success with Staff ID
+                const staffId = _staffDoc?.staffId || '(Not found — ask your admin)';
+                document.getElementById('display-staff-id').textContent = staffId;
+                show('step-success');
+
+            } catch (e) {
+                console.error('Claim error:', e);
+                alert('Error activating account: ' + (e.message || 'Unknown error. Please try again.'));
+                btn.innerHTML = '<i class="fa-solid fa-lock-open mr-2"></i> Activate My Account';
+                btn.disabled = false;
+            }
+        }
+
+        function copyStaffId() {
+            const id = document.getElementById('display-staff-id').textContent;
+            navigator.clipboard.writeText(id).then(() => {
+                const icon = document.getElementById('copy-icon');
+                icon.className = 'fa-solid fa-check';
+                setTimeout(() => { icon.className = 'fa-solid fa-copy'; }, 2000);
+            });
+        }
+
+        function show(id) {
+            ['step-loading', 'step-error', 'step-set-password', 'step-success'].forEach(s => {
+                document.getElementById(s).classList.add('hidden');
+            });
+            document.getElementById(id).classList.remove('hidden');
+        }
+    </script>
+</body>
+
+</html>

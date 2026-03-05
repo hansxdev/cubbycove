@@ -171,10 +171,10 @@ async function handleKidLogin() {
     setTimeout(poll, 3000); // start first poll after 3s
 }
 
-// 4. Staff Login Handler (Async)
-window.handleStaffLogin = async function (email, password) {
-    if (!email || !password) {
-        alert("Please enter credentials.");
+// 4. Staff Login Handler — accepts Staff ID (#STF-...) or email
+window.handleStaffLogin = async function (identifier, password) {
+    if (!identifier || !password) {
+        alert("Please enter your Staff ID (or email) and password.");
         return;
     }
 
@@ -187,7 +187,15 @@ window.handleStaffLogin = async function (email, password) {
     }
 
     try {
-        const user = await DataService.login(email, password);
+        let loginEmail = identifier.trim();
+
+        // If identifier looks like a Staff ID, resolve it to an email first
+        if (loginEmail.toUpperCase().startsWith('#STF-')) {
+            const staffDoc = await DataService.getStaffByStaffId(loginEmail);
+            loginEmail = staffDoc.email;
+        }
+
+        const user = await DataService.login(loginEmail, password);
 
         // Route based on role
         if (['super_admin', 'admin'].includes(user.role)) {

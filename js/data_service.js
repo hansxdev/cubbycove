@@ -1242,30 +1242,50 @@ const DataService = {
     },
 
     createStaffAccount: async function (creatorEmail, newStaffData) {
-        // Valid approach for Starter: Create the DB Document. The Staff member must "Sign Up" themselves on the login page?
-        // Or we use an Invite?
-        // Let's Stub this to just create the DB Document for now so it shows in the list.
-
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         const { ID } = Appwrite;
 
-        // Mock ID since we aren't creating real Auth User yet
+        // Generate a human-readable Staff ID: #STF-XXXXXX
+        const randomHex = () => Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0');
+        const staffId = '#STF-' + randomHex();
+
+        // Use a predictable doc ID so staff can later create their Auth account
+        // with the same ID (best-effort, falls back gracefully).
         const tempId = ID.unique();
 
         const staffDoc = {
             role: newStaffData.role,
-            status: 'active',
+            status: 'pending_claim', // unclaimed until staff sets their password
             firstName: newStaffData.firstName,
             lastName: newStaffData.lastName,
             middleName: '',
             email: newStaffData.email,
             faceId: 'manual_override',
+            staffId,
             createdAt: new Date().toISOString()
-            // No password stored here
         };
 
-        await databases.createDocument(DB_ID, COLLECTIONS.USERS, tempId, staffDoc);
-        return staffDoc;
+        const doc = await databases.createDocument(DB_ID, COLLECTIONS.USERS, tempId, staffDoc);
+        return doc; // includes $id and staffId
+    },
+
+    /**
+     * Look up a staff member's user document by their staffId (#STF-XXXXXX).
+     * Used by the Staff ID login flow to resolve the email before Appwrite login.
+     */
+    getStaffByStaffId: async function (staffId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                Query.equal('staffId', staffId.toUpperCase()),
+                Query.limit(1)
+            ]);
+            if (result.documents.length === 0) throw new Error('No staff account found with that Staff ID.');
+            return result.documents[0];
+        } catch (e) {
+            throw new Error(e.message || 'Staff ID lookup failed.');
+        }
     },
 
     /**

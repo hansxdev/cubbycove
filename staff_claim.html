@@ -150,7 +150,7 @@
     <script src="js/appwrite_config.js"></script>
     <script src="js/data_service.js"></script>
     <script>
-        let _staffDoc = null;
+        let _pendingDoc = null; // the pending_staff document
 
         async function lookupStaffEmail() {
             const email = document.getElementById('claim-email').value.trim().toLowerCase();
@@ -165,29 +165,22 @@
                 const { databases, DB_ID, COLLECTIONS } = svc;
                 const { Query } = Appwrite;
 
-                // Find the pending DB doc by email
-                const result = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+                // Query the PUBLIC pending_staff collection (no auth needed)
+                const result = await databases.listDocuments(DB_ID, COLLECTIONS.PENDING_STAFF, [
                     Query.equal('email', email),
                     Query.limit(1)
                 ]);
 
                 if (result.documents.length === 0) {
-                    showError('No staff account found with that email address. Please check with your administrator.');
+                    showError('No pending staff account found with that email. Please check with your administrator.');
                     return;
                 }
 
-                const doc = result.documents[0];
+                _pendingDoc = result.documents[0];
 
-                if (doc.status !== 'pending_claim') {
-                    showError('This account has already been claimed. Please log in at the Staff Portal instead.');
-                    return;
-                }
-
-                // Valid — show the set-password step
-                _staffDoc = doc;
-                document.getElementById('staff-name').textContent = `${doc.firstName} ${doc.lastName}`;
-                document.getElementById('staff-role').textContent = doc.role.replace('_', ' ');
-                document.getElementById('staff-email-display').textContent = doc.email;
+                document.getElementById('staff-name').textContent = `${_pendingDoc.firstName} ${_pendingDoc.lastName}`;
+                document.getElementById('staff-role').textContent = _pendingDoc.role.replace('_', ' ');
+                document.getElementById('staff-email-display').textContent = _pendingDoc.email;
                 show('step-set-password');
 
             } catch (e) {
@@ -214,28 +207,42 @@
                 const { account, databases, DB_ID, COLLECTIONS } = svc;
                 const { ID } = Appwrite;
 
-                // Create the Appwrite Auth account using the staff's email
-                const fullName = `${_staffDoc.firstName} ${_staffDoc.lastName}`.trim();
+                // 1. Create the Appwrite Auth account
+                const fullName = `${_pendingDoc.firstName} ${_pendingDoc.lastName}`.trim();
                 try {
-                    await account.create(ID.unique(), _staffDoc.email, newPw, fullName);
+                    await account.create(ID.unique(), _pendingDoc.email, newPw, fullName);
                 } catch (createErr) {
-                    // Code 409 = account already exists — that's fine, just continue
-                    if (createErr.code !== 409) throw createErr;
+                    if (createErr.code !== 409) throw createErr; // 409 = already exists, that's fine
                 }
 
-                // Update the DB doc status to 'active'
-                await databases.updateDocument(DB_ID, COLLECTIONS.USERS, _staffDoc.$id, {
-                    status: 'active'
-                });
+                // 2. Log in to get a session (needed to update the users doc)
+                await account.createEmailPasswordSession(_pendingDoc.email, newPw);
 
-                // Show success with Staff ID
-                document.getElementById('display-staff-id').textContent = _staffDoc.staffId || '(Ask your admin)';
+                // 3. Activate the users doc (now authenticated)
+                if (_pendingDoc.usersDocId) {
+                    try {
+                        await databases.updateDocument(DB_ID, COLLECTIONS.USERS, _pendingDoc.usersDocId, {
+                            status: 'active'
+                        });
+                    } catch (e) {
+                        console.warn('Could not update users doc status:', e.message);
+                    }
+                }
+
+                // 4. Delete the pending_staff record (claimed — no longer needed)
+                try {
+                    await databases.deleteDocument(DB_ID, COLLECTIONS.PENDING_STAFF, _pendingDoc.$id);
+                } catch (e) {
+                    console.warn('Could not delete pending_staff record:', e.message);
+                }
+
+                // 5. Show success with Staff ID
+                document.getElementById('display-staff-id').textContent = _pendingDoc.staffId || '(Ask your admin)';
                 show('step-success');
 
             } catch (e) {
                 console.error('Claim error:', e);
                 showError('Could not activate account: ' + (e.message || 'Unknown error. Please try again.'));
-                const btn = document.getElementById('claim-btn');
                 btn.innerHTML = '<i class="fa-solid fa-lock-open mr-2"></i> Activate My Account';
                 btn.disabled = false;
             }
@@ -261,6 +268,7 @@
             });
             document.getElementById(id).classList.remove('hidden');
         }
+
     </script>
 </body>
 

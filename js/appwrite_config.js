@@ -24,7 +24,8 @@ try {
         CHILDREN: 'children',
         VIDEOS: 'videos',
         THREAT_LOGS: 'threat_logs',
-        ACCESS_LOGS: 'access_logs'
+        ACCESS_LOGS: 'access_logs',
+        PENDING_STAFF: 'pending_staff'   // lightweight public-read collection for staff claiming
     };
 
     // Storage Bucket IDs

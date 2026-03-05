@@ -1249,13 +1249,12 @@ const DataService = {
         const randomHex = () => Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0');
         const staffId = '#STF-' + randomHex();
 
-        // Use a predictable doc ID so staff can later create their Auth account
-        // with the same ID (best-effort, falls back gracefully).
         const tempId = ID.unique();
 
+        // 1. Create the full user document (authenticated-only read/write)
         const staffDoc = {
             role: newStaffData.role,
-            status: 'pending_claim', // unclaimed until staff sets their password
+            status: 'pending_claim',
             firstName: newStaffData.firstName,
             lastName: newStaffData.lastName,
             middleName: '',
@@ -1264,8 +1263,23 @@ const DataService = {
             staffId,
             createdAt: new Date().toISOString()
         };
-
         const doc = await databases.createDocument(DB_ID, COLLECTIONS.USERS, tempId, staffDoc);
+
+        // 2. Write a minimal mirror to pending_staff (public read, for claim page)
+        //    Only contains what the claim page needs — no sensitive data.
+        try {
+            await databases.createDocument(DB_ID, COLLECTIONS.PENDING_STAFF, ID.unique(), {
+                email: newStaffData.email,
+                firstName: newStaffData.firstName,
+                lastName: newStaffData.lastName,
+                role: newStaffData.role,
+                staffId,
+                usersDocId: doc.$id  // reference so claim page can update the users doc
+            });
+        } catch (e) {
+            console.warn('Could not write to pending_staff (collection may not exist yet):', e.message);
+        }
+
         return doc; // includes $id and staffId
     },
 

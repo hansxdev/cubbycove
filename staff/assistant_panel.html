@@ -36,14 +36,23 @@
 
     <div class="flex h-screen overflow-hidden">
 
+        <!-- MOBILE OVERLAY -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"
+            onclick="toggleAssistantSidebar()"></div>
+
         <!-- SIDEBAR -->
         <aside
-            class="w-64 bg-cubby-dark text-white border-r border-gray-700 flex flex-col flex-shrink-0 transition-all duration-300"
+            class="fixed inset-y-0 left-0 w-64 bg-cubby-dark text-white border-r border-gray-700 flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:relative lg:transform-none z-50"
             id="sidebar">
-            <div class="h-16 flex items-center justify-center border-b border-gray-700">
-                <i class="fa-solid fa-user-shield text-cubby-blue text-2xl mr-2"></i>
-                <span class="text-xl font-bold tracking-wider">Cubby<span
-                        class="text-cubby-blue">Assistant</span></span>
+            <div class="h-16 flex items-center justify-between px-4 border-b border-gray-700">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-user-shield text-cubby-blue text-2xl"></i>
+                    <span class="text-xl font-bold tracking-wider">Cubby<span
+                            class="text-cubby-blue">Assistant</span></span>
+                </div>
+                <button class="lg:hidden text-gray-400 hover:text-white p-1" onclick="toggleAssistantSidebar()">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
             </div>
 
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
@@ -94,8 +103,9 @@
 
             <!-- TOP BAR -->
             <header
-                class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10 border-b border-gray-100">
-                <button class="text-gray-500 hover:text-gray-700 focus:outline-none lg:hidden">
+                class="h-16 bg-white shadow-sm flex items-center justify-between px-4 sm:px-6 z-10 border-b border-gray-100">
+                <button class="text-gray-500 hover:text-gray-700 focus:outline-none lg:hidden"
+                    onclick="toggleAssistantSidebar()">
                     <i class="fa-solid fa-bars text-xl"></i>
                 </button>
                 <h2 class="text-lg font-bold text-gray-700" id="page-title">Pending Tasks</h2>
@@ -401,6 +411,15 @@
             radio.value = '';
             radio.dataset.label = '';
             document.querySelectorAll('.hour-btn').forEach(b => b.classList.remove('selected'));
+        }
+    </script>
+
+    <script>
+        function toggleAssistantSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
         }
     </script>
 

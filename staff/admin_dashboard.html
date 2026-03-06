@@ -85,12 +85,23 @@
 
     <div class="flex h-screen overflow-hidden">
 
+        <!-- MOBILE OVERLAY -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"
+            onclick="toggleAdminSidebar()"></div>
+
         <!-- SIDEBAR -->
-        <aside class="w-64 bg-cubby-dark text-white flex flex-col flex-shrink-0 transition-all duration-300"
+        <aside
+            class="fixed inset-y-0 left-0 w-64 bg-cubby-dark text-white flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:relative lg:transform-none z-50"
             id="sidebar">
-            <div class="h-16 flex items-center justify-center border-b border-gray-700">
-                <i class="fa-solid fa-shield-cat text-cubby-blue text-2xl mr-2"></i>
-                <span class="text-xl font-bold tracking-wider">Cubby<span class="text-cubby-blue">Admin</span></span>
+            <div class="h-16 flex items-center justify-between px-4 border-b border-gray-700">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-shield-cat text-cubby-blue text-2xl"></i>
+                    <span class="text-xl font-bold tracking-wider">Cubby<span
+                            class="text-cubby-blue">Admin</span></span>
+                </div>
+                <button class="lg:hidden text-gray-400 hover:text-white p-1" onclick="toggleAdminSidebar()">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
             </div>
 
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
@@ -179,8 +190,9 @@
         <div class="flex-1 flex flex-col overflow-hidden">
 
             <!-- TOP BAR -->
-            <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10">
-                <button class="text-gray-500 hover:text-gray-700 focus:outline-none lg:hidden">
+            <header class="h-16 bg-white shadow-sm flex items-center justify-between px-4 sm:px-6 z-10">
+                <button class="text-gray-500 hover:text-gray-700 focus:outline-none lg:hidden"
+                    onclick="toggleAdminSidebar()">
                     <i class="fa-solid fa-bars text-xl"></i>
                 </button>
                 <h2 class="text-lg font-bold text-gray-700" id="page-title">Dashboard</h2>
@@ -205,7 +217,7 @@
                 <div id="tab-dashboard" class="space-y-6">
 
                     <!-- Stat Cards -->
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                         <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-cubby-blue">
                             <div class="flex items-center justify-between">
                                 <div>
@@ -754,6 +766,15 @@
             chev.style.transform = ''; wrap.classList.remove('active');
             radio.value = ''; radio.dataset.label = '';
             document.querySelectorAll('.hour-btn').forEach(b => b.classList.remove('selected'));
+        }
+    </script>
+
+    <script>
+        function toggleAdminSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
         }
     </script>
 

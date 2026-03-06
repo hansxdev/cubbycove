@@ -1108,12 +1108,15 @@ const DataService = {
 
         const newVideo = {
             title: videoData.title,
-            url: videoData.url, // ID or URL
+            url: videoData.url,
             category: videoData.category,
-            creatorEmail: videoData.creatorEmail, // Need this from context
-            status: 'pending',
-            views: 0,
-            uploadedAt: new Date().toISOString()
+            creatorEmail: videoData.creatorEmail,
+            status: videoData.status || 'pending',
+            views: videoData.views || 0,
+            likes: videoData.likes || 0,
+            dislikes: videoData.dislikes || 0,
+            subscriberGains: videoData.subscriberGains || 0,
+            uploadedAt: videoData.uploadedAt || new Date().toISOString()
         };
 
         const doc = await databases.createDocument(DB_ID, COLLECTIONS.VIDEOS, ID.unique(), newVideo);
@@ -1155,6 +1158,30 @@ const DataService = {
             status: newStatus
         });
         return true;
+    },
+
+    /**
+     * Get a single video by its document ID.
+     */
+    getVideoById: async function (videoId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        return await databases.getDocument(DB_ID, COLLECTIONS.VIDEOS, videoId);
+    },
+
+    /**
+     * Increment view count for a video.
+     * Will NOT increment if the viewerEmail matches the creatorEmail (creator watching own video).
+     */
+    incrementVideoView: async function (videoId, viewerEmail) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const video = await databases.getDocument(DB_ID, COLLECTIONS.VIDEOS, videoId);
+        // Do NOT count creator's own views
+        if (video.creatorEmail && viewerEmail && video.creatorEmail === viewerEmail) {
+            console.log('⚠️ Creator view — not incrementing count');
+            return video;
+        }
+        const newViews = (video.views || 0) + 1;
+        return await databases.updateDocument(DB_ID, COLLECTIONS.VIDEOS, videoId, { views: newViews });
     },
 
     // --- STAFF & USER MANAGEMENT ---

@@ -315,17 +315,21 @@ async function loadPendingVideos() {
         updateBadge('content', pendingVideos.length);
 
         pendingVideos.forEach(video => {
-            // Extract ID if URL is full (Helper)
-            let videoThumbnailId = video.url;
-            if (video.url.includes('v=')) videoThumbnailId = video.url.split('v=')[1].split('&')[0];
-            else if (video.url.includes('youtu.be/')) videoThumbnailId = video.url.split('youtu.be/')[1];
+            // Detect if URL is YouTube or a direct video (Cloudinary, etc.)
+            const ytMatch = video.url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+            let playerHtml = '';
+            if (ytMatch) {
+                playerHtml = `<iframe class="w-full h-full" src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen></iframe>`;
+            } else {
+                playerHtml = `<video src="${(video.url || '').replace(/"/g, '&quot;')}" class="w-full h-full object-cover" controls preload="metadata"></video>`;
+            }
 
             const html = `
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dashboard-card mb-4" id="video-${video.$id}">
                     <div class="flex flex-col md:flex-row">
                         <!-- Thumbnail/Embed -->
                         <div class="w-full md:w-1/3 bg-black relative group h-48 md:h-auto">
-                            <iframe class="w-full h-full" src="https://www.youtube.com/embed/${videoThumbnailId}" frameborder="0" allowfullscreen></iframe>
+                            ${playerHtml}
                         </div>
                         
                         <!-- Details -->
@@ -671,3 +675,94 @@ function initRealtimeSubscriptions() {
 
     console.log('✅ [Realtime] Assistant panel subscriptions active.');
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// PROFILE SETTINGS MODAL
+// ─────────────────────────────────────────────────────────────────────────
+
+let _originalUsername = '';
+
+window.openSettingsModal = function () {
+    const modal = document.getElementById('settings-modal');
+    if (!modal || !currentUser) return;
+
+    const svc = window.AppwriteService;
+    svc.account.get().then(acct => {
+        const prefs = acct.prefs || {};
+        document.getElementById('settings-avatar').src = document.getElementById('header-avatar').src;
+        document.getElementById('settings-email').textContent = acct.email || currentUser.email;
+        document.getElementById('settings-bio').value = prefs.bio || '';
+        document.getElementById('settings-username').value = acct.name || '';
+        _originalUsername = acct.name || '';
+        document.getElementById('settings-darkmode').checked = prefs.darkMode === 'true';
+        document.getElementById('settings-current-pass').value = '';
+        document.getElementById('settings-new-pass').value = '';
+
+        const bioEl = document.getElementById('settings-bio');
+        document.getElementById('bio-char-count').textContent = bioEl.value.length;
+        bioEl.oninput = () => { document.getElementById('bio-char-count').textContent = bioEl.value.length; };
+
+        const lastChange = prefs.lastUsernameChange ? new Date(prefs.lastUsernameChange) : null;
+        const cooldownEl = document.getElementById('username-cooldown');
+        if (lastChange) {
+            const daysSince = Math.floor((Date.now() - lastChange.getTime()) / 86400000);
+            const daysLeft = 30 - daysSince;
+            cooldownEl.textContent = daysLeft > 0
+                ? `⏳ You can change your username again in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}.`
+                : '✅ You can change your username.';
+        } else {
+            cooldownEl.textContent = '✅ You can change your username.';
+        }
+        modal.classList.remove('hidden');
+    }).catch(e => { console.error('Settings load error:', e); });
+};
+
+window.closeSettingsModal = function () {
+    document.getElementById('settings-modal')?.classList.add('hidden');
+};
+
+window.saveSettings = async function () {
+    const svc = window.AppwriteService;
+    try {
+        const acct = await svc.account.get();
+        const prefs = acct.prefs || {};
+        const newBio = document.getElementById('settings-bio').value.trim();
+        const newUsername = document.getElementById('settings-username').value.trim();
+        const darkMode = document.getElementById('settings-darkmode').checked;
+        const currentPass = document.getElementById('settings-current-pass').value;
+        const newPass = document.getElementById('settings-new-pass').value;
+
+        const updatedPrefs = { ...prefs, bio: newBio, darkMode: String(darkMode) };
+        if (newUsername && newUsername !== _originalUsername) {
+            const lastChange = prefs.lastUsernameChange ? new Date(prefs.lastUsernameChange) : null;
+            if (lastChange) {
+                const daysSince = Math.floor((Date.now() - lastChange.getTime()) / 86400000);
+                if (daysSince < 30) {
+                    alert(`You can only change your username once every 30 days. ${30 - daysSince} days remaining.`);
+                    return;
+                }
+            }
+            await svc.account.updateName(newUsername);
+            updatedPrefs.lastUsernameChange = new Date().toISOString();
+        }
+
+        await svc.account.updatePrefs(updatedPrefs);
+
+        if (currentPass && newPass) {
+            if (newPass.length < 8) { alert('New password must be at least 8 characters.'); return; }
+            await svc.account.updatePassword(newPass, currentPass);
+            alert('Password updated successfully!');
+        }
+
+        if (darkMode) document.body.classList.add('dark-mode');
+        else document.body.classList.remove('dark-mode');
+
+        const nameEl = document.getElementById('header-name');
+        if (nameEl && newUsername) nameEl.textContent = newUsername;
+
+        closeSettingsModal();
+        alert('Settings saved!');
+    } catch (e) {
+        alert('Error saving settings: ' + e.message);
+    }
+};

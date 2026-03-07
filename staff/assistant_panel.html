@@ -110,7 +110,8 @@
                 </button>
                 <h2 class="text-lg font-bold text-gray-700" id="page-title">Pending Tasks</h2>
                 <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                        onclick="openSettingsModal()">
                         <img id="header-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Assistant"
                             class="w-8 h-8 rounded-full bg-gray-200">
                         <div class="flex flex-col text-right">
@@ -422,6 +423,70 @@
             overlay.classList.toggle('hidden');
         }
     </script>
+
+    <!-- PROFILE SETTINGS MODAL -->
+    <div id="settings-modal"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeSettingsModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"><i
+                    class="fa-solid fa-times"></i></button>
+            <div class="text-center mb-6">
+                <img id="settings-avatar" src=""
+                    class="w-20 h-20 rounded-full border-4 border-gray-100 shadow-md mx-auto">
+                <h3 class="text-xl font-extrabold text-gray-800 mt-3">Profile Settings</h3>
+                <p id="settings-email" class="text-sm text-gray-400 mt-1"></p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Bio</label>
+                    <textarea id="settings-bio" rows="3" maxlength="200"
+                        class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cubby-blue resize-none"
+                        placeholder="Write a short bio..."></textarea>
+                    <p class="text-xs text-gray-400 text-right mt-0.5"><span id="bio-char-count">0</span>/200</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Username</label>
+                    <input id="settings-username" type="text"
+                        class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+                    <p id="username-cooldown" class="text-xs text-gray-400 mt-0.5"></p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2"><i
+                            class="fa-solid fa-lock mr-1"></i>Change Password</label>
+                    <input id="settings-current-pass" type="password" placeholder="Current password"
+                        class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+                    <input id="settings-new-pass" type="password" placeholder="New password"
+                        class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+                </div>
+                <div class="flex items-center justify-between bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center text-yellow-400">
+                            <i class="fa-solid fa-moon"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-gray-700">Dark Mode</p>
+                            <p class="text-xs text-gray-400">Easier on the eyes</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="settings-darkmode" class="sr-only peer">
+                        <div
+                            class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-cubby-blue after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all">
+                        </div>
+                    </label>
+                </div>
+                <button onclick="saveSettings()"
+                    class="w-full py-3 bg-cubby-blue hover:bg-blue-400 text-white font-bold rounded-xl transition-colors shadow-md text-sm">
+                    <i class="fa-solid fa-check mr-1"></i> Save Changes
+                </button>
+                <button onclick="handleLogout()"
+                    class="w-full py-2.5 border-2 border-red-200 text-red-500 font-bold rounded-xl hover:bg-red-50 transition-colors text-sm">
+                    <i class="fa-solid fa-right-from-bracket mr-1"></i> Log Out
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
     <script src="../js/appwrite_config.js"></script>

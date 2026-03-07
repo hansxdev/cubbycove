@@ -69,7 +69,7 @@
             </button>
 
             <!-- User Profile (Logged In State) -->
-            <div class="flex items-center gap-3 cursor-pointer group">
+            <div class="flex items-center gap-3 cursor-pointer group" onclick="openKidSettingsModal()">
                 <span class="hidden md:block font-bold text-gray-700 group-hover:text-cubby-blue">Loading...</span>
                 <div class="relative">
                     <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Guest" alt="Avatar"
@@ -560,6 +560,167 @@
             </div>
         </div>
     </main>
+
+    <!-- KID SETTINGS MODAL -->
+    <div id="kid-settings-modal"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-7 relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeKidSettingsModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"><i
+                    class="fa-solid fa-times"></i></button>
+            <div class="text-center mb-5">
+                <div id="kid-avatar-preview"
+                    class="w-20 h-20 rounded-full mx-auto flex items-center justify-center text-4xl shadow-lg border-4 border-white"
+                    style="background:#60a5fa">
+                    🐻
+                </div>
+                <h3 class="text-lg font-extrabold text-gray-800 mt-3">My Profile ✨</h3>
+            </div>
+            <div class="space-y-4">
+                <!-- Display Name -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Display Name</label>
+                    <input id="kid-display-name" type="text" maxlength="30"
+                        class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-cubby-blue transition-colors"
+                        placeholder="What should buddies call you?">
+                </div>
+                <!-- Avatar Color -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Avatar Color</label>
+                    <div id="avatar-color-grid" class="flex flex-wrap gap-2">
+                        <button onclick="pickAvatarColor('#ef4444')"
+                            class="w-8 h-8 rounded-full bg-red-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#f97316')"
+                            class="w-8 h-8 rounded-full bg-orange-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#eab308')"
+                            class="w-8 h-8 rounded-full bg-yellow-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#22c55e')"
+                            class="w-8 h-8 rounded-full bg-green-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#3b82f6')"
+                            class="w-8 h-8 rounded-full bg-blue-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#8b5cf6')"
+                            class="w-8 h-8 rounded-full bg-violet-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#ec4899')"
+                            class="w-8 h-8 rounded-full bg-pink-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#14b8a6')"
+                            class="w-8 h-8 rounded-full bg-teal-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                    </div>
+                </div>
+                <!-- Avatar Icon -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Avatar Icon</label>
+                    <div id="avatar-icon-grid" class="flex flex-wrap gap-2">
+                        <button onclick="pickAvatarIcon('🐻')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-xl transition-colors">🐻</button>
+                        <button onclick="pickAvatarIcon('🦊')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-xl transition-colors">🦊</button>
+                        <button onclick="pickAvatarIcon('🐱')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-xl transition-colors">🐱</button>
+                        <button onclick="pickAvatarIcon('🐶')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-xl transition-colors">🐶</button>
+                        <button onclick="pickAvatarIcon('🦁')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-xl transition-colors">🦁</button>
+                        <button onclick="pickAvatarIcon('🐼')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-xl transition-colors">🐼</button>
+                        <button onclick="pickAvatarIcon('🦄')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-xl transition-colors">🦄</button>
+                        <button onclick="pickAvatarIcon('🐲')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-xl transition-colors">🐲</button>
+                        <button onclick="pickAvatarIcon('🌟')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-xl transition-colors">🌟</button>
+                        <button onclick="pickAvatarIcon('🚀')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-xl transition-colors">🚀</button>
+                    </div>
+                </div>
+                <!-- Cover Color -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Cover Color</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="pickCoverColor('#3b82f6')"
+                            class="w-12 h-6 rounded-lg bg-blue-500 hover:scale-105 transition-transform"></button>
+                        <button onclick="pickCoverColor('#8b5cf6')"
+                            class="w-12 h-6 rounded-lg bg-violet-500 hover:scale-105 transition-transform"></button>
+                        <button onclick="pickCoverColor('#ec4899')"
+                            class="w-12 h-6 rounded-lg bg-pink-500 hover:scale-105 transition-transform"></button>
+                        <button onclick="pickCoverColor('#ef4444')"
+                            class="w-12 h-6 rounded-lg bg-red-500 hover:scale-105 transition-transform"></button>
+                        <button onclick="pickCoverColor('#f97316')"
+                            class="w-12 h-6 rounded-lg bg-orange-500 hover:scale-105 transition-transform"></button>
+                        <button onclick="pickCoverColor('#22c55e')"
+                            class="w-12 h-6 rounded-lg bg-green-500 hover:scale-105 transition-transform"></button>
+                    </div>
+                    <div id="cover-color-preview" class="mt-2 h-4 rounded-full w-full" style="background:#3b82f6"></div>
+                </div>
+                <!-- Bio -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">About Me</label>
+                    <textarea id="kid-bio" rows="2" maxlength="100"
+                        class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cubby-blue resize-none"
+                        placeholder="Tell your buddies about yourself!"></textarea>
+                    <p class="text-xs text-gray-400 text-right"><span id="kid-bio-count">0</span>/100</p>
+                </div>
+                <!-- Theme Selector -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Theme</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="pickTheme('default')"
+                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-blue-300 transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600"></div>
+                            <span class="text-[10px] font-bold text-gray-500">Default</span>
+                        </button>
+                        <button onclick="pickTheme('cherry')"
+                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-red-300 transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-pink-600"></div>
+                            <span class="text-[10px] font-bold text-gray-500">Cherry</span>
+                        </button>
+                        <button onclick="pickTheme('blueberry')"
+                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-indigo-300 transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600"></div>
+                            <span class="text-[10px] font-bold text-gray-500">Blueberry</span>
+                        </button>
+                        <button onclick="pickTheme('sunflower')"
+                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-yellow-300 transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500"></div>
+                            <span class="text-[10px] font-bold text-gray-500">Sunflower</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Save -->
+                <button onclick="saveKidSettings()"
+                    class="w-full py-3 bg-cubby-blue hover:bg-blue-400 text-white font-extrabold rounded-xl transition-colors shadow-md text-sm">
+                    <i class="fa-solid fa-check mr-1"></i> Save My Profile!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BUDDY PROFILE VIEW MODAL -->
+    <div id="buddy-profile-modal"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden relative">
+            <button onclick="closeBuddyProfileModal()"
+                class="absolute top-4 right-4 z-10 text-white/80 hover:text-white text-xl"><i
+                    class="fa-solid fa-times"></i></button>
+            <!-- Cover -->
+            <div id="buddy-cover" class="h-28 relative" style="background:#3b82f6">
+                <div class="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
+                    <div id="buddy-avatar-view"
+                        class="w-16 h-16 rounded-full flex items-center justify-center text-3xl shadow-lg border-4 border-white"
+                        style="background:#60a5fa">
+                        🐻
+                    </div>
+                </div>
+            </div>
+            <div class="pt-12 pb-6 px-6 text-center">
+                <h3 id="buddy-display-name" class="text-lg font-extrabold text-gray-800"></h3>
+                <p id="buddy-username" class="text-sm text-gray-400 font-semibold"></p>
+                <div class="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <p class="text-xs font-bold text-gray-500 uppercase mb-1">About</p>
+                    <p id="buddy-bio" class="text-sm text-gray-600">No bio yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Appwrite & Data -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>

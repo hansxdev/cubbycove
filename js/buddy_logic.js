@@ -71,6 +71,11 @@ function renderBuddyList(buddies) {
     container.innerHTML = buddies.map(buddy => `
         <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-xl transition-colors group relative"
              title="Chat with ${buddy.username}">
+            <button onclick="event.stopPropagation(); viewBuddyProfile('${buddy.childId}', '${encodeURIComponent(buddy.username)}')"
+                class="shrink-0 text-gray-300 hover:text-cubby-blue text-xs p-1 rounded-lg hover:bg-blue-50 transition-colors"
+                title="View Profile">
+                <i class="fa-solid fa-user-circle"></i>
+            </button>
             <a href="chat.html?buddyId=${encodeURIComponent(buddy.childId)}&buddyName=${encodeURIComponent(buddy.username)}&buddyDocId=${encodeURIComponent(buddy.buddyDocId)}"
                class="flex items-center gap-2 flex-1 min-w-0">
                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddy.username)}"
@@ -270,4 +275,43 @@ window.unfriendBuddy = async function (buddyDocId, encodedUsername) {
     } catch (e) {
         alert('Could not unfriend: ' + e.message);
     }
+};
+
+// ── Buddy Profile View ────────────────────────────────────────────────────────
+
+window.viewBuddyProfile = async function (childId, encodedUsername) {
+    const modal = document.getElementById('buddy-profile-modal');
+    if (!modal) return;
+
+    const username = decodeURIComponent(encodedUsername);
+
+    // Set defaults while loading
+    document.getElementById('buddy-display-name').textContent = username;
+    document.getElementById('buddy-username').textContent = '@' + username;
+    document.getElementById('buddy-bio').textContent = 'No bio yet';
+    document.getElementById('buddy-cover').style.background = '#3b82f6';
+    const avatarView = document.getElementById('buddy-avatar-view');
+    avatarView.style.background = '#60a5fa';
+    avatarView.textContent = '🐻';
+
+    modal.classList.remove('hidden');
+
+    // Try to fetch buddy's profile and prefs
+    try {
+        const profile = await DataService.getChildProfileReadOnly(childId);
+        if (profile) {
+            const prefs = profile.prefs || {};
+            if (prefs.displayName) document.getElementById('buddy-display-name').textContent = prefs.displayName;
+            if (prefs.bio) document.getElementById('buddy-bio').textContent = prefs.bio;
+            if (prefs.coverColor) document.getElementById('buddy-cover').style.background = prefs.coverColor;
+            if (prefs.avatarBgColor) avatarView.style.background = prefs.avatarBgColor;
+            if (prefs.avatarIcon) avatarView.textContent = prefs.avatarIcon;
+        }
+    } catch (e) {
+        console.debug('Could not fetch buddy profile prefs:', e.message);
+    }
+};
+
+window.closeBuddyProfileModal = function () {
+    document.getElementById('buddy-profile-modal')?.classList.add('hidden');
 };

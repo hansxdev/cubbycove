@@ -69,9 +69,12 @@ async function initCreatorStudio() {
     try {
         const { account } = window.AppwriteService;
         currentUser = await account.get();
-        // Update header with real name
-        const nameEl = document.querySelector('header span.font-bold.text-gray-600, header .font-bold');
-        if (nameEl) nameEl.textContent = currentUser.name || currentUser.email;
+        // Update header with real name and avatar
+        const nameEl = document.getElementById('creator-header-name');
+        const avatarEl = document.getElementById('creator-header-avatar');
+        const displayName = currentUser.name || currentUser.email;
+        if (nameEl) nameEl.textContent = displayName;
+        if (avatarEl) avatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(displayName)}`;
         loadMyUploads();
     } catch (e) {
         console.error('Creator init error:', e);

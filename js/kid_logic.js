@@ -165,3 +165,131 @@ window.handleKidLogout = async function () {
     }
     window.location.href = '../index.html';
 };
+
+// ─────────────────────────────────────────────────────────────────────────
+// KID PROFILE SETTINGS MODAL
+// ─────────────────────────────────────────────────────────────────────────
+
+let _kidAvatarColor = '#60a5fa';
+let _kidAvatarIcon = '🐻';
+let _kidCoverColor = '#3b82f6';
+let _kidTheme = 'default';
+
+window.openKidSettingsModal = function () {
+    const modal = document.getElementById('kid-settings-modal');
+    if (!modal) return;
+
+    const session = _getChildSession();
+    if (session) {
+        // Load saved prefs from session/child doc
+        const prefs = session.prefs || {};
+        _kidAvatarColor = prefs.avatarBgColor || '#60a5fa';
+        _kidAvatarIcon = prefs.avatarIcon || '🐻';
+        _kidCoverColor = prefs.coverColor || '#3b82f6';
+        _kidTheme = prefs.theme || 'default';
+
+        document.getElementById('kid-display-name').value = prefs.displayName || session.name || '';
+        document.getElementById('kid-bio').value = prefs.bio || '';
+
+        // Update previews
+        const preview = document.getElementById('kid-avatar-preview');
+        if (preview) { preview.style.background = _kidAvatarColor; preview.textContent = _kidAvatarIcon; }
+        const coverPreview = document.getElementById('cover-color-preview');
+        if (coverPreview) coverPreview.style.background = _kidCoverColor;
+    }
+
+    // Bio counter
+    const bioEl = document.getElementById('kid-bio');
+    if (bioEl) {
+        document.getElementById('kid-bio-count').textContent = bioEl.value.length;
+        bioEl.oninput = () => { document.getElementById('kid-bio-count').textContent = bioEl.value.length; };
+    }
+
+    modal.classList.remove('hidden');
+};
+
+window.closeKidSettingsModal = function () {
+    document.getElementById('kid-settings-modal')?.classList.add('hidden');
+};
+
+window.pickAvatarColor = function (color) {
+    _kidAvatarColor = color;
+    const preview = document.getElementById('kid-avatar-preview');
+    if (preview) preview.style.background = color;
+};
+
+window.pickAvatarIcon = function (icon) {
+    _kidAvatarIcon = icon;
+    const preview = document.getElementById('kid-avatar-preview');
+    if (preview) preview.textContent = icon;
+};
+
+window.pickCoverColor = function (color) {
+    _kidCoverColor = color;
+    const coverPreview = document.getElementById('cover-color-preview');
+    if (coverPreview) coverPreview.style.background = color;
+};
+
+window.pickTheme = function (theme) {
+    _kidTheme = theme;
+    // Visual feedback — highlight selected
+    document.body.className = document.body.className.replace(/\btheme-\S+/g, '');
+    if (theme !== 'default') document.body.classList.add('theme-' + theme);
+};
+
+window.saveKidSettings = async function () {
+    const session = _getChildSession();
+    if (!session) { alert('Session not found. Please log in again.'); return; }
+
+    const displayName = document.getElementById('kid-display-name').value.trim();
+    const bio = document.getElementById('kid-bio').value.trim();
+
+    // Gemini API bio filter (stub — call DataService.filterBioGemini if available)
+    if (bio && typeof DataService.filterBioGemini === 'function') {
+        try {
+            const filtered = await DataService.filterBioGemini(bio);
+            if (filtered && filtered.blocked) {
+                alert('Your bio contains inappropriate content. Please try again with different words! 😊');
+                return;
+            }
+        } catch (e) {
+            console.warn('Gemini filter unavailable:', e.message);
+        }
+    }
+
+    const prefs = {
+        avatarBgColor: _kidAvatarColor,
+        avatarIcon: _kidAvatarIcon,
+        coverColor: _kidCoverColor,
+        theme: _kidTheme,
+        displayName: displayName,
+        bio: bio
+    };
+
+    // Save to child session + try updating child doc
+    session.prefs = { ...session.prefs, ...prefs };
+    sessionStorage.setItem('cubby_child_session', JSON.stringify(session));
+
+    try {
+        if (typeof DataService.updateChildPrefs === 'function') {
+            await DataService.updateChildPrefs(session.$id, prefs);
+        }
+    } catch (e) {
+        console.warn('Could not save prefs to server:', e.message);
+    }
+
+    // Apply theme immediately
+    document.body.className = document.body.className.replace(/\btheme-\S+/g, '');
+    if (_kidTheme !== 'default') document.body.classList.add('theme-' + _kidTheme);
+
+    closeKidSettingsModal();
+    alert('Profile saved! ✨');
+};
+
+// Apply saved theme on load
+document.addEventListener('DOMContentLoaded', () => {
+    const session = _getChildSession();
+    if (session && session.prefs && session.prefs.theme && session.prefs.theme !== 'default') {
+        document.body.classList.add('theme-' + session.prefs.theme);
+    }
+});

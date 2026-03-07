@@ -978,3 +978,95 @@ async function saveEditedChild() {
     btn.innerHTML = originalText;
     btn.disabled = false;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// PROFILE SETTINGS MODAL
+// ─────────────────────────────────────────────────────────────────────────
+
+let _origParentUsername = '';
+
+window.openSettingsModal = function () {
+    const modal = document.getElementById('settings-modal');
+    if (!modal) return;
+
+    const svc = window.AppwriteService;
+    svc.account.get().then(acct => {
+        const prefs = acct.prefs || {};
+        const avatarEl = document.getElementById('sidebar-parent-avatar');
+        document.getElementById('settings-avatar').src = avatarEl ? avatarEl.src : '';
+        document.getElementById('settings-email').textContent = acct.email || '';
+        document.getElementById('settings-bio').value = prefs.bio || '';
+        document.getElementById('settings-username').value = acct.name || '';
+        _origParentUsername = acct.name || '';
+        document.getElementById('settings-darkmode').checked = prefs.darkMode === 'true';
+        document.getElementById('settings-current-pass').value = '';
+        document.getElementById('settings-new-pass').value = '';
+
+        const bioEl = document.getElementById('settings-bio');
+        document.getElementById('bio-char-count').textContent = bioEl.value.length;
+        bioEl.oninput = () => { document.getElementById('bio-char-count').textContent = bioEl.value.length; };
+
+        const lastChange = prefs.lastUsernameChange ? new Date(prefs.lastUsernameChange) : null;
+        const cooldownEl = document.getElementById('username-cooldown');
+        if (lastChange) {
+            const daysSince = Math.floor((Date.now() - lastChange.getTime()) / 86400000);
+            const daysLeft = 30 - daysSince;
+            cooldownEl.textContent = daysLeft > 0
+                ? `⏳ You can change your username again in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}.`
+                : '✅ You can change your username.';
+        } else {
+            cooldownEl.textContent = '✅ You can change your username.';
+        }
+        modal.classList.remove('hidden');
+    }).catch(e => { console.error('Settings load error:', e); });
+};
+
+window.closeSettingsModal = function () {
+    document.getElementById('settings-modal')?.classList.add('hidden');
+};
+
+window.saveSettings = async function () {
+    const svc = window.AppwriteService;
+    try {
+        const acct = await svc.account.get();
+        const prefs = acct.prefs || {};
+        const newBio = document.getElementById('settings-bio').value.trim();
+        const newUsername = document.getElementById('settings-username').value.trim();
+        const darkMode = document.getElementById('settings-darkmode').checked;
+        const currentPass = document.getElementById('settings-current-pass').value;
+        const newPass = document.getElementById('settings-new-pass').value;
+
+        const updatedPrefs = { ...prefs, bio: newBio, darkMode: String(darkMode) };
+        if (newUsername && newUsername !== _origParentUsername) {
+            const lastChange = prefs.lastUsernameChange ? new Date(prefs.lastUsernameChange) : null;
+            if (lastChange) {
+                const daysSince = Math.floor((Date.now() - lastChange.getTime()) / 86400000);
+                if (daysSince < 30) {
+                    alert(`You can only change your username once every 30 days. ${30 - daysSince} days remaining.`);
+                    return;
+                }
+            }
+            await svc.account.updateName(newUsername);
+            updatedPrefs.lastUsernameChange = new Date().toISOString();
+        }
+
+        await svc.account.updatePrefs(updatedPrefs);
+
+        if (currentPass && newPass) {
+            if (newPass.length < 8) { alert('New password must be at least 8 characters.'); return; }
+            await svc.account.updatePassword(newPass, currentPass);
+            alert('Password updated successfully!');
+        }
+
+        if (darkMode) document.body.classList.add('dark-mode');
+        else document.body.classList.remove('dark-mode');
+
+        const nameEl = document.getElementById('sidebar-parent-name');
+        if (nameEl && newUsername) nameEl.textContent = newUsername;
+
+        closeSettingsModal();
+        alert('Settings saved!');
+    } catch (e) {
+        alert('Error saving settings: ' + e.message);
+    }
+};

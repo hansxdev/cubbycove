@@ -34,7 +34,7 @@ try {
     const BUCKET_PROFILE_PICS = 'profile_pics';
 
     // Function IDs
-    const FUNCTION_GEMINI_FILTER = 'gemini_filter_id'; // REPLACE with your Function ID
+    const FUNCTION_GEMINI_FILTER = '69aed56d0034b1b68f9e'; // REPLACE with your Function ID
 
     // Expose creating services globally
     window.AppwriteService = {

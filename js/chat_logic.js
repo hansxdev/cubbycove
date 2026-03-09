@@ -32,13 +32,22 @@ async function analyzeMessageWithAI(text) {
     const lowerText = text.toLowerCase();
     if (TAGALOG_BAD_WORDS.some(w => lowerText.includes(w))) return false;
 
+    const promptText = `You are a strict content moderator for a platform used by elementary school students. 
+Check the following message for profanity, cyberbullying, or inappropriate content.
+
+Message: "${text}"
+
+Return a JSON object with exactly two fields:
+1. "isSafe" (boolean): true if the message is completely safe, false if it contains profanity or bullying.
+2. "reason" (string): a very brief reason for your decision.`;
+
     // Call the secure Appwrite Function instead of exposing the API key
     try {
         const { functions, FUNCTION_GEMINI_FILTER } = window.AppwriteService;
 
         const execution = await functions.createExecution(
             FUNCTION_GEMINI_FILTER,
-            JSON.stringify({ action: 'filter_message', text: text }),
+            JSON.stringify({ prompt: promptText }),
             false,
             '/',
             'POST'
@@ -55,10 +64,14 @@ async function analyzeMessageWithAI(text) {
             return !BAD_WORDS.some(w => lowerText.includes(w));
         }
 
-        // Debug log for the reason
-        console.log("Gemini Moderation:", responseData.result);
+        // Gemini returns the markdown JSON string in responseData.result
+        const evaluationStr = responseData.result.replace(/```json|```/g, '').trim();
+        const evaluation = JSON.parse(evaluationStr);
 
-        return responseData.result.isSafe;
+        // Debug log for the reason
+        console.log("Gemini Moderation:", evaluation);
+
+        return evaluation.isSafe;
 
     } catch (e) {
         console.warn("Appwrite Function failed, falling back to local list:", e.message);

@@ -7,7 +7,7 @@
  */
 
 try {
-    const { Client, Account, Databases, Storage } = Appwrite;
+    const { Client, Account, Databases, Storage, Functions } = Appwrite;
 
     const client = new Client()
         .setEndpoint('https://sgp.cloud.appwrite.io/v1') // Updated from .env
@@ -16,6 +16,7 @@ try {
     const account = new Account(client);
     const databases = new Databases(client);
     const storage = new Storage(client);
+    const functions = new Functions(client);
 
     // Database & Collection IDs (Constants)
     const DB_ID = '699054e500210206c665'; // REPLACE with your Database ID
@@ -30,6 +31,10 @@ try {
 
     // Storage Bucket IDs
     const BUCKET_PARENT_DOCS = 'parent_docs'; // Create this bucket in your Appwrite project
+    const BUCKET_PROFILE_PICS = 'profile_pics';
+
+    // Function IDs
+    const FUNCTION_GEMINI_FILTER = 'gemini_filter_id'; // REPLACE with your Function ID
 
     // Expose creating services globally
     window.AppwriteService = {
@@ -37,9 +42,12 @@ try {
         account,
         databases,
         storage,
+        functions,
         DB_ID,
         COLLECTIONS,
-        BUCKET_PARENT_DOCS
+        BUCKET_PARENT_DOCS,
+        BUCKET_PROFILE_PICS,
+        FUNCTION_GEMINI_FILTER
     };
 
     console.log("✅ [Appwrite] Client Initialized");

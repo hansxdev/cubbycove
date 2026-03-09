@@ -344,21 +344,29 @@ async function loadDashboardData() {
         return; // Redirect to login immediately
     }
 
-    // update Header Profile
+    // 1. Update Parent Info
     const userNameEl = document.getElementById('userName');
-    const userAvatarEl = document.getElementById('sidebar-parent-avatar');
-    const sidebarParentNameEl = document.getElementById('sidebar-parent-name');
-
     if (userNameEl) {
         const fullName = [user.firstName, user.middleName, user.lastName].filter(Boolean).join(' ');
         userNameEl.textContent = fullName;
     }
 
-    if (userAvatarEl && sidebarParentNameEl) {
-        const fullName = [user.firstName, user.middleName, user.lastName].filter(Boolean).join(' ');
-        sidebarParentNameEl.textContent = `${user.firstName}'s`;
-        userAvatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`;
-    }
+    const parentNameEl = document.getElementById('sidebar-parent-name');
+    if (parentNameEl) parentNameEl.textContent = user.name || user.firstName;
+
+    const parentAvatarEl = document.getElementById('sidebar-parent-avatar');
+    const headerAvatarEl = document.getElementById('header-avatar');
+    let avatarSrc = `https://ui-avatars.com/api/?name=${user.firstName}&background=random`;
+
+    try {
+        const prefs = await AppwriteService.account.getPrefs();
+        if (prefs && prefs.profilePictureUrl) {
+            avatarSrc = prefs.profilePictureUrl;
+        }
+    } catch (e) { /* ignore prefs fetch error */ }
+
+    if (parentAvatarEl) parentAvatarEl.src = avatarSrc;
+    if (headerAvatarEl) headerAvatarEl.src = avatarSrc;
 
     // --- 1. Render Kids ---
     await renderKidsAndStats(user);
@@ -403,11 +411,18 @@ async function renderKidsAndStats(user) {
         const activeIndicator = isActive ? `<div class="w-1.5 h-1.5 rounded-full bg-green-400 absolute left-2 top-1/2 transform -translate-y-1/2 shadow-sm"></div>` : '';
         const borderClass = isActive ? 'border-purple-200' : 'border-transparent hover:border-purple-100';
 
+        let avatarHtml = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(child.username || child.name)}"
+                    class="w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm ml-2 object-cover group-hover:border-purple-200 transition-colors">`;
+
+        if (child.avatarImage) {
+            const bgStr = child.avatarBgColor ? `style="background-color: ${child.avatarBgColor}"` : 'bg-white';
+            avatarHtml = `<img src="${child.avatarImage}" ${bgStr} class="w-8 h-8 rounded-full border border-gray-200 shadow-sm ml-2 object-contain p-0.5 group-hover:border-purple-200 transition-colors">`;
+        }
+
         const html = `
             <div onclick="selectChild('${child.$id}')" class="relative flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-all group ${activeBg} border ${borderClass}">
                 ${activeIndicator}
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(child.username || child.name)}"
-                    class="w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm ml-2 object-cover group-hover:border-purple-200 transition-colors">
+                ${avatarHtml}
                 <div class="flex-1 min-w-0">
                     <h4 class="text-[13px] truncate transition-colors ${activeText}">${child.name}</h4>
                     <p class="text-[10px] text-gray-400 truncate">${child.isOnline ? 'Active Now' : 'Offline'}</p>
@@ -993,7 +1008,13 @@ window.openSettingsModal = function () {
     svc.account.get().then(acct => {
         const prefs = acct.prefs || {};
         const avatarEl = document.getElementById('sidebar-parent-avatar');
-        document.getElementById('settings-avatar').src = avatarEl ? avatarEl.src : '';
+
+        let displayAvatarUrl = avatarEl ? avatarEl.src : '';
+        if (prefs.profilePictureUrl) {
+            displayAvatarUrl = prefs.profilePictureUrl;
+        }
+
+        document.getElementById('settings-avatar').src = displayAvatarUrl;
         document.getElementById('settings-email').textContent = acct.email || '';
         document.getElementById('settings-bio').value = prefs.bio || '';
         document.getElementById('settings-username').value = acct.name || '';
@@ -1035,8 +1056,30 @@ window.saveSettings = async function () {
         const darkMode = document.getElementById('settings-darkmode').checked;
         const currentPass = document.getElementById('settings-current-pass').value;
         const newPass = document.getElementById('settings-new-pass').value;
+        const avatarUpload = document.getElementById('settings-avatar-upload');
 
         const updatedPrefs = { ...prefs, bio: newBio, darkMode: String(darkMode) };
+
+        // Handle profile picture upload
+        if (avatarUpload && avatarUpload.files && avatarUpload.files.length > 0) {
+            const file = avatarUpload.files[0];
+            try {
+                // Determine file extension to enforce max size properly if needed, Appwrite limits handle this too
+                const { ID } = Appwrite;
+                const uploadResult = await svc.storage.createFile(svc.BUCKET_PROFILE_PICS, ID.unique(), file);
+
+                // Construct the file view URL
+                const fileUrl = `${svc.client.config.endpoint}/storage/buckets/${svc.BUCKET_PROFILE_PICS}/files/${uploadResult.$id}/view?project=${svc.client.config.project}`;
+
+                updatedPrefs.profilePictureUrl = fileUrl;
+                document.getElementById('settings-avatar').src = fileUrl; // Update preview
+            } catch (uploadError) {
+                console.error("Profile picture upload failed:", uploadError);
+                alert("Failed to upload profile picture. Please try again.");
+                return; // Stop save process if image upload fails
+            }
+        }
+
         if (newUsername && newUsername !== _origParentUsername) {
             const lastChange = prefs.lastUsernameChange ? new Date(prefs.lastUsernameChange) : null;
             if (lastChange) {

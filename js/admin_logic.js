@@ -70,9 +70,20 @@ async function initAdminDashboard() {
         const nameEl = document.getElementById('header-name');
         const roleEl = document.getElementById('header-role');
         const avatarEl = document.getElementById('header-avatar');
+
         if (nameEl) nameEl.textContent = `${currentUser.firstName} ${currentUser.lastName}`;
         if (roleEl) roleEl.textContent = currentUser.role.replace('_', ' ');
-        if (avatarEl) avatarEl.src = `https://ui-avatars.com/api/?name=${currentUser.firstName}+${currentUser.lastName}&background=random`;
+
+        try {
+            const acct = await window.AppwriteService.account.get();
+            if (avatarEl) {
+                if (acct.prefs && acct.prefs.profilePictureUrl) {
+                    avatarEl.src = acct.prefs.profilePictureUrl;
+                } else {
+                    avatarEl.src = `https://ui-avatars.com/api/?name=${currentUser.firstName}+${currentUser.lastName}&background=random`;
+                }
+            }
+        } catch (e) { }
 
         if (currentUser.role === 'super_admin') {
             const staffMenu = document.getElementById('menu-staff');
@@ -1105,7 +1116,14 @@ window.openSettingsModal = function () {
     const svc = window.AppwriteService;
     svc.account.get().then(acct => {
         const prefs = acct.prefs || {};
-        document.getElementById('settings-avatar').src = document.getElementById('header-avatar').src;
+
+        // Grab existing avatar if present in DOM, fallback to current pref or dicebear
+        let displayAvatarUrl = document.getElementById('header-avatar') ? document.getElementById('header-avatar').src : '';
+        if (prefs.profilePictureUrl) {
+            displayAvatarUrl = prefs.profilePictureUrl;
+        }
+
+        document.getElementById('settings-avatar').src = displayAvatarUrl;
         document.getElementById('settings-email').textContent = acct.email || currentUser.email;
         document.getElementById('settings-bio').value = prefs.bio || '';
         document.getElementById('settings-username').value = acct.name || '';
@@ -1150,9 +1168,29 @@ window.saveSettings = async function () {
         const darkMode = document.getElementById('settings-darkmode').checked;
         const currentPass = document.getElementById('settings-current-pass').value;
         const newPass = document.getElementById('settings-new-pass').value;
+        const avatarUpload = document.getElementById('settings-avatar-upload');
+
+        const updatedPrefs = { ...prefs, bio: newBio, darkMode: String(darkMode) };
+
+        // Handle profile picture upload
+        if (avatarUpload && avatarUpload.files && avatarUpload.files.length > 0) {
+            const file = avatarUpload.files[0];
+            try {
+                const { ID } = Appwrite;
+                const uploadResult = await svc.storage.createFile(svc.BUCKET_PROFILE_PICS, ID.unique(), file);
+                const fileUrl = `${svc.client.config.endpoint}/storage/buckets/${svc.BUCKET_PROFILE_PICS}/files/${uploadResult.$id}/view?project=${svc.client.config.project}`;
+
+                updatedPrefs.profilePictureUrl = fileUrl;
+                document.getElementById('settings-avatar').src = fileUrl; // Update preview
+                if (document.getElementById('header-avatar')) document.getElementById('header-avatar').src = fileUrl;
+            } catch (uploadError) {
+                console.error("Profile picture upload failed:", uploadError);
+                alert("Failed to upload profile picture. Please try again.");
+                return; // Stop save process
+            }
+        }
 
         // Username cooldown check
-        const updatedPrefs = { ...prefs, bio: newBio, darkMode: String(darkMode) };
         if (newUsername && newUsername !== _originalUsername) {
             const lastChange = prefs.lastUsernameChange ? new Date(prefs.lastUsernameChange) : null;
             if (lastChange) {

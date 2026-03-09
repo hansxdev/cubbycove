@@ -1,0 +1,10 @@
+{
+  "name": "cubbycove-gemini-filter",
+  "version": "1.0.0",
+  "description": "Appwrite function to filter messages and bio using Google Gemini API",
+  "main": "src/index.js",
+  "type": "module",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}

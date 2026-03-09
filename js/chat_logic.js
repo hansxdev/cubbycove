@@ -27,55 +27,41 @@ const TAGALOG_BAD_WORDS = [
     'bayag', 'titi', 'pepe', 'puke', 'tanga'
 ];
 
-// WARNING: Hardcoding API keys in the client-side is insecure. 
-// For production use, it is highly recommended to move this to an Appwrite Function.
-const GEMINI_API_KEY = "AIzaSyDa-i3mYO4K1G5wa46ilVdAFh0NuSegtsg"; // Replace with your actual Gemini API key
-
-// Analyzes message text for profanity using local lists and the Gemini API.
+// Analyzes message text for profanity using local lists and the Appwrite Gemini Function.
 async function analyzeMessageWithAI(text) {
     const lowerText = text.toLowerCase();
     if (TAGALOG_BAD_WORDS.some(w => lowerText.includes(w))) return false;
 
-    // Use Gemini API directly via REST since we have no Node backend or bundler
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-    const prompt = `You are a strict content moderator for a platform used by elementary school students. 
-Check the following message for profanity, cyberbullying, or inappropriate content.
-
-Message: "${text}"
-
-Return a JSON object with exactly two fields:
-1. "isSafe" (boolean): true if the message is completely safe, false if it contains profanity or bullying.
-2. "reason" (string): a very brief reason for your decision.`;
-
+    // Call the secure Appwrite Function instead of exposing the API key
     try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { responseMimeType: 'application/json' }
-            })
-        });
+        const { functions, FUNCTION_GEMINI_FILTER } = window.AppwriteService;
 
-        if (!response.ok) {
-            const errorData = await response.text();
-            throw new Error(`${response.status} - ${errorData}`);
+        const execution = await functions.createExecution(
+            FUNCTION_GEMINI_FILTER,
+            JSON.stringify({ action: 'filter_message', text: text }),
+            false,
+            '/',
+            'POST'
+        );
+
+        if (!execution.responseBody) {
+            throw new Error('Empty response from Appwrite Function.');
         }
 
-        const data = await response.json();
+        const responseData = JSON.parse(execution.responseBody);
 
-        // Extract the generated text from Gemini's response
-        const responseText = data.candidates[0].content.parts[0].text;
-        const evaluation = JSON.parse(responseText);
+        if (!responseData.success) {
+            console.error("Gemini Appwrite Function Error:", responseData.error);
+            return !BAD_WORDS.some(w => lowerText.includes(w));
+        }
 
         // Debug log for the reason
-        console.log("Gemini Moderation:", evaluation);
+        console.log("Gemini Moderation:", responseData.result);
 
-        return evaluation.isSafe;
+        return responseData.result.isSafe;
 
     } catch (e) {
-        console.warn("Gemini API failed, falling back to local list:", e.message);
+        console.warn("Appwrite Function failed, falling back to local list:", e.message);
         return !BAD_WORDS.some(w => lowerText.includes(w));
     }
 }
@@ -125,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Updates the chat header with the current buddy's avatar and name.
-function updateChatHeader(buddyId, buddyName) {
+function updateChatHeader(buddyId, buddyName, avatarImage, avatarBgColor) {
     const avatarEl = $('chat-buddy-avatar');
     const nameEl = $('chat-buddy-name');
     const statusEl = $('chat-status-label');
@@ -133,9 +119,29 @@ function updateChatHeader(buddyId, buddyName) {
     if (!buddyId) {
         if (nameEl) nameEl.textContent = 'No buddy selected';
         if (statusEl) statusEl.textContent = '';
+        if (avatarEl) {
+            avatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=friend`;
+            avatarEl.style.backgroundColor = '';
+            avatarEl.classList.remove('object-contain', 'p-1');
+            avatarEl.classList.add('object-cover');
+        }
         return;
     }
-    if (avatarEl) avatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddyName)}`;
+
+    if (avatarEl) {
+        if (avatarImage) {
+            avatarEl.src = avatarImage;
+            avatarEl.style.backgroundColor = avatarBgColor || '#e5e7eb';
+            avatarEl.classList.add('object-contain', 'p-1');
+            avatarEl.classList.remove('object-cover');
+        } else {
+            avatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddyName)}`;
+            avatarEl.style.backgroundColor = '';
+            avatarEl.classList.remove('object-contain', 'p-1');
+            avatarEl.classList.add('object-cover');
+        }
+    }
+
     if (nameEl) nameEl.textContent = buddyName || 'Your Buddy';
     if (statusEl) statusEl.textContent = 'Online';
 }
@@ -152,11 +158,23 @@ async function loadChatBuddySidebar() {
         }
         container.innerHTML = buddies.map(buddy => {
             const isActive = buddy.childId === _buddyId;
+
+            if (isActive) {
+                // Update header with actual loaded avatar if active
+                updateChatHeader(buddy.childId, buddy.username, buddy.avatarImage, buddy.avatarBgColor);
+            }
+
+            let avatarHtml = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddy.username)}" class="w-10 h-10 rounded-full bg-white border border-gray-200">`;
+            if (buddy.avatarImage) {
+                const bgStr = buddy.avatarBgColor ? `style="background-color: ${buddy.avatarBgColor}"` : 'bg-gray-200';
+                avatarHtml = `<img src="${buddy.avatarImage}" ${bgStr} class="w-10 h-10 rounded-full border border-gray-200 object-contain p-0.5">`;
+            }
+
             return `
             <a href="chat.html?buddyId=${encodeURIComponent(buddy.childId)}&buddyName=${encodeURIComponent(buddy.username)}&buddyDocId=${encodeURIComponent(buddy.buddyDocId)}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all buddy-item ${isActive ? 'bg-cubby-green/10' : 'hover:bg-gray-50'}"
                data-name="${buddy.username.toLowerCase()}">
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddy.username)}" class="w-10 h-10 rounded-full bg-white border border-gray-200">
+                ${avatarHtml}
                 <div class="flex-1 min-w-0 info">
                     <h4 class="font-bold ${isActive ? 'text-cubby-green' : 'text-gray-800'} truncate text-sm">${buddy.username}</h4>
                     <p class="text-xs text-gray-400 truncate">${isActive ? 'Chatting now' : 'Tap to chat'}</p>

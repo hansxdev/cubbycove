@@ -722,10 +722,10 @@ const DataService = {
     },
 
     /**
-     * Get accepted buddies for a child.
+     * Get accepted buddies for a child, sorted by latest chat interaction.
      */
     getBuddies: async function (childId) {
-        const { databases, DB_ID } = this._getServices();
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
         const { Query } = Appwrite;
         try {
             const [sent, received] = await Promise.all([
@@ -738,12 +738,50 @@ const DataService = {
                     Query.equal('status', 'accepted')
                 ])
             ]);
+
             // Flatten into a unified list
-            const buddies = [
-                ...sent.documents.map(d => ({ buddyDocId: d.$id, childId: d.toChildId, username: d.toUsername, kidId: d.toKidId })),
-                ...received.documents.map(d => ({ buddyDocId: d.$id, childId: d.fromChildId, username: d.fromUsername, kidId: d.fromKidId }))
+            const rawBuddies = [
+                ...sent.documents.map(d => ({ buddyDocId: d.$id, childId: d.toChildId, username: d.toUsername, kidId: d.toKidId, buddyCreatedAt: d.createdAt })),
+                ...received.documents.map(d => ({ buddyDocId: d.$id, childId: d.fromChildId, username: d.fromUsername, kidId: d.fromKidId, buddyCreatedAt: d.createdAt }))
             ];
-            return buddies;
+
+            // Fetch latest interaction time and profile info for each buddy
+            const buddiesWithTime = await Promise.all(rawBuddies.map(async (buddy) => {
+                const convId = this._buildConversationId(childId, buddy.childId);
+                let lastTime = new Date(buddy.buddyCreatedAt).getTime() || 0; // Fallback to when they became buddies
+                let avatarImage = null;
+                let avatarBgColor = null;
+
+                try {
+                    const msgs = await databases.listDocuments(DB_ID, 'chat_messages', [
+                        Query.equal('conversationId', convId),
+                        Query.orderDesc('sentAt'),
+                        Query.limit(1)
+                    ]);
+                    if (msgs.documents.length > 0) {
+                        lastTime = new Date(msgs.documents[0].sentAt).getTime();
+                    }
+                } catch (e) {
+                    // Ignore chat fetch errors for individual buddies
+                }
+
+                try {
+                    const profile = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, buddy.childId);
+                    if (profile) {
+                        avatarImage = profile.avatarImage || null;
+                        avatarBgColor = profile.avatarBgColor || null;
+                    }
+                } catch (e) {
+                    // Silent fail if missing read-access or profile deleted
+                }
+
+                return { ...buddy, lastInteractionTime: lastTime, avatarImage, avatarBgColor };
+            }));
+
+            // Sort descending by last interaction time
+            buddiesWithTime.sort((a, b) => b.lastInteractionTime - a.lastInteractionTime);
+
+            return buddiesWithTime;
         } catch (e) {
             console.warn('getBuddies error:', e.message);
             return [];

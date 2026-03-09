@@ -44,7 +44,10 @@ async function refreshBuddyUI() {
         DataService.getIncomingBuddyRequests(_currentChild.$id)
     ]);
 
-    renderBuddyList(buddies);
+    // Limit to the 3 most recently interacted with buddies
+    const topBuddies = buddies.slice(0, 3);
+
+    renderBuddyList(topBuddies);
     renderIncomingRequests(incoming);
 }
 
@@ -68,7 +71,16 @@ function renderBuddyList(buddies) {
         return;
     }
 
-    container.innerHTML = buddies.map(buddy => `
+    container.innerHTML = buddies.map(buddy => {
+        let avatarHtml = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddy.username)}"
+            class="w-8 h-8 rounded-full bg-gray-200 border border-white shadow-sm shrink-0">`;
+
+        if (buddy.avatarImage) {
+            const bgStr = buddy.avatarBgColor ? `style="background-color: ${buddy.avatarBgColor}"` : 'bg-gray-200';
+            avatarHtml = `<img src="${buddy.avatarImage}" ${bgStr} class="w-8 h-8 rounded-full border border-white shadow-sm shrink-0 object-contain p-0.5">`;
+        }
+
+        return `
         <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-xl transition-colors group relative"
              title="Chat with ${buddy.username}">
             <button onclick="event.stopPropagation(); viewBuddyProfile('${buddy.childId}', '${encodeURIComponent(buddy.username)}')"
@@ -78,8 +90,7 @@ function renderBuddyList(buddies) {
             </button>
             <a href="chat.html?buddyId=${encodeURIComponent(buddy.childId)}&buddyName=${encodeURIComponent(buddy.username)}&buddyDocId=${encodeURIComponent(buddy.buddyDocId)}"
                class="flex items-center gap-2 flex-1 min-w-0">
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddy.username)}"
-                    class="w-8 h-8 rounded-full bg-gray-200 border border-white shadow-sm shrink-0">
+                ${avatarHtml}
                 <span class="font-bold text-gray-700 group-hover:text-cubby-blue text-sm truncate">${buddy.username}</span>
             </a>
             <button onclick="unfriendBuddy('${buddy.buddyDocId}', '${encodeURIComponent(buddy.username)}')"
@@ -88,7 +99,7 @@ function renderBuddyList(buddies) {
                 <i class="fa-solid fa-user-xmark"></i>
             </button>
         </div>
-    `).join('');
+    `}).join('');
 }
 
 // ── Render incoming requests ──────────────────────────────────────────────────

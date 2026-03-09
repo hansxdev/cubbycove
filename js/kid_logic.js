@@ -88,7 +88,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateHeader(user);
     }
 
-    // 3. Record session start time (fresh for each page load/navigation)
+    // 3. Load dynamic kid videos if we are on the home page
+    if (document.getElementById('kid-video-list')) {
+        loadKidVideos();
+    }
+
+    // 4. Record session start time (fresh for each page load/navigation)
     _screenTimeStart = Date.now();
     _screenTimeFlushed = false;
 });
@@ -148,6 +153,94 @@ function updateHeader(user) {
     });
 }
 
+// Loads approved videos into the kid dashboard
+async function loadKidVideos() {
+    const videoGrid = document.getElementById('kid-video-list');
+    if (!videoGrid) return;
+
+    try {
+        const videos = await DataService.getVideos('approved');
+        videoGrid.innerHTML = '';
+
+        if (!videos || videos.length === 0) {
+            videoGrid.innerHTML = `
+                <div class="col-span-full py-12 text-center text-gray-500 font-bold">
+                    <p>No videos available right now. Check back later!</p>
+                </div>`;
+            return;
+        }
+
+        videos.forEach(video => {
+            const ytMatch = video.url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+            const isYouTube = !!ytMatch;
+            const vidId = isYouTube ? ytMatch[1] : '';
+            const safeUrl = (video.url || '').replace(/"/g, '&quot;');
+
+            const thumbHtml = isYouTube
+                ? `<img src="https://img.youtube.com/vi/${vidId}/mqdefault.jpg" alt="${video.title}" class="absolute inset-0 w-full h-full object-cover">`
+                : `<video src="${safeUrl}" class="absolute inset-0 w-full h-full object-cover" muted preload="metadata"></video>`;
+
+            // Since this is the Kid dashboard, we can reuse playVideo or playDirectVideo from guest_logic 
+            // OR define them here. Since guest_logic isn't loaded here usually, we'll define a simple modal opener here.
+
+            const clickAttr = isYouTube
+                ? `onclick="openKidVideoModal('yt', '${vidId}')"`
+                : `onclick="openKidVideoModal('direct', '${safeUrl}')"`;
+
+            videoGrid.innerHTML += `
+                <div class="video-card group cursor-pointer bg-white rounded-2xl p-3 shadow-md border-b-4 border-gray-100 hover:shadow-xl hover:scale-[1.02] transition-all" ${clickAttr}>
+                    <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
+                        ${thumbHtml}
+                        <span class="absolute top-2 left-2 bg-cubby-blue text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">${video.category || 'Video'}</span>
+                        <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center transition-all">
+                            <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center pl-1 shadow-lg">
+                                <i class="fa-solid fa-play text-cubby-blue text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 mt-3 px-1">
+                        <div class="min-w-[40px]"><img src="https://api.dicebear.com/7.x/identicon/svg?seed=${video.category || 'video'}" class="w-9 h-9 rounded-full bg-gray-100"></div>
+                        <div>
+                            <h3 class="font-extrabold text-gray-800 text-lg leading-tight mb-1 line-clamp-2 group-hover:text-cubby-blue transition-colors">
+                                ${video.title}
+                            </h3>
+                            <p class="text-sm text-gray-500 font-bold">${video.creatorEmail ? video.creatorEmail.split('@')[0] : 'Creator'}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    } catch (e) {
+        console.error('Error loading kid videos:', e);
+        videoGrid.innerHTML = `
+            <div class="col-span-full py-12 text-center text-gray-500 font-bold">
+                <p>Oops, could not load videos. Please try refreshing.</p>
+            </div>`;
+    }
+}
+
+window.openKidVideoModal = function (type, urlOrId) {
+    const modal = document.createElement('div');
+    modal.className = "fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 backdrop-blur-sm";
+
+    let contentHtml = '';
+    if (type === 'yt') {
+        contentHtml = `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${urlOrId}?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    } else {
+        contentHtml = `<video src="${urlOrId}" class="w-full h-full" controls autoplay preload="metadata"></video>`;
+    }
+
+    modal.innerHTML = `
+        <div class="w-full max-w-4xl aspect-video bg-black relative rounded-xl overflow-hidden shadow-2xl border-4 border-gray-800">
+            <button onclick="this.parentElement.parentElement.remove()" class="absolute -top-12 right-0 text-white text-3xl hover:text-red-500 transition-colors bg-gray-800/50 rounded-full w-10 h-10 flex items-center justify-center pb-1 shadow-lg">
+                <i class="fa-solid fa-times"></i>
+            </button>
+            ${contentHtml}
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
 // Check if DataService is missing and warn dev (or user)
 if (typeof DataService === 'undefined') {
     console.warn("CRITICAL: DataService.js is missing from this page!");
@@ -184,7 +277,7 @@ window.openKidSettingsModal = function () {
         // Load saved prefs from session/child doc
         const prefs = session.prefs || {};
         _kidAvatarColor = prefs.avatarBgColor || '#60a5fa';
-        _kidAvatarIcon = prefs.avatarIcon || '🐻';
+        _kidAvatarIcon = prefs.avatarImage || prefs.avatarIcon || '🐻';
         _kidCoverColor = prefs.coverColor || '#3b82f6';
         _kidTheme = prefs.theme || 'default';
 
@@ -193,7 +286,14 @@ window.openKidSettingsModal = function () {
 
         // Update previews
         const preview = document.getElementById('kid-avatar-preview');
-        if (preview) { preview.style.background = _kidAvatarColor; preview.textContent = _kidAvatarIcon; }
+        if (preview) {
+            preview.style.background = _kidAvatarColor;
+            if (_kidAvatarIcon.startsWith('../')) {
+                preview.innerHTML = `<img src="${_kidAvatarIcon}" class="w-full h-full object-contain p-1">`;
+            } else {
+                preview.textContent = _kidAvatarIcon;
+            }
+        }
         const coverPreview = document.getElementById('cover-color-preview');
         if (coverPreview) coverPreview.style.background = _kidCoverColor;
     }
@@ -221,7 +321,13 @@ window.pickAvatarColor = function (color) {
 window.pickAvatarIcon = function (icon) {
     _kidAvatarIcon = icon;
     const preview = document.getElementById('kid-avatar-preview');
-    if (preview) preview.textContent = icon;
+    if (preview) {
+        if (icon.startsWith('../')) {
+            preview.innerHTML = `<img src="${icon}" class="w-full h-full object-contain p-1">`;
+        } else {
+            preview.textContent = icon;
+        }
+    }
 };
 
 window.pickCoverColor = function (color) {
@@ -259,7 +365,8 @@ window.saveKidSettings = async function () {
 
     const prefs = {
         avatarBgColor: _kidAvatarColor,
-        avatarIcon: _kidAvatarIcon,
+        avatarImage: _kidAvatarIcon.startsWith('../') ? _kidAvatarIcon : null,
+        avatarIcon: _kidAvatarIcon.startsWith('../') ? '🐻' : _kidAvatarIcon,
         coverColor: _kidCoverColor,
         theme: _kidTheme,
         displayName: displayName,
@@ -273,6 +380,14 @@ window.saveKidSettings = async function () {
     try {
         if (typeof DataService.updateChildPrefs === 'function') {
             await DataService.updateChildPrefs(session.$id, prefs);
+        }
+        if (typeof DataService.updateChild === 'function') {
+            // Also store these visually-important attributes directly on the document
+            // so they are readable without auth
+            await DataService.updateChild(session.$id, {
+                avatarImage: prefs.avatarImage,
+                avatarBgColor: prefs.avatarBgColor
+            });
         }
     } catch (e) {
         console.warn('Could not save prefs to server:', e.message);

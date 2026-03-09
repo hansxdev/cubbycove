@@ -4,14 +4,7 @@
   "description": "Appwrite function to filter messages and bio using Google Gemini API",
   "main": "src/index.js",
   "type": "module",
-  "scripts": {
-    "format": "prettier --write ."
-  },
   "dependencies": {
-    "node-appwrite": "^20.2.1",
     "node-fetch": "^3.3.2"
-  },
-  "devDependencies": {
-    "prettier": "^3.2.5"
   }
 }

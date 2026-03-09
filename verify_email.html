@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification - CubbyCove</title>
+    <link rel="icon" type="image/png" href="images/closedlogo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { sans: ['Nunito', 'sans-serif'] }, colors: { 'cubby-blue': '#4CC9F0', 'cubby-dark': '#1A1A2E' } } }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
+    <script src="js/appwrite_config.js"></script>
+    <script src="js/data_service.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans p-4">
+    <div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md text-center">
+        <div class="flex justify-center mb-6">
+            <div class="bg-cubby-blue/20 p-4 rounded-2xl">
+                <i class="fa-solid fa-envelope-circle-check text-3xl text-cubby-blue"></i>
+            </div>
+        </div>
+        <h1 class="text-2xl font-black text-gray-800 mb-2">Email Verification</h1>
+
+        <!-- Loading -->
+        <div id="status-loading" class="mt-4 py-4">
+            <i class="fa-solid fa-spinner fa-spin text-cubby-blue text-3xl mb-3"></i>
+            <p class="text-gray-500 font-semibold">Verifying your email, please wait...</p>
+        </div>
+
+        <!-- Success (parent/non-staff) -->
+        <div id="status-success" class="hidden mt-4 space-y-4">
+            <div class="bg-green-100 text-green-700 p-4 rounded-2xl">
+                <i class="fa-solid fa-check-circle text-xl mb-1"></i>
+                <p class="font-bold">Email Verified Successfully!</p>
+            </div>
+            <p class="text-gray-600 text-sm">Your identity has been confirmed. Your account is now pending review by our
+                team.</p>
+            <a href="index.html"
+                class="block w-full bg-cubby-blue text-cubby-dark font-bold py-3 rounded-xl hover:bg-cyan-400 transition-colors">
+                <i class="fa-solid fa-house mr-2"></i> Return to Home
+            </a>
+        </div>
+
+        <!-- Staff Success — shows Staff ID -->
+        <div id="status-staff-success" class="hidden mt-4 space-y-5">
+            <div class="bg-green-100 text-green-700 p-4 rounded-2xl">
+                <i class="fa-solid fa-check-circle text-xl mb-1"></i>
+                <p class="font-bold">Email Verified!</p>
+            </div>
+            <p class="text-sm text-gray-600">Your staff account has been activated. Here is your Staff ID — save it to
+                log in!</p>
+            <!-- Staff ID display -->
+            <div class="bg-cubby-dark rounded-2xl p-6">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Your Staff ID</p>
+                <div class="flex items-center justify-center gap-3">
+                    <p id="staff-id-display" class="text-3xl font-extrabold text-cubby-blue tracking-wider">—</p>
+                    <button onclick="copyId()" title="Copy"
+                        class="text-gray-500 hover:text-cubby-blue transition-colors">
+                        <i class="fa-solid fa-copy" id="copy-icon"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-3">
+                    <i class="fa-solid fa-triangle-exclamation text-yellow-400 mr-1"></i>
+                    Use this ID instead of your email to log in.
+                </p>
+            </div>
+            <a href="staff_access.html"
+                class="block w-full bg-cubby-blue text-cubby-dark font-bold py-3 rounded-xl hover:bg-cyan-400 transition-colors">
+                <i class="fa-solid fa-right-to-bracket mr-2"></i> Go to Staff Login
+            </a>
+        </div>
+
+        <!-- Error -->
+        <div id="status-error" class="hidden mt-4 space-y-4">
+            <div class="bg-red-100 text-red-600 p-4 rounded-2xl">
+                <i class="fa-solid fa-circle-exclamation text-xl mb-1"></i>
+                <p class="font-bold">Verification Failed</p>
+            </div>
+            <p id="error-msg" class="text-gray-600 text-sm">The verification link is invalid or expired.</p>
+            <a href="index.html" class="text-cubby-blue font-bold hover:underline text-sm">← Return to Home</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const secret = params.get('secret');
+            const userId = params.get('userId');
+            const isMock = params.get('mock') === 'true';
+
+            if (isMock) { showSuccess(); return; }
+            if (!secret || !userId) { showError('Invalid verification link.'); return; }
+
+            try {
+                const { account, databases, DB_ID, COLLECTIONS } = window.AppwriteService;
+                await account.updateVerification(userId, secret);
+
+                // Check if this is a staff user and fetch their staffId
+                let staffId = null;
+                try {
+                    const userDoc = await databases.getDocument(DB_ID, COLLECTIONS.USERS, userId);
+                    if (userDoc.staffId && ['admin', 'assistant', 'creator', 'super_admin'].includes(userDoc.role)) {
+                        staffId = userDoc.staffId;
+                        // Activate if still pending_claim
+                        if (userDoc.status === 'pending_claim') {
+                            await databases.updateDocument(DB_ID, COLLECTIONS.USERS, userId, { status: 'active' });
+                        }
+                    }
+                } catch { /* non-fatal — parent users won't have staffId */ }
+
+                if (staffId) {
+                    showStaffSuccess(staffId);
+                } else {
+                    showSuccess();
+                }
+
+            } catch (err) {
+                console.error('Verification Error:', err);
+                showError(err.message || 'Verification failed. Please try again.');
+            }
+        });
+
+        function showSuccess() {
+            hide('status-loading'); hide('status-error'); hide('status-staff-success');
+            document.getElementById('status-success').classList.remove('hidden');
+        }
+
+        function showStaffSuccess(staffId) {
+            hide('status-loading'); hide('status-error'); hide('status-success');
+            document.getElementById('staff-id-display').textContent = staffId;
+            document.getElementById('status-staff-success').classList.remove('hidden');
+        }
+
+        function showError(msg) {
+            hide('status-loading'); hide('status-success'); hide('status-staff-success');
+            document.getElementById('status-error').classList.remove('hidden');
+            document.getElementById('error-msg').textContent = msg;
+        }
+
+        function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function copyId() {
+            const id = document.getElementById('staff-id-display').textContent;
+            navigator.clipboard.writeText(id).then(() => {
+                const icon = document.getElementById('copy-icon');
+                icon.className = 'fa-solid fa-check text-green-500';
+                setTimeout(() => { icon.className = 'fa-solid fa-copy'; }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>

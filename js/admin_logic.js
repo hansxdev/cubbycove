@@ -1176,8 +1176,13 @@ window.saveSettings = async function () {
         if (avatarUpload && avatarUpload.files && avatarUpload.files.length > 0) {
             const file = avatarUpload.files[0];
             try {
-                const { ID } = Appwrite;
-                const uploadResult = await svc.storage.createFile(svc.BUCKET_PROFILE_PICS, ID.unique(), file);
+                const { ID, Permission, Role } = Appwrite;
+                const uploadResult = await svc.storage.createFile(
+                    svc.BUCKET_PROFILE_PICS,
+                    ID.unique(),
+                    file,
+                    [Permission.read(Role.any())]
+                );
                 const fileUrl = `${svc.client.config.endpoint}/storage/buckets/${svc.BUCKET_PROFILE_PICS}/files/${uploadResult.$id}/view?project=${svc.client.config.project}`;
 
                 updatedPrefs.profilePictureUrl = fileUrl;

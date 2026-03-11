@@ -1065,8 +1065,13 @@ window.saveSettings = async function () {
             const file = avatarUpload.files[0];
             try {
                 // Determine file extension to enforce max size properly if needed, Appwrite limits handle this too
-                const { ID } = Appwrite;
-                const uploadResult = await svc.storage.createFile(svc.BUCKET_PROFILE_PICS, ID.unique(), file);
+                const { ID, Permission, Role } = Appwrite;
+                const uploadResult = await svc.storage.createFile(
+                    svc.BUCKET_PROFILE_PICS,
+                    ID.unique(),
+                    file,
+                    [Permission.read(Role.any())]
+                );
 
                 // Construct the file view URL
                 const fileUrl = `${svc.client.config.endpoint}/storage/buckets/${svc.BUCKET_PROFILE_PICS}/files/${uploadResult.$id}/view?project=${svc.client.config.project}`;

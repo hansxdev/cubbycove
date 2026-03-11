@@ -30,8 +30,8 @@ try {
     };
 
     // Storage Bucket IDs
-    const BUCKET_PARENT_DOCS = 'parent_docs'; // Create this bucket in your Appwrite project
-    const BUCKET_PROFILE_PICS = 'profile_pics';
+    const BUCKET_PARENT_DOCS = 'parent_docs'; // Use this bucket in your Appwrite project for docs AND avatars
+    const BUCKET_PROFILE_PICS = 'parent_docs';
 
     // Function IDs
     const FUNCTION_GEMINI_FILTER = '69aed56d0034b1b68f9e'; // REPLACE with your Function ID

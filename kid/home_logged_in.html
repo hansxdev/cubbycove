@@ -112,11 +112,18 @@
                     class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Chat</span>
             </a>
             <!-- UNLOCKED: Favorites -->
-            <a href="#"
+            <a href="favorites.html"
                 class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors sidebar-link transition-all duration-300">
                 <i class="fa-solid fa-heart text-xl w-6 text-center text-cubby-pink"></i>
                 <span
                     class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Favorites</span>
+            </a>
+            <!-- UNLOCKED: History -->
+            <a href="history.html"
+                class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors sidebar-link transition-all duration-300">
+                <i class="fa-solid fa-clock-rotate-left text-xl w-6 text-center text-cubby-purple"></i>
+                <span
+                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">History</span>
             </a>
         </div>
 
@@ -370,21 +377,13 @@
                         class="fa-solid fa-arrow-trend-up text-xs"></i></a>
             </div>
 
-            <div id="kid-video-list"
-                class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div id="kid-video-list" class="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory no-scrollbar">
                 <!-- Dynamic videos will be loaded here by kid_logic.js -->
-                <div class="col-span-full py-12 text-center text-gray-500 font-bold">
+                <div class="py-12 text-center text-gray-500 font-bold w-full">
                     <i class="fa-solid fa-spinner fa-spin text-3xl text-cubby-blue mb-3"></i>
                     <p>Loading fun videos...</p>
                 </div>
             </div>
-            Virtual Zoo Tour 🦁 See Lions and Tigers!
-            </h3>
-            <p class="text-sm text-gray-500 font-bold">Nat Geo Kids</p>
-        </div>
-        </div>
-
-        </div>
         </div>
 
         <!-- CONTINUE WATCHING SECTION -->
@@ -392,71 +391,8 @@
             <h2 class="flex items-center gap-2 text-2xl font-black text-gray-800 mb-4">
                 <i class="fa-regular fa-clock text-cubby-pink"></i> Continue Watching
             </h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                <!-- CW Card 1 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 hover:shadow-lg transition-shadow cursor-pointer">
-                    <div
-                        class="aspect-video bg-cubby-purple/20 rounded-xl relative overflow-hidden flex items-center justify-center">
-                        <i class="fa-solid fa-star text-4xl text-cubby-purple rotate-12"></i>
-                        <!-- Progress Bar -->
-                        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
-                            <div class="h-full bg-cubby-blue w-1/3"></div>
-                        </div>
-                    </div>
-                    <div class="mt-2 px-1">
-                        <h3 class="font-bold text-gray-700 text-sm">Educational Content 1</h3>
-                        <p class="text-xs text-gray-400 mt-1">Continue from 5:30</p>
-                    </div>
-                </div>
-                <!-- CW Card 2 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 hover:shadow-lg transition-shadow cursor-pointer">
-                    <div
-                        class="aspect-video bg-cubby-pink/20 rounded-xl relative overflow-hidden flex items-center justify-center">
-                        <i class="fa-solid fa-shapes text-4xl text-cubby-pink -rotate-6"></i>
-                        <!-- Progress Bar -->
-                        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
-                            <div class="h-full bg-cubby-blue w-2/3"></div>
-                        </div>
-                    </div>
-                    <div class="mt-2 px-1">
-                        <h3 class="font-bold text-gray-700 text-sm">Educational Content 2</h3>
-                        <p class="text-xs text-gray-400 mt-1">Continue from 8:45</p>
-                    </div>
-                </div>
-                <!-- CW Card 3 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 hover:shadow-lg transition-shadow cursor-pointer">
-                    <div
-                        class="aspect-video bg-cubby-yellow/20 rounded-xl relative overflow-hidden flex items-center justify-center">
-                        <i class="fa-solid fa-rocket text-4xl text-cubby-yellow"></i>
-                        <!-- Progress Bar -->
-                        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
-                            <div class="h-full bg-cubby-blue w-1/2"></div>
-                        </div>
-                    </div>
-                    <div class="mt-2 px-1">
-                        <h3 class="font-bold text-gray-700 text-sm">Educational Content 3</h3>
-                        <p class="text-xs text-gray-400 mt-1">Continue from 2:15</p>
-                    </div>
-                </div>
-                <!-- CW Card 4 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 hover:shadow-lg transition-shadow cursor-pointer">
-                    <div
-                        class="aspect-video bg-cubby-green/20 rounded-xl relative overflow-hidden flex items-center justify-center">
-                        <i class="fa-solid fa-leaf text-4xl text-cubby-green rotate-45"></i>
-                        <!-- Progress Bar -->
-                        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
-                            <div class="h-full bg-cubby-blue w-3/4"></div>
-                        </div>
-                    </div>
-                    <div class="mt-2 px-1">
-                        <h3 class="font-bold text-gray-700 text-sm">Educational Content 4</h3>
-                        <p class="text-xs text-gray-400 mt-1">Continue from 10:00</p>
-                    </div>
-                </div>
+            <div id="continue-watching-list" class="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory no-scrollbar">
+                <p class="text-gray-400 font-semibold text-sm px-2">Loading...</p>
             </div>
         </div>
     </main>

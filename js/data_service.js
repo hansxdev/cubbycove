@@ -1157,6 +1157,11 @@ const DataService = {
             uploadedAt: videoData.uploadedAt || new Date().toISOString()
         };
 
+        // Optional custom thumbnail
+        if (videoData.thumbnailUrl) {
+            newVideo.thumbnailUrl = videoData.thumbnailUrl;
+        }
+
         const doc = await databases.createDocument(DB_ID, COLLECTIONS.VIDEOS, ID.unique(), newVideo);
         return doc;
     },
@@ -1583,6 +1588,175 @@ const DataService = {
             console.log(`⏱️ [ScreenTime] Logged ${mins} min (${category || 'general'}) for child ${childId} on ${todayStr}`);
         } catch (err) {
             console.warn('logScreenTime error:', err.message);
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // KID WATCH HISTORY
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Log a video view in the kid's watch history.
+     * Uses 'any' create permission (kids have no Appwrite auth session).
+     */
+    logWatchHistory: async function (childId, videoId, videoTitle, videoCategory, videoUrl, thumbnailUrl) {
+        if (!childId || !videoId) return;
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+        try {
+            await databases.createDocument(DB_ID, 'kid_watch_history', ID.unique(), {
+                childId,
+                videoId,
+                videoTitle: videoTitle || '',
+                videoCategory: videoCategory || '',
+                videoUrl: videoUrl || '',
+                thumbnailUrl: thumbnailUrl || '',
+                watchedAt: new Date().toISOString()
+            });
+        } catch (e) {
+            console.warn('logWatchHistory error:', e.message);
+        }
+    },
+
+    /**
+     * Get watch history for a child.
+     * @param {string} childId
+     * @param {string} filter - 'today' | 'week' | 'month' | 'all'
+     * @returns {Array} history documents sorted newest-first
+     */
+    getWatchHistory: async function (childId, filter = 'all') {
+        if (!childId) return [];
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+
+        const now = new Date();
+        let startDate = null;
+        if (filter === 'today') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        } else if (filter === 'week') {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 7);
+        } else if (filter === 'month') {
+            startDate = new Date(now);
+            startDate.setMonth(now.getMonth() - 1);
+        }
+
+        try {
+            const queries = [
+                Query.equal('childId', childId),
+                Query.orderDesc('watchedAt'),
+                Query.limit(200)
+            ];
+            if (startDate) {
+                queries.push(Query.greaterThanEqual('watchedAt', startDate.toISOString()));
+            }
+            const result = await databases.listDocuments(DB_ID, 'kid_watch_history', queries);
+            return result.documents;
+        } catch (e) {
+            console.warn('getWatchHistory error:', e.message);
+            return [];
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // KID FAVORITES
+    // ─────────────────────────────────────────────────────────────────────────
+
+    addFavorite: async function (childId, videoId, videoTitle, videoCategory, videoUrl, thumbnailUrl) {
+        if (!childId || !videoId) return;
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+        try {
+            return await databases.createDocument(DB_ID, 'kid_favorites', ID.unique(), {
+                childId,
+                videoId,
+                videoTitle: videoTitle || '',
+                videoCategory: videoCategory || '',
+                videoUrl: videoUrl || '',
+                thumbnailUrl: thumbnailUrl || '',
+                addedAt: new Date().toISOString()
+            });
+        } catch (e) {
+            console.warn('addFavorite error:', e.message);
+        }
+    },
+
+    removeFavorite: async function (childId, videoId) {
+        if (!childId || !videoId) return;
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, 'kid_favorites', [
+                Query.equal('childId', childId),
+                Query.equal('videoId', videoId),
+                Query.limit(1)
+            ]);
+            if (result.documents.length > 0) {
+                await databases.deleteDocument(DB_ID, 'kid_favorites', result.documents[0].$id);
+            }
+        } catch (e) {
+            console.warn('removeFavorite error:', e.message);
+        }
+    },
+
+    getFavorites: async function (childId) {
+        if (!childId) return [];
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, 'kid_favorites', [
+                Query.equal('childId', childId),
+                Query.orderDesc('addedAt'),
+                Query.limit(200)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('getFavorites error:', e.message);
+            return [];
+        }
+    },
+
+    isFavorited: async function (childId, videoId) {
+        if (!childId || !videoId) return false;
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, 'kid_favorites', [
+                Query.equal('childId', childId),
+                Query.equal('videoId', videoId),
+                Query.limit(1)
+            ]);
+            return result.documents.length > 0;
+        } catch (e) {
+            return false;
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // VIDEO LIKES / DISLIKES
+    // ─────────────────────────────────────────────────────────────────────────
+
+    likeVideo: async function (videoId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            const video = await databases.getDocument(DB_ID, COLLECTIONS.VIDEOS, videoId);
+            return await databases.updateDocument(DB_ID, COLLECTIONS.VIDEOS, videoId, {
+                likes: (video.likes || 0) + 1
+            });
+        } catch (e) {
+            console.warn('likeVideo error:', e.message);
+        }
+    },
+
+    dislikeVideo: async function (videoId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            const video = await databases.getDocument(DB_ID, COLLECTIONS.VIDEOS, videoId);
+            return await databases.updateDocument(DB_ID, COLLECTIONS.VIDEOS, videoId, {
+                dislikes: (video.dislikes || 0) + 1
+            });
+        } catch (e) {
+            console.warn('dislikeVideo error:', e.message);
         }
     }
 };

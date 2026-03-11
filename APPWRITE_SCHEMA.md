@@ -147,3 +147,39 @@ Stores chat messages between buddies. Powered by Appwrite Realtime.
 > **Setup**: Run `js/appwrite_add_chat.js` in your Appwrite Console F12 to create this collection.
 > **Realtime**: Enable Realtime in your Appwrite project settings so `subscribeToChatMessages()` works live.
 
+#### Collection: `kid_watch_history`
+Tracks which videos each kid has watched and when.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `childId` | String | Yes | The child who watched. |
+| `videoId` | String | Yes | The video document ID. |
+| `videoTitle` | String | No | Cached video title for display. |
+| `videoCategory` | String | No | Cached video category. |
+| `videoUrl` | String | No | Cached video URL. |
+| `thumbnailUrl` | String | No | Cached thumbnail URL. |
+| `watchedAt` | String | Yes | ISO timestamp of when the video was opened. |
+
+> **Permissions**: `create`: `any` (kids have no Appwrite auth session); `read`: `any`.
+
+#### Collection: `kid_favorites`
+Stores videos a kid has marked as favorite.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `childId` | String | Yes | The child who favorited. |
+| `videoId` | String | Yes | The video document ID. |
+| `videoTitle` | String | No | Cached video title. |
+| `videoCategory` | String | No | Cached video category. |
+| `videoUrl` | String | No | Cached video URL. |
+| `thumbnailUrl` | String | No | Cached thumbnail URL. |
+| `addedAt` | String | Yes | ISO timestamp. |
+
+> **Permissions**: `create`: `any`; `read`: `any`; `delete`: `any`.
+
+#### Videos Collection — New Attribute
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `thumbnailUrl` | String | No | Custom thumbnail URL uploaded by the creator. If empty, auto-generate from YouTube/video. |
+

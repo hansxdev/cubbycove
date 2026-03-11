@@ -150,6 +150,38 @@ function showUploadError(msg) {
 // ═════════════════════════════════════════════════════════════════════════════
 //  UPLOAD HANDLER — Saves video metadata to Appwrite
 // ═════════════════════════════════════════════════════════════════════════════
+
+// Thumbnail Preview
+window.previewThumbnail = function (input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const preview = document.getElementById('thumbnail-preview');
+        const placeholder = document.getElementById('thumbnail-placeholder');
+        if (placeholder) placeholder.classList.add('hidden');
+        // Remove existing preview image if any
+        const existing = preview.querySelector('img');
+        if (existing) existing.remove();
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.className = 'w-full h-full object-cover';
+        preview.appendChild(img);
+        document.getElementById('clear-thumbnail-btn').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+};
+
+window.clearThumbnailPreview = function () {
+    const preview = document.getElementById('thumbnail-preview');
+    const placeholder = document.getElementById('thumbnail-placeholder');
+    const img = preview.querySelector('img');
+    if (img) img.remove();
+    if (placeholder) placeholder.classList.remove('hidden');
+    document.getElementById('thumbnailFile').value = '';
+    document.getElementById('clear-thumbnail-btn').classList.add('hidden');
+};
+
 async function handleUpload(e) {
     e.preventDefault();
 
@@ -166,6 +198,31 @@ async function handleUpload(e) {
     successBox.classList.add('hidden');
 
     try {
+        let thumbnailUrl = '';
+
+        // Upload custom thumbnail if provided
+        const thumbInput = document.getElementById('thumbnailFile');
+        if (thumbInput && thumbInput.files && thumbInput.files.length > 0) {
+            try {
+                const thumbFile = thumbInput.files[0];
+                const formData = new FormData();
+                formData.append('file', thumbFile);
+                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+                formData.append('resource_type', 'image');
+
+                const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.secure_url) {
+                    thumbnailUrl = data.secure_url;
+                }
+            } catch (thumbErr) {
+                console.warn('Thumbnail upload failed, continuing without custom thumbnail:', thumbErr);
+            }
+        }
+
         await DataService.addVideo({
             title: title,
             url: url,
@@ -176,11 +233,13 @@ async function handleUpload(e) {
             likes: 0,
             dislikes: 0,
             subscriberGains: 0,
-            uploadedAt: new Date().toISOString()
+            uploadedAt: new Date().toISOString(),
+            thumbnailUrl: thumbnailUrl
         });
 
         // Reset form
         document.getElementById('uploadForm').reset();
+        clearThumbnailPreview();
         successBox.innerHTML = '<i class="fa-solid fa-check-circle mr-1"></i> Video submitted for review!';
         successBox.classList.remove('hidden');
     } catch (err) {

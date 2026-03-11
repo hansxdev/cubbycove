@@ -1,19 +1,14 @@
 // Logic for kid/home_logged_in.html AND kid/games.html AND kid/chat.html
+// AND kid/history.html AND kid/favorites.html
 // Ensure we have DataService available.
 
 // ── Screen Time Tracking ──────────────────────────────────────────────────────
-// We record when the kid session page loads and flush accumulated minutes
-// to Appwrite on unload / visibility-change / logout.
+let _screenTimeStart = Date.now();
+let _screenTimeFlushed = false;
 
-let _screenTimeStart = Date.now(); // Reset each page navigation
-let _screenTimeFlushed = false;    // Guard to avoid double-saving per page
+// ── All approved videos cache (used by modal recommendations) ─────────────────
+let _allApprovedVideos = [];
 
-/**
- * Detects the screen time category based on the current page URL.
- * - games.html / games folder → 'games'
- * - chat.html / chat folder   → 'communication'
- * - anything else             → 'entertainment'
- */
 function _getPageCategory() {
     const path = window.location.pathname.toLowerCase();
     if (path.includes('game')) return 'games';
@@ -21,33 +16,22 @@ function _getPageCategory() {
     return 'entertainment';
 }
 
-/**
- * Saves elapsed minutes since _screenTimeStart to Appwrite.
- * Safe to call multiple times — silently returns if already flushed this page load.
- */
 async function flushScreenTime() {
     if (_screenTimeFlushed) return;
     _screenTimeFlushed = true;
-
     const session = _getChildSession();
     if (!session || !session.$id) return;
-
     const elapsedMs = Date.now() - _screenTimeStart;
-    const elapsedMinutes = elapsedMs / 60000; // convert ms → minutes
-
-    if (elapsedMinutes < 0.5) return; // less than 30 seconds — skip
-
+    const elapsedMinutes = elapsedMs / 60000;
+    if (elapsedMinutes < 0.5) return;
     const category = _getPageCategory();
-
     try {
         await DataService.logScreenTime(session.$id, elapsedMinutes, category);
     } catch (e) {
-        // Non-fatal
         console.warn('[ScreenTime] flush error:', e.message);
     }
 }
 
-/** Reads the child session stored by kidLoginFromApproved() */
 function _getChildSession() {
     try {
         const raw = sessionStorage.getItem('cubby_child_session');
@@ -57,43 +41,41 @@ function _getChildSession() {
     }
 }
 
-// Listen for page unload (tab closed, navigate away, refresh)
-window.addEventListener('beforeunload', () => {
-    // Use sendBeacon-style synchronous Fire & Forget.
-    // We can't await here, but DataService.logScreenTime is a fetch operation
-    // that will complete before the browser kills the page in most cases.
-    flushScreenTime();
-});
-
-// Listen for tab becoming hidden (user switches tabs / minimises / goes to another app)
-// This is more reliable than beforeunload on mobile.
+window.addEventListener('beforeunload', () => { flushScreenTime(); });
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
         flushScreenTime();
     } else if (document.visibilityState === 'visible') {
-        // Kid came back — restart the timer for this segment
         _screenTimeStart = Date.now();
         _screenTimeFlushed = false;
     }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Auth Check
     const user = await checkAuth();
+    if (user) updateHeader(user);
 
-    if (user) {
-        // 2. Update Header
-        updateHeader(user);
-    }
+    const path = window.location.pathname.toLowerCase();
 
-    // 3. Load dynamic kid videos if we are on the home page
+    // Home page
     if (document.getElementById('kid-video-list')) {
         loadKidVideos();
+        loadContinueWatching();
     }
 
-    // 4. Record session start time (fresh for each page load/navigation)
+    // History page
+    if (path.includes('history.html')) {
+        loadHistoryPage();
+    }
+
+    // Favorites page
+    if (path.includes('favorites.html')) {
+        loadFavoritesPage();
+    }
+
     _screenTimeStart = Date.now();
     _screenTimeFlushed = false;
 });
@@ -105,26 +87,18 @@ async function checkAuth() {
             window.location.href = '../index.html';
             return null;
         }
-
         const user = await DataService.getCurrentUser();
         if (!user) {
             console.warn("No active session. Redirecting to guest home.");
             window.location.href = '../index.html';
             return null;
         }
-
-        // Role guard: only kids/children may use these pages.
         const allowedRoles = ['kid', 'child'];
         if (!allowedRoles.includes(user.role)) {
-            console.warn(`Role '${user.role}' is not allowed on Kid pages. Redirecting.`);
-            if (user.role === 'parent') {
-                window.location.href = '../parent/dashboard.html';
-            } else {
-                window.location.href = '../staff_access.html';
-            }
+            if (user.role === 'parent') window.location.href = '../parent/dashboard.html';
+            else window.location.href = '../staff_access.html';
             return null;
         }
-
         return user;
     } catch (error) {
         console.error("Auth Error:", error);
@@ -133,136 +107,504 @@ async function checkAuth() {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// HEADER — Dynamic Profile Picture
+// ─────────────────────────────────────────────────────────────────────────────
 function updateHeader(user) {
     const headerProfile = document.querySelector('.group .font-bold.text-gray-700');
-    const headerAvatars = document.querySelectorAll('.group img');
+    const headerAvatarImgs = document.querySelectorAll('.group img');
 
-    let displayName = user.firstName || "Kid";
-    if (user.role === 'parent') displayName = user.firstName;
-
+    let displayName = user.firstName || user.name || "Kid";
     if (headerProfile) {
         headerProfile.textContent = `Hi, ${displayName}!`;
         headerProfile.classList.remove('hidden');
     }
 
-    const avatarSeed = user.avatar || user.firstName || 'Felix';
-    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed)}`;
+    // Check for custom avatar from session prefs or child doc
+    const session = _getChildSession();
+    const prefs = session?.prefs || {};
+    const avatarImage = user.avatarImage || prefs.avatarImage;
+    const avatarBgColor = user.avatarBgColor || prefs.avatarBgColor;
 
-    headerAvatars.forEach(img => {
-        img.src = avatarUrl;
+    headerAvatarImgs.forEach(img => {
+        if (avatarImage && avatarImage.startsWith('../')) {
+            img.src = avatarImage;
+            img.style.objectFit = 'contain';
+            img.style.padding = '2px';
+            if (avatarBgColor) img.style.backgroundColor = avatarBgColor;
+        } else {
+            const avatarSeed = user.avatar || user.firstName || 'Felix';
+            img.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed)}`;
+        }
     });
 }
 
-// Loads approved videos into the kid dashboard
+// ─────────────────────────────────────────────────────────────────────────────
+// LOAD KID VIDEOS — Featured for You (horizontal scroll, 4 visible)
+// ─────────────────────────────────────────────────────────────────────────────
 async function loadKidVideos() {
     const videoGrid = document.getElementById('kid-video-list');
     if (!videoGrid) return;
 
     try {
         const videos = await DataService.getVideos('approved');
+        _allApprovedVideos = videos || [];
         videoGrid.innerHTML = '';
 
         if (!videos || videos.length === 0) {
             videoGrid.innerHTML = `
-                <div class="col-span-full py-12 text-center text-gray-500 font-bold">
+                <div class="py-12 text-center text-gray-500 font-bold w-full">
                     <p>No videos available right now. Check back later!</p>
                 </div>`;
             return;
         }
 
         videos.forEach(video => {
-            const ytMatch = video.url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
-            const isYouTube = !!ytMatch;
-            const vidId = isYouTube ? ytMatch[1] : '';
-            const safeUrl = (video.url || '').replace(/"/g, '&quot;');
-
-            const thumbHtml = isYouTube
-                ? `<img src="https://img.youtube.com/vi/${vidId}/mqdefault.jpg" alt="${video.title}" class="absolute inset-0 w-full h-full object-cover">`
-                : `<video src="${safeUrl}" class="absolute inset-0 w-full h-full object-cover" muted preload="metadata"></video>`;
-
-            // Since this is the Kid dashboard, we can reuse playVideo or playDirectVideo from guest_logic 
-            // OR define them here. Since guest_logic isn't loaded here usually, we'll define a simple modal opener here.
-
-            const clickAttr = isYouTube
-                ? `onclick="openKidVideoModal('yt', '${vidId}')"`
-                : `onclick="openKidVideoModal('direct', '${safeUrl}')"`;
-
-            videoGrid.innerHTML += `
-                <div class="video-card group cursor-pointer bg-white rounded-2xl p-3 shadow-md border-b-4 border-gray-100 hover:shadow-xl hover:scale-[1.02] transition-all" ${clickAttr}>
-                    <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
-                        ${thumbHtml}
-                        <span class="absolute top-2 left-2 bg-cubby-blue text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">${video.category || 'Video'}</span>
-                        <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center transition-all">
-                            <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center pl-1 shadow-lg">
-                                <i class="fa-solid fa-play text-cubby-blue text-xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex gap-3 mt-3 px-1">
-                        <div class="min-w-[40px]"><img src="https://api.dicebear.com/7.x/identicon/svg?seed=${video.category || 'video'}" class="w-9 h-9 rounded-full bg-gray-100"></div>
-                        <div>
-                            <h3 class="font-extrabold text-gray-800 text-lg leading-tight mb-1 line-clamp-2 group-hover:text-cubby-blue transition-colors">
-                                ${video.title}
-                            </h3>
-                            <p class="text-sm text-gray-500 font-bold">${video.creatorEmail ? video.creatorEmail.split('@')[0] : 'Creator'}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
+            videoGrid.innerHTML += _buildVideoCard(video);
         });
     } catch (e) {
         console.error('Error loading kid videos:', e);
         videoGrid.innerHTML = `
-            <div class="col-span-full py-12 text-center text-gray-500 font-bold">
+            <div class="py-12 text-center text-gray-500 font-bold w-full">
                 <p>Oops, could not load videos. Please try refreshing.</p>
             </div>`;
     }
 }
 
-window.openKidVideoModal = function (type, urlOrId) {
-    const modal = document.createElement('div');
-    modal.className = "fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 backdrop-blur-sm";
+/** Build a single video card HTML string */
+function _buildVideoCard(video, extraClasses = '') {
+    const ytMatch = video.url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+    const isYouTube = !!ytMatch;
+    const vidId = isYouTube ? ytMatch[1] : '';
+    const safeUrl = (video.url || '').replace(/"/g, '&quot;');
+    const videoDocId = video.$id || '';
 
-    let contentHtml = '';
-    if (type === 'yt') {
-        contentHtml = `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${urlOrId}?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    // Use custom thumbnail if available
+    let thumbHtml;
+    if (video.thumbnailUrl) {
+        thumbHtml = `<img src="${video.thumbnailUrl}" alt="${video.title}" class="absolute inset-0 w-full h-full object-cover">`;
+    } else if (isYouTube) {
+        thumbHtml = `<img src="https://img.youtube.com/vi/${vidId}/mqdefault.jpg" alt="${video.title}" class="absolute inset-0 w-full h-full object-cover">`;
     } else {
-        contentHtml = `<video src="${urlOrId}" class="w-full h-full" controls autoplay preload="metadata"></video>`;
+        thumbHtml = `<video src="${safeUrl}" class="absolute inset-0 w-full h-full object-cover" muted preload="metadata"></video>`;
     }
 
+    return `
+        <div class="video-card group cursor-pointer bg-white rounded-2xl p-3 shadow-md border-b-4 border-gray-100 hover:shadow-xl hover:scale-[1.02] transition-all flex-shrink-0 min-w-[260px] max-w-[300px] snap-start ${extraClasses}"
+             onclick="openKidVideoModal('${videoDocId}')">
+            <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
+                ${thumbHtml}
+                <span class="absolute top-2 left-2 bg-cubby-blue text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">${video.category || 'Video'}</span>
+                <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center transition-all">
+                    <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center pl-1 shadow-lg">
+                        <i class="fa-solid fa-play text-cubby-blue text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-3 px-1">
+                <div class="min-w-[40px]"><img src="https://api.dicebear.com/7.x/identicon/svg?seed=${video.category || 'video'}" class="w-9 h-9 rounded-full bg-gray-100"></div>
+                <div class="min-w-0">
+                    <h3 class="font-extrabold text-gray-800 text-sm leading-tight mb-1 line-clamp-2 group-hover:text-cubby-blue transition-colors">
+                        ${video.title}
+                    </h3>
+                    <p class="text-xs text-gray-500 font-bold">${video.creatorEmail ? video.creatorEmail.split('@')[0] : 'Creator'}</p>
+                </div>
+            </div>
+        </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTINUE WATCHING — Today only
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadContinueWatching() {
+    const container = document.getElementById('continue-watching-list');
+    if (!container) return;
+
+    const session = _getChildSession();
+    if (!session || !session.$id) {
+        container.innerHTML = '<p class="text-gray-400 font-semibold text-sm px-2">Log in to see your history.</p>';
+        return;
+    }
+
+    try {
+        const history = await DataService.getWatchHistory(session.$id, 'today');
+        if (!history || history.length === 0) {
+            container.innerHTML = '<p class="text-gray-400 font-semibold text-sm px-2">Nothing watched today yet! Start exploring 🎬</p>';
+            return;
+        }
+
+        // Deduplicate by videoId (keep most recent watch)
+        const seen = new Set();
+        const unique = history.filter(h => {
+            if (seen.has(h.videoId)) return false;
+            seen.add(h.videoId);
+            return true;
+        });
+
+        container.innerHTML = unique.map(h => {
+            const fakeVideo = {
+                $id: h.videoId,
+                title: h.videoTitle,
+                url: h.videoUrl,
+                category: h.videoCategory,
+                thumbnailUrl: h.thumbnailUrl,
+                creatorEmail: ''
+            };
+            return _buildVideoCard(fakeVideo);
+        }).join('');
+    } catch (e) {
+        console.warn('Continue watching error:', e.message);
+        container.innerHTML = '<p class="text-gray-400 font-semibold text-sm px-2">Could not load watch history.</p>';
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VIDEO PLAYER MODAL — YouTube-style (70/30 Layout)
+// ─────────────────────────────────────────────────────────────────────────────
+window.openKidVideoModal = async function (videoDocId) {
+    // Find video from cache or fetch it
+    let video = _allApprovedVideos.find(v => v.$id === videoDocId);
+    if (!video) {
+        try { video = await DataService.getVideoById(videoDocId); } catch (e) { }
+    }
+    if (!video) return;
+
+    const ytMatch = video.url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+    const isYouTube = !!ytMatch;
+    const vidId = isYouTube ? ytMatch[1] : '';
+    const safeUrl = (video.url || '').replace(/"/g, '&quot;');
+
+    let playerHtml;
+    if (isYouTube) {
+        playerHtml = `<iframe id="kid-modal-player" width="100%" height="100%" src="https://www.youtube.com/embed/${vidId}?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    } else {
+        playerHtml = `<video id="kid-modal-player" src="${safeUrl}" class="w-full h-full" controls autoplay preload="metadata"></video>`;
+    }
+
+    // Log watch history
+    const session = _getChildSession();
+    const thumbUrl = video.thumbnailUrl || (isYouTube ? `https://img.youtube.com/vi/${vidId}/mqdefault.jpg` : '');
+    if (session?.$id) {
+        DataService.logWatchHistory(session.$id, video.$id, video.title, video.category, video.url, thumbUrl);
+        DataService.incrementVideoView(video.$id, '').catch(() => { });
+    }
+
+    // Check favorite status
+    let isFav = false;
+    if (session?.$id) {
+        isFav = await DataService.isFavorited(session.$id, video.$id);
+    }
+
+    // Build recommendations
+    const recsHtml = _buildRecommendations(video);
+
+    const modal = document.createElement('div');
+    modal.id = 'kid-video-modal';
+    modal.className = 'fixed inset-0 bg-black/95 z-[100] flex flex-col lg:flex-row overflow-auto';
+
     modal.innerHTML = `
-        <div class="w-full max-w-4xl aspect-video bg-black relative rounded-xl overflow-hidden shadow-2xl border-4 border-gray-800">
-            <button onclick="this.parentElement.parentElement.remove()" class="absolute -top-12 right-0 text-white text-3xl hover:text-red-500 transition-colors bg-gray-800/50 rounded-full w-10 h-10 flex items-center justify-center pb-1 shadow-lg">
-                <i class="fa-solid fa-times"></i>
-            </button>
-            ${contentHtml}
+        <!-- Close Button -->
+        <button id="kid-modal-close-btn" class="absolute top-4 right-4 z-50 text-white text-2xl hover:text-red-400 transition-colors bg-black/50 rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
+            <i class="fa-solid fa-times"></i>
+        </button>
+
+        <!-- LEFT: Video Player (70%) -->
+        <div class="w-full lg:w-[70%] flex flex-col p-4 lg:p-6">
+            <div class="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
+                ${playerHtml}
+            </div>
+
+            <!-- Video Info -->
+            <div class="mt-4 px-1">
+                <h2 class="text-white text-xl font-extrabold leading-tight mb-2">${video.title}</h2>
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="https://api.dicebear.com/7.x/identicon/svg?seed=${video.category || 'creator'}" class="w-10 h-10 rounded-full bg-gray-700">
+                    <div>
+                        <p class="text-white font-bold text-sm">${video.creatorEmail ? video.creatorEmail.split('@')[0] : 'Creator'}</p>
+                        <p class="text-gray-400 text-xs font-semibold">${video.category || 'Video'} • ${(video.views || 0).toLocaleString()} views</p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-3">
+                    <button onclick="window._kidLikeVideo('${video.$id}')" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-bold transition-colors">
+                        <i class="fa-solid fa-thumbs-up"></i> <span id="kid-like-count">${video.likes || 0}</span>
+                    </button>
+                    <button onclick="window._kidDislikeVideo('${video.$id}')" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-bold transition-colors">
+                        <i class="fa-solid fa-thumbs-down"></i> <span id="kid-dislike-count">${video.dislikes || 0}</span>
+                    </button>
+                    <button id="kid-fav-btn" onclick="window._kidToggleFavorite('${video.$id}', '${video.title.replace(/'/g, "\\'")}', '${video.category}', '${safeUrl}', '${thumbUrl}')"
+                        class="flex items-center gap-2 ${isFav ? 'bg-cubby-pink text-white' : 'bg-gray-800 text-white'} hover:bg-cubby-pink/80 px-4 py-2 rounded-full text-sm font-bold transition-colors">
+                        <i class="fa-solid fa-heart"></i> ${isFav ? 'Favorited' : 'Favorite'}
+                    </button>
+                    <button onclick="window._kidShareVideo('${video.url}')" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-bold transition-colors">
+                        <i class="fa-solid fa-share"></i> Share
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Recommendations (30%) -->
+        <div class="w-full lg:w-[30%] p-4 lg:p-6 lg:pl-0 overflow-y-auto">
+            <h3 class="text-white font-extrabold text-lg mb-4"><i class="fa-solid fa-wand-magic-sparkles text-cubby-yellow mr-2"></i>Up Next</h3>
+            <div id="kid-modal-recs" class="space-y-3">
+                ${recsHtml}
+            </div>
         </div>
     `;
+
     document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+
+    // Close listeners
+    document.getElementById('kid-modal-close-btn').addEventListener('click', _closeKidVideoModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) _closeKidVideoModal();
+    });
 };
 
-// Check if DataService is missing and warn dev (or user)
+function _closeKidVideoModal() {
+    const modal = document.getElementById('kid-video-modal');
+    if (modal) {
+        modal.remove();
+        document.body.style.overflow = '';
+    }
+}
+
+// ─── Recommendation Logic ────────────────────────────────────────────────────
+function _buildRecommendations(currentVideo) {
+    if (!_allApprovedVideos || _allApprovedVideos.length === 0) return '<p class="text-gray-500 text-sm">No recommendations yet.</p>';
+
+    // Prioritize same category, then fallback to others
+    const sameCategory = _allApprovedVideos.filter(v => v.$id !== currentVideo.$id && v.category === currentVideo.category);
+    const otherCategory = _allApprovedVideos.filter(v => v.$id !== currentVideo.$id && v.category !== currentVideo.category);
+
+    // Shuffle the "other" to add variety
+    for (let i = otherCategory.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [otherCategory[i], otherCategory[j]] = [otherCategory[j], otherCategory[i]];
+    }
+
+    const recommended = [...sameCategory, ...otherCategory].slice(0, 15);
+
+    if (recommended.length === 0) return '<p class="text-gray-500 text-sm">No more videos available.</p>';
+
+    return recommended.map(v => {
+        const yt = v.url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+        let thumbSrc;
+        if (v.thumbnailUrl) thumbSrc = v.thumbnailUrl;
+        else if (yt) thumbSrc = `https://img.youtube.com/vi/${yt[1]}/mqdefault.jpg`;
+        else thumbSrc = '';
+
+        const thumbEl = thumbSrc
+            ? `<img src="${thumbSrc}" class="w-full h-full object-cover" alt="${v.title}">`
+            : `<div class="w-full h-full bg-gray-700 flex items-center justify-center"><i class="fa-solid fa-film text-gray-500 text-xl"></i></div>`;
+
+        return `
+            <div class="flex gap-3 cursor-pointer group hover:bg-white/5 rounded-xl p-2 transition-colors"
+                 onclick="document.getElementById('kid-video-modal').remove(); document.body.style.overflow=''; openKidVideoModal('${v.$id}')">
+                <div class="w-40 min-w-[160px] aspect-video rounded-lg overflow-hidden bg-gray-800 relative flex-shrink-0">
+                    ${thumbEl}
+                    <span class="absolute bottom-1 right-1 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">${v.category || 'Video'}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h4 class="text-white text-xs font-bold line-clamp-2 group-hover:text-cubby-blue transition-colors leading-tight">${v.title}</h4>
+                    <p class="text-gray-500 text-[10px] font-semibold mt-1">${v.creatorEmail ? v.creatorEmail.split('@')[0] : 'Creator'}</p>
+                    <p class="text-gray-600 text-[10px] mt-0.5">${(v.views || 0).toLocaleString()} views</p>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+// ─── Action Button Handlers ──────────────────────────────────────────────────
+window._kidLikeVideo = async function (videoId) {
+    try {
+        const updated = await DataService.likeVideo(videoId);
+        const el = document.getElementById('kid-like-count');
+        if (el && updated) el.textContent = updated.likes;
+    } catch (e) { console.warn(e); }
+};
+
+window._kidDislikeVideo = async function (videoId) {
+    try {
+        const updated = await DataService.dislikeVideo(videoId);
+        const el = document.getElementById('kid-dislike-count');
+        if (el && updated) el.textContent = updated.dislikes;
+    } catch (e) { console.warn(e); }
+};
+
+window._kidToggleFavorite = async function (videoId, title, category, url, thumbUrl) {
+    const session = _getChildSession();
+    if (!session?.$id) return;
+
+    const btn = document.getElementById('kid-fav-btn');
+    const isFav = await DataService.isFavorited(session.$id, videoId);
+
+    if (isFav) {
+        await DataService.removeFavorite(session.$id, videoId);
+        if (btn) {
+            btn.classList.remove('bg-cubby-pink');
+            btn.classList.add('bg-gray-800');
+            btn.innerHTML = '<i class="fa-solid fa-heart"></i> Favorite';
+        }
+    } else {
+        await DataService.addFavorite(session.$id, videoId, title, category, url, thumbUrl);
+        if (btn) {
+            btn.classList.add('bg-cubby-pink');
+            btn.classList.remove('bg-gray-800');
+            btn.innerHTML = '<i class="fa-solid fa-heart"></i> Favorited';
+        }
+    }
+};
+
+window._kidShareVideo = function (url) {
+    if (navigator.share) {
+        navigator.share({ title: 'Check out this video on CubbyCove!', url: url }).catch(() => { });
+    } else {
+        navigator.clipboard.writeText(url).then(() => alert('Link copied!')).catch(() => { });
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HISTORY PAGE
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadHistoryPage() {
+    const container = document.getElementById('history-video-list');
+    const filterEl = document.getElementById('history-filter');
+    if (!container) return;
+
+    const session = _getChildSession();
+    if (!session?.$id) {
+        container.innerHTML = '<p class="text-gray-400 font-semibold text-center py-12">Please log in to see your history.</p>';
+        return;
+    }
+
+    const filter = filterEl ? filterEl.value : 'today';
+
+    container.innerHTML = '<div class="text-center py-12"><i class="fa-solid fa-spinner fa-spin text-3xl text-cubby-blue"></i></div>';
+
+    try {
+        // Also fetch approved videos to populate the cache for modal recommendations
+        if (_allApprovedVideos.length === 0) {
+            try { _allApprovedVideos = await DataService.getVideos('approved') || []; } catch (e) { }
+        }
+
+        const history = await DataService.getWatchHistory(session.$id, filter);
+
+        if (!history || history.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-16">
+                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa-solid fa-clock-rotate-left text-gray-300 text-3xl"></i>
+                    </div>
+                    <p class="text-gray-500 font-bold text-lg">No videos watched yet</p>
+                    <p class="text-gray-400 text-sm mt-1">Your watch history will appear here!</p>
+                </div>`;
+            return;
+        }
+
+        // Group by date
+        const groups = {};
+        history.forEach(h => {
+            const dateKey = new Date(h.watchedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            if (!groups[dateKey]) groups[dateKey] = [];
+            groups[dateKey].push(h);
+        });
+
+        let html = '';
+        for (const [date, items] of Object.entries(groups)) {
+            html += `<div class="mb-6">
+                <h3 class="text-lg font-extrabold text-gray-700 mb-3 flex items-center gap-2">
+                    <i class="fa-regular fa-calendar text-cubby-blue"></i> ${date}
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">`;
+
+            // Deduplicate within same day
+            const seen = new Set();
+            items.forEach(h => {
+                if (seen.has(h.videoId)) return;
+                seen.add(h.videoId);
+                const fakeVideo = { $id: h.videoId, title: h.videoTitle, url: h.videoUrl, category: h.videoCategory, thumbnailUrl: h.thumbnailUrl, creatorEmail: '' };
+                html += _buildVideoCard(fakeVideo, 'min-w-0 max-w-none');
+            });
+
+            html += `</div></div>`;
+        }
+
+        container.innerHTML = html;
+    } catch (e) {
+        console.error('History page error:', e);
+        container.innerHTML = '<p class="text-red-400 font-bold text-center py-12">Error loading history.</p>';
+    }
+}
+
+// Filter change handler
+window.changeHistoryFilter = function () {
+    loadHistoryPage();
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FAVORITES PAGE
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadFavoritesPage() {
+    const container = document.getElementById('favorites-video-list');
+    if (!container) return;
+
+    const session = _getChildSession();
+    if (!session?.$id) {
+        container.innerHTML = '<p class="text-gray-400 font-semibold text-center py-12">Please log in to see your favorites.</p>';
+        return;
+    }
+
+    container.innerHTML = '<div class="text-center py-12"><i class="fa-solid fa-spinner fa-spin text-3xl text-cubby-pink"></i></div>';
+
+    try {
+        // Also fetch approved videos to populate the cache for modal recommendations
+        if (_allApprovedVideos.length === 0) {
+            try { _allApprovedVideos = await DataService.getVideos('approved') || []; } catch (e) { }
+        }
+
+        const favorites = await DataService.getFavorites(session.$id);
+
+        if (!favorites || favorites.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-16">
+                    <div class="w-20 h-20 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa-solid fa-heart text-cubby-pink text-3xl"></i>
+                    </div>
+                    <p class="text-gray-500 font-bold text-lg">No favorites yet</p>
+                    <p class="text-gray-400 text-sm mt-1">Tap the ❤️ button on any video to add it here!</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = favorites.map(f => {
+            const fakeVideo = { $id: f.videoId, title: f.videoTitle, url: f.videoUrl, category: f.videoCategory, thumbnailUrl: f.thumbnailUrl, creatorEmail: '' };
+            return _buildVideoCard(fakeVideo, 'min-w-0 max-w-none');
+        }).join('');
+    } catch (e) {
+        console.error('Favorites page error:', e);
+        container.innerHTML = '<p class="text-red-400 font-bold text-center py-12">Error loading favorites.</p>';
+    }
+}
+
+// Check if DataService is missing
 if (typeof DataService === 'undefined') {
     console.warn("CRITICAL: DataService.js is missing from this page!");
 }
 
-// Expose a proper logout that saves screen time THEN deletes the Appwrite session
+// ─────────────────────────────────────────────────────────────────────────────
+// LOGOUT
+// ─────────────────────────────────────────────────────────────────────────────
 window.handleKidLogout = async function () {
-    // Flush time before leaving
     await flushScreenTime();
-
-    try {
-        await DataService.logout();
-    } catch (e) {
-        console.warn("Logout error:", e);
-    }
+    try { await DataService.logout(); } catch (e) { console.warn("Logout error:", e); }
     window.location.href = '../index.html';
 };
 
-// ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // KID PROFILE SETTINGS MODAL
-// ─────────────────────────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────────────────────────────────────────
 let _kidAvatarColor = '#60a5fa';
 let _kidAvatarIcon = '🐻';
 let _kidCoverColor = '#3b82f6';
@@ -274,7 +616,6 @@ window.openKidSettingsModal = function () {
 
     const session = _getChildSession();
     if (session) {
-        // Load saved prefs from session/child doc
         const prefs = session.prefs || {};
         _kidAvatarColor = prefs.avatarBgColor || '#60a5fa';
         _kidAvatarIcon = prefs.avatarImage || prefs.avatarIcon || '🐻';
@@ -284,7 +625,6 @@ window.openKidSettingsModal = function () {
         document.getElementById('kid-display-name').value = prefs.displayName || session.name || '';
         document.getElementById('kid-bio').value = prefs.bio || '';
 
-        // Update previews
         const preview = document.getElementById('kid-avatar-preview');
         if (preview) {
             preview.style.background = _kidAvatarColor;
@@ -298,7 +638,6 @@ window.openKidSettingsModal = function () {
         if (coverPreview) coverPreview.style.background = _kidCoverColor;
     }
 
-    // Bio counter
     const bioEl = document.getElementById('kid-bio');
     if (bioEl) {
         document.getElementById('kid-bio-count').textContent = bioEl.value.length;
@@ -322,11 +661,8 @@ window.pickAvatarIcon = function (icon) {
     _kidAvatarIcon = icon;
     const preview = document.getElementById('kid-avatar-preview');
     if (preview) {
-        if (icon.startsWith('../')) {
-            preview.innerHTML = `<img src="${icon}" class="w-full h-full object-contain p-1">`;
-        } else {
-            preview.textContent = icon;
-        }
+        if (icon.startsWith('../')) preview.innerHTML = `<img src="${icon}" class="w-full h-full object-contain p-1">`;
+        else preview.textContent = icon;
     }
 };
 
@@ -338,7 +674,6 @@ window.pickCoverColor = function (color) {
 
 window.pickTheme = function (theme) {
     _kidTheme = theme;
-    // Visual feedback — highlight selected
     document.body.className = document.body.className.replace(/\btheme-\S+/g, '');
     if (theme !== 'default') document.body.classList.add('theme-' + theme);
 };
@@ -350,7 +685,6 @@ window.saveKidSettings = async function () {
     const displayName = document.getElementById('kid-display-name').value.trim();
     const bio = document.getElementById('kid-bio').value.trim();
 
-    // Gemini API bio filter (stub — call DataService.filterBioGemini if available)
     if (bio && typeof DataService.filterBioGemini === 'function') {
         try {
             const filtered = await DataService.filterBioGemini(bio);
@@ -358,9 +692,7 @@ window.saveKidSettings = async function () {
                 alert('Your bio contains inappropriate content. Please try again with different words! 😊');
                 return;
             }
-        } catch (e) {
-            console.warn('Gemini filter unavailable:', e.message);
-        }
+        } catch (e) { console.warn('Gemini filter unavailable:', e.message); }
     }
 
     const prefs = {
@@ -373,7 +705,6 @@ window.saveKidSettings = async function () {
         bio: bio
     };
 
-    // Save to child session + try updating child doc
     session.prefs = { ...session.prefs, ...prefs };
     sessionStorage.setItem('cubby_child_session', JSON.stringify(session));
 
@@ -382,18 +713,13 @@ window.saveKidSettings = async function () {
             await DataService.updateChildPrefs(session.$id, prefs);
         }
         if (typeof DataService.updateChild === 'function') {
-            // Also store these visually-important attributes directly on the document
-            // so they are readable without auth
             await DataService.updateChild(session.$id, {
                 avatarImage: prefs.avatarImage,
                 avatarBgColor: prefs.avatarBgColor
             });
         }
-    } catch (e) {
-        console.warn('Could not save prefs to server:', e.message);
-    }
+    } catch (e) { console.warn('Could not save prefs to server:', e.message); }
 
-    // Apply theme immediately
     document.body.className = document.body.className.replace(/\btheme-\S+/g, '');
     if (_kidTheme !== 'default') document.body.classList.add('theme-' + _kidTheme);
 

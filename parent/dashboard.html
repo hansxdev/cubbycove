@@ -24,7 +24,37 @@
     <link rel="stylesheet" href="../css/style.css">
 </head>
 
-<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+<!-- Early dark mode check to prevent FOUC (flash of unstyled content) -->
+<script>
+    if (localStorage.getItem('cubbycove_theme') === 'dark') {
+        document.documentElement.classList.add('dark-mode');
+    }
+</script>
+
+<body class="bg-gray-50 text-gray-800 font-sans antialiased transition-colors duration-300">
+    <!-- Apply dark-mode from localStorage immediately -->
+    <script>
+        if (localStorage.getItem('cubbycove_theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+        }
+        // File preview for avatar upload
+        document.addEventListener('DOMContentLoaded', () => {
+            const avatarUpload = document.getElementById('settings-avatar-upload');
+            if (avatarUpload) {
+                avatarUpload.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            const preview = document.getElementById('settings-avatar');
+                            if (preview) preview.src = ev.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        });
+    </script>
 
     <div class="flex h-screen overflow-hidden">
 

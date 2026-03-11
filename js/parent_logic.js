@@ -798,6 +798,11 @@ function renderChart(labels, datasets, type) {
         screenTimeChartInstance.destroy();
     }
 
+    // Dark mode aware colors
+    const isDark = document.body.classList.contains('dark-mode');
+    const gridColor = isDark ? '#374151' : '#F3F4F6';
+    const tickColor = isDark ? '#9CA3AF' : '#9CA3AF';
+
     screenTimeChartInstance = new Chart(canvas, {
         type: type,
         data: {
@@ -811,10 +816,10 @@ function renderChart(labels, datasets, type) {
                 y: {
                     beginAtZero: true,
                     stacked: type === 'bar',
-                    grid: { color: '#F3F4F6', drawBorder: false },
+                    grid: { color: gridColor, drawBorder: false },
                     border: { display: false },
                     ticks: {
-                        color: '#9CA3AF',
+                        color: tickColor,
                         font: { size: 10, weight: 'bold' }
                     }
                 },
@@ -823,17 +828,17 @@ function renderChart(labels, datasets, type) {
                     grid: { display: false },
                     border: { display: false },
                     ticks: {
-                        color: '#9CA3AF',
+                        color: tickColor,
                         font: { size: 10, weight: 'bold' }
                     }
                 }
             },
             plugins: {
-                legend: { display: false }, // Legend is hardcoded in HTML below it
+                legend: { display: false },
                 tooltip: {
                     mode: 'index',
                     intersect: false,
-                    backgroundColor: 'rgba(28, 29, 33, 0.9)',
+                    backgroundColor: isDark ? 'rgba(55, 65, 81, 0.95)' : 'rgba(28, 29, 33, 0.9)',
                     titleColor: '#fff',
                     bodyColor: '#A1A1AA',
                     cornerRadius: 8,
@@ -1064,7 +1069,6 @@ window.saveSettings = async function () {
         if (avatarUpload && avatarUpload.files && avatarUpload.files.length > 0) {
             const file = avatarUpload.files[0];
             try {
-                // Determine file extension to enforce max size properly if needed, Appwrite limits handle this too
                 const { ID, Permission, Role } = Appwrite;
                 const uploadResult = await svc.storage.createFile(
                     svc.BUCKET_PROFILE_PICS,
@@ -1077,11 +1081,16 @@ window.saveSettings = async function () {
                 const fileUrl = `${svc.client.config.endpoint}/storage/buckets/${svc.BUCKET_PROFILE_PICS}/files/${uploadResult.$id}/view?project=${svc.client.config.project}`;
 
                 updatedPrefs.profilePictureUrl = fileUrl;
-                document.getElementById('settings-avatar').src = fileUrl; // Update preview
+                document.getElementById('settings-avatar').src = fileUrl;
+                // Update sidebar and header avatars globally
+                const sideAvatar = document.getElementById('sidebar-parent-avatar');
+                if (sideAvatar) sideAvatar.src = fileUrl;
+                const headerAvatar = document.getElementById('header-avatar');
+                if (headerAvatar) headerAvatar.src = fileUrl;
             } catch (uploadError) {
                 console.error("Profile picture upload failed:", uploadError);
                 alert("Failed to upload profile picture. Please try again.");
-                return; // Stop save process if image upload fails
+                return;
             }
         }
 
@@ -1106,8 +1115,14 @@ window.saveSettings = async function () {
             alert('Password updated successfully!');
         }
 
-        if (darkMode) document.body.classList.add('dark-mode');
-        else document.body.classList.remove('dark-mode');
+        // Dark mode — save to localStorage for instant load next time
+        if (darkMode) {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('cubbycove_theme', 'dark');
+        } else {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('cubbycove_theme', 'light');
+        }
 
         const nameEl = document.getElementById('sidebar-parent-name');
         if (nameEl && newUsername) nameEl.textContent = newUsername;

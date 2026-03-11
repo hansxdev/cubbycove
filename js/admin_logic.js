@@ -221,6 +221,9 @@ async function loadDashboardCharts(period = 'day') {
             const ctx = canvas.getContext('2d');
             const existing = Chart.getChart(canvas);
             if (existing) existing.destroy();
+            const isDark = document.body.classList.contains('dark-mode');
+            const gridColor = isDark ? '#374151' : '#f3f4f6';
+            const tickColor = isDark ? '#9CA3AF' : '#6B7280';
             return new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -241,8 +244,8 @@ async function loadDashboardCharts(period = 'day') {
                     maintainAspectRatio: true,
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxTicksLimit: 8 } },
-                        y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { precision: 0, font: { size: 10 } } }
+                        x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10 }, maxTicksLimit: 8 } },
+                        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, precision: 0, font: { size: 10 } } }
                     }
                 }
             });

@@ -15,6 +15,37 @@ const DataService = {
         return window.AppwriteService; // { client, account, databases, DB_ID, COLLECTIONS }
     },
 
+    // --- REALTIME METHODS ---
+
+    /**
+     * Subscribes to changes in specific Appwrite channels.
+     * channels: array of channel names (e.g. ['databases.DB.collections.COL.documents'])
+     * callback: function to run on update (receives the response object)
+     * returns: Unsubscribe function
+     */
+    subscribe: function (channels, callback) {
+        const { client } = this._getServices();
+        return client.subscribe(channels, callback);
+    },
+
+    /**
+     * Subscribes to all document changes within a specific collection.
+     */
+    subscribeToCollection: function (collectionId, callback) {
+        const { DB_ID } = this._getServices();
+        const channel = `databases.${DB_ID}.collections.${collectionId}.documents`;
+        return this.subscribe([channel], callback);
+    },
+
+    /**
+     * Subscribes to changes for a specific document.
+     */
+    subscribeToDocument: function (collectionId, documentId, callback) {
+        const { DB_ID } = this._getServices();
+        const channel = `databases.${DB_ID}.collections.${collectionId}.documents.${documentId}`;
+        return this.subscribe([channel], callback);
+    },
+
     // --- AUTHENTICATION METHODS ---
 
     /**

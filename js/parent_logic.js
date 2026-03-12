@@ -67,16 +67,29 @@ function setupVirtualScroll(containerId, listId, itemsHtmlArray) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Notification Polling ─────────────────────────────────────────────────────
-let _notifPollInterval = null;
+// ── Notification push-based updates ──────────────────────────────────────────
+let _unsubNotifs = null;
 
 function startNotifPolling() {
-    checkLoginRequests(); // run once immediately
-    _notifPollInterval = setInterval(checkLoginRequests, 10000); // then every 10s
+    checkLoginRequests(); // internal logic: fetch once immediately
+    
+    // Subscribe to access logs (login requests) and generic notifications
+    const { DB_ID, COLLECTIONS } = AppwriteService;
+    
+    _unsubNotifs = DataService.subscribe([
+        `databases.${DB_ID}.collections.${COLLECTIONS.ACCESS_LOGS}.documents`,
+        `databases.${DB_ID}.collections.${COLLECTIONS.NOTIFICATIONS}.documents`
+    ], () => {
+        // Any change in these collections → refresh UI
+        checkLoginRequests();
+    });
 }
 
 function stopNotifPolling() {
-    clearInterval(_notifPollInterval);
+    if (_unsubNotifs) {
+        _unsubNotifs();
+        _unsubNotifs = null;
+    }
 }
 
 async function checkLoginRequests() {

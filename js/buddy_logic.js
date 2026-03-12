@@ -5,7 +5,7 @@
 
 let _currentChild = null;
 let _foundBuddyTarget = null; // the child doc found by search
-let _buddyPollInterval = null;
+let _unsubscribeBuddies = null;
 
 // ── Bootstrap ────────────────────────────────────────────────────────────────
 
@@ -30,9 +30,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await refreshBuddyUI();
 
-    // Poll for new buddy requests every 15 seconds
-    _buddyPollInterval = setInterval(refreshBuddyUI, 15000);
+    // Push-based updates for buddy requests and list changes
+    startBuddyRealtime();
 });
+
+// Begins the Realtime subscription for buddy events.
+function startBuddyRealtime() {
+    stopBuddyRealtime();
+    const { COLLECTIONS } = AppwriteService;
+    _unsubscribeBuddies = DataService.subscribeToCollection(COLLECTIONS.BUDDIES, response => {
+        const payload = response.payload;
+        // Only refresh if the event involves the current child
+        if (payload.toChildId === _currentChild?.$id || payload.fromChildId === _currentChild?.$id) {
+            refreshBuddyUI();
+        }
+    });
+}
+
+// Terminates the Realtime subscription.
+function stopBuddyRealtime() {
+    if (_unsubscribeBuddies) {
+        _unsubscribeBuddies();
+        _unsubscribeBuddies = null;
+    }
+}
+
+// Safely terminates Realtime when the user navigates away.
+window.addEventListener('beforeunload', stopBuddyRealtime);
+window.addEventListener('pagehide', stopBuddyRealtime);
 
 // ── Main refresh ─────────────────────────────────────────────────────────────
 

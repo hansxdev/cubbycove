@@ -29,7 +29,10 @@ try {
         PENDING_STAFF: 'pending_staff',
         PATHS: 'paths',
         KID_REWARDS: 'kid_rewards',
-        KID_PATH_STATUS: 'kid_path_status'
+        KID_PATH_STATUS: 'kid_path_status',
+        CHAT_MESSAGES: 'chat_messages',
+        NOTIFICATIONS: 'notifications',
+        BUDDIES: 'buddies'
     };
 
     // Storage Bucket IDs

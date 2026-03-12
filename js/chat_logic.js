@@ -4,7 +4,7 @@ let _buddyId = '';
 let _buddyName = '';
 let _buddyDocId = '';
 let _conversationId = '';
-let _pollInterval = null;
+let _unsubscribeChat = null;
 let _lastMessageTime = null;
 let _knownMessageIds = new Set();
 let _lastRenderedMsg = null;
@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateChatHeader(_buddyId, _buddyName);
     _conversationId = DataService._buildConversationId(_currentChild.$id, _buddyId);
     await loadMessageHistory();
-    startPolling();
+    startRealtimeChat();
 
     $('send-btn').addEventListener('click', sendMessage);
     $('message-input').addEventListener('keydown', e => {
@@ -232,37 +232,37 @@ async function loadMessageHistory() {
     }
 }
 
-// Begins the recurring poll for new incoming chat messages.
-function startPolling() {
-    stopPolling();
-    _pollInterval = setInterval(pollNewMessages, POLL_MS);
+// Begins the push-based subscription for new incoming chat messages.
+function startRealtimeChat() {
+    stopRealtimeChat();
+    const { COLLECTIONS } = AppwriteService;
+    _unsubscribeChat = DataService.subscribeToCollection(COLLECTIONS.CHAT_MESSAGES, response => {
+        // Appwrite Realtime response contains: events[], payload{}
+        const isCreate = response.events.some(e => e.includes('.create'));
+        if (isCreate) {
+            const msg = response.payload;
+            // Verify message is for this conversation and not already rendered
+            if (msg.conversationId === _conversationId && !_knownMessageIds.has(msg.$id)) {
+                _knownMessageIds.add(msg.$id);
+                const emptyCard = $('empty-chat-msg');
+                if (emptyCard) emptyCard.remove();
+                renderMessage(msg);
+                scrollToBottom();
+            }
+        }
+    });
 }
 
-// Stops the recurring poll for new chat messages.
-function stopPolling() {
-    if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
-}
-
-// Checks the server for new messages that haven't been rendered yet.
-async function pollNewMessages() {
-    if (!_conversationId) return;
-    try {
-        const messages = await DataService.getChatMessages(_conversationId, 25);
-        let addedAny = false;
-        messages.forEach(msg => {
-            if (_knownMessageIds.has(msg.$id)) return;
-            _knownMessageIds.add(msg.$id);
-            const emptyCard = $('empty-chat-msg');
-            if (emptyCard) emptyCard.remove();
-            renderMessage(msg);
-            addedAny = true;
-            if (!_lastMessageTime || msg.sentAt > _lastMessageTime) _lastMessageTime = msg.sentAt;
-        });
-        if (addedAny) scrollToBottom();
-    } catch (e) {
-        console.warn('[CubbyChat] Poll error:', e.message);
+// Terminates the Realtime subscription.
+function stopRealtimeChat() {
+    if (_unsubscribeChat) {
+        _unsubscribeChat(); // client.subscribe returns an unsubscribe function
+        _unsubscribeChat = null;
     }
 }
+
+// Deprecated: pollNewMessages is no longer used but kept for logic reference if needed
+// function pollNewMessages() { ... }
 
 // Renders a single message bubble into the chat message container.
 function renderMessage(msg) {
@@ -444,5 +444,5 @@ function formatTime(isoStr) {
 }
 
 // Safely terminates message polling when the user navigates away from the page.
-window.addEventListener('beforeunload', stopPolling);
+window.addEventListener('beforeunload', stopRealtimeChat);
 window.addEventListener('pagehide', stopPolling);

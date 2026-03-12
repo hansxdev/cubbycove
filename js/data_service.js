@@ -1416,6 +1416,7 @@ const DataService = {
                 allowGames: childData.allowGames !== undefined ? childData.allowGames : true,
                 isOnline: false,
                 threatScore: 0,
+                totalPoints: 0,
                 kidId: '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0')
             };
 
@@ -1757,6 +1758,218 @@ const DataService = {
             });
         } catch (e) {
             console.warn('dislikeVideo error:', e.message);
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // LEARNING PATHS & REWARDS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    addPath: async function (pathData) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+        const newPath = {
+            title: pathData.title,
+            description: pathData.description || '',
+            creatorEmail: pathData.creatorEmail,
+            type: pathData.type || 'flexible',
+            videoIds: pathData.videoIds || [],
+            bonusPoints: pathData.bonusPoints || 50,
+            createdAt: new Date().toISOString()
+        };
+        return await databases.createDocument(DB_ID, COLLECTIONS.PATHS, ID.unique(), newPath);
+    },
+
+    getPaths: async function () {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        const result = await databases.listDocuments(DB_ID, COLLECTIONS.PATHS, [
+            Query.orderDesc('createdAt'),
+            Query.limit(100)
+        ]);
+        return result.documents;
+    },
+
+    getPathById: async function (pathId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        return await databases.getDocument(DB_ID, COLLECTIONS.PATHS, pathId);
+    },
+
+    updatePath: async function (pathId, updateData) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        return await databases.updateDocument(DB_ID, COLLECTIONS.PATHS, pathId, {
+            ...updateData,
+            updatedAt: new Date().toISOString()
+        });
+    },
+
+    deletePath: async function (pathId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        return await databases.deleteDocument(DB_ID, COLLECTIONS.PATHS, pathId);
+    },
+
+    /**
+     * Records a video completion reward for a child.
+     * Updates the child's total points atomically.
+     */
+    recordVideoReward: async function (childId, videoId, points = 10) {
+        if (!childId || !videoId) return;
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID, Query } = Appwrite;
+
+        const rewardId = `video_${childId}_${videoId}`;
+        try {
+            // 1. Check if already rewarded with unique rewardId
+            const existing = await databases.listDocuments(DB_ID, COLLECTIONS.KID_REWARDS, [
+                Query.equal('rewardId', rewardId)
+            ]);
+
+            if (existing.documents.length > 0) {
+                console.log('ℹ️ Video reward already claimed.');
+                return existing.documents[0];
+            }
+
+            // 2. Create reward entry with unique rewardId
+            const reward = await databases.createDocument(DB_ID, COLLECTIONS.KID_REWARDS, ID.unique(), {
+                childId,
+                rewardType: 'video_completion',
+                points,
+                sourceId: videoId,
+                rewardId: rewardId,
+                earnedAt: new Date().toISOString()
+            });
+
+            // 3. Update child totalPoints
+            const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+            await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
+                totalPoints: (child.totalPoints || 0) + points
+            });
+
+            console.log(`⭐ [Rewards] Child ${childId} earned ${points} stars for Video ${videoId}`);
+            return reward;
+
+        } catch (e) {
+            console.error('recordVideoReward error:', e.message);
+            throw e;
+        }
+    },
+
+    getRewardsByChild: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        const result = await databases.listDocuments(DB_ID, COLLECTIONS.KID_REWARDS, [
+            Query.equal('childId', childId),
+            Query.orderDesc('earnedAt'),
+            Query.limit(50)
+        ]);
+        return result.documents;
+    },
+
+    /**
+     * Get path progress for a child.
+     */
+    getPathProgress: async function (childId, pathId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.KID_PATH_STATUS, [
+                Query.equal('childId', childId),
+                Query.equal('pathId', pathId),
+                Query.limit(1)
+            ]);
+            return result.documents.length > 0 ? result.documents[0] : null;
+        } catch (e) {
+            console.warn('getPathProgress error:', e.message);
+            return null;
+        }
+    },
+
+    getPathStatusesByChild: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        const result = await databases.listDocuments(DB_ID, COLLECTIONS.KID_PATH_STATUS, [
+            Query.equal('childId', childId),
+            Query.orderDesc('updatedAt'),
+            Query.limit(50)
+        ]);
+        return result.documents;
+    },
+
+    /**
+     * Updates path progress when a video is finished.
+     * If all videos in path are finished, awards bonus.
+     */
+    updatePathProgress: async function (childId, pathId, videoId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+
+        try {
+            const path = await this.getPathById(pathId);
+            let status = await this.getPathProgress(childId, pathId);
+
+            if (!status) {
+                status = await databases.createDocument(DB_ID, COLLECTIONS.KID_PATH_STATUS, ID.unique(), {
+                    childId,
+                    pathId,
+                    completedVideoIds: [videoId],
+                    currentStatus: 'in_progress',
+                    updatedAt: new Date().toISOString()
+                });
+            } else {
+                if (!status.completedVideoIds.includes(videoId)) {
+                    const newList = [...status.completedVideoIds, videoId];
+                    const isFinished = newList.length >= path.videoIds.length;
+                    
+                    status = await databases.updateDocument(DB_ID, COLLECTIONS.KID_PATH_STATUS, status.$id, {
+                        completedVideoIds: newList,
+                        currentStatus: isFinished ? 'completed' : 'in_progress',
+                        updatedAt: new Date().toISOString()
+                    });
+
+                    // Award bonus if just finished
+                    if (isFinished) {
+                        await this.recordPathBonus(childId, pathId, path.bonusStars || path.bonusPoints || 0);
+                    }
+                }
+            }
+            return status;
+        } catch (e) {
+            console.error('updatePathProgress error:', e.message);
+            throw e;
+        }
+    },
+
+    recordPathBonus: async function (childId, pathId, points) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID, Query } = Appwrite;
+
+        const rewardId = `path_${childId}_${pathId}`;
+        try {
+            const existing = await databases.listDocuments(DB_ID, COLLECTIONS.KID_REWARDS, [
+                Query.equal('rewardId', rewardId)
+            ]);
+
+            if (existing.documents.length > 0) return existing.documents[0];
+
+            const reward = await databases.createDocument(DB_ID, COLLECTIONS.KID_REWARDS, ID.unique(), {
+                childId,
+                rewardType: 'path_bonus',
+                points,
+                sourceId: pathId,
+                rewardId: rewardId,
+                earnedAt: new Date().toISOString()
+            });
+
+            const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+            await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
+                totalPoints: (child.totalPoints || 0) + points
+            });
+
+            console.log(`🏆 [Rewards] Path Bonus! Child ${childId} earned ${points} for finishing Path ${pathId}`);
+            return reward;
+        } catch (e) {
+            console.error('recordPathBonus error:', e.message);
+            throw e;
         }
     }
 };

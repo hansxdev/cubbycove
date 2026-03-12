@@ -13,6 +13,17 @@ All users (Parents, Staff) will use Appwrite Authentication.
 
 ### 2. Database: `CubbyCoveDB`
 
+> [!CAUTION]
+> **Important Permissions Note for Kid Portal:**
+> Since children log into the Kid Portal without a formal Appwrite Authentication session, any collections they need to read or write to **must** have `Any` permissions enabled in the Appwrite Console:
+> - **`Videos`**: Requires `Any` Read permission so the kid portal can load videos.
+> - **`Children`**: Requires `Any` Read permission so the login page can verify usernames.
+> - **`kid_watch_history`**: Requires `Any` Read/Create/Update/Delete permissions.
+- **`kid_favorites`**: Requires `Any` Read/Create/Update/Delete permissions.
+- **`kid_rewards`**: Requires `Any` Read/Create permissions.
+- **`kid_path_status`**: Requires `Any` Read/Create/Update permissions.
+- **`paths`**: Requires `Any` Read permission.
+
 #### Collection: `Users` (Profile Data)
 Stores additional user information linked to the Appwrite Auth Account.
 
@@ -46,6 +57,7 @@ Stores profiles of children registered by parents.
 | `screenTimeLogs` | JSON | No | Logs screen time. Format: `[{ "date": "2023-10-27", "minutes": 45 }]` |
 | `activityLogs` | JSON | No | History of actions. Format: `[{ "action": "Played Math Game", "timestamp": "...", "link": "/games/math" }]` |
 | `status` | String | Yes | Enum: `active`, `inactive`. |
+| `totalPoints` | Integer | Yes | Total points earned via Watch-to-Earn. Default: `0`. |
 
 #### Collection: `Videos` (Content Library)
 Stores video content metadata, approval status, and creator details.
@@ -59,6 +71,8 @@ Stores video content metadata, approval status, and creator details.
 | `status` | String | Yes | Enum: `pending`, `approved`, `rejected`. Default: `pending`. |
 | `views` | Integer | Yes | View count. Default: `0`. |
 | `uploadedAt` | Datetime | Yes | Timestamp of submission. |
+| `duration` | Integer | No | Duration in seconds (for Watch-to-Earn logic). |
+| `pointsValue` | Integer | Yes | Points awarded for completing this video. Default: `10`. |
 
 #### Collection: `ThreatLogs` (New)
 Detailed logs of detected threats for review.
@@ -182,4 +196,39 @@ Stores videos a kid has marked as favorite.
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `thumbnailUrl` | String | No | Custom thumbnail URL uploaded by the creator. If empty, auto-generate from YouTube/video. |
+
+#### Collection: `paths` (New)
+Stores learning paths/series created by creators.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `title` | String | Yes | Path Title. |
+| `description` | String | No | Short description for kids. |
+| `creatorEmail` | String | Yes | Link to the creator document. |
+| `type` | String | Yes | Enum: `ordered`, `flexible`. |
+| `videoIds` | String[] | Yes | Array of video document IDs. |
+| `bonusPoints` | Integer | Yes | Points awarded on finishing path. |
+| `createdAt` | Datetime | Yes | ISO timestamp. |
+
+#### Collection: `kid_rewards` (New)
+Ledger of point-earning events.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `childId` | String | Yes | The kid who earned points. |
+| `rewardType` | String | Yes | Enum: `video_completion`, `path_bonus`. |
+| `points` | Integer | Yes | Points awarded. |
+| `sourceId` | String | Yes | ID of video or path. |
+| `earnedAt` | Datetime | Yes | ISO timestamp. |
+
+#### Collection: `kid_path_status` (New)
+Tracks progress within a specific path.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `childId` | String | Yes | The child's ID ($id). |
+| `pathId` | String | Yes | The path ID ($id). |
+| `completedVideoIds` | String[] | No | IDs of finished videos in this path. |
+| `currentStatus` | String | Yes | Enum: `in_progress`, `completed`. |
+| `updatedAt` | Datetime | Yes | ISO timestamp. |
 

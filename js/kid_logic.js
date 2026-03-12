@@ -9,6 +9,17 @@ let _screenTimeFlushed = false;
 // ── All approved videos cache (used by modal recommendations) ─────────────────
 let _allApprovedVideos = [];
 
+// ── Reward Engine State ──────────────────────────────────────────────────────
+let _rewardInterval = null;
+let _heartbeatInterval = null;
+let _currentVideoId = null;
+let _currentPathId = null; // Path context for the current video
+let _currentPointsValue = 10;
+let _elapsedPlayTime = 0;
+let _completionThreshold = 0.8; // 80%
+let _isRewardClaimed = false;
+let _rewardedVideoIds = new Set(); // Cache of completed videos for badges
+
 function _getPageCategory() {
     const path = window.location.pathname.toLowerCase();
     if (path.includes('game')) return 'games';
@@ -63,6 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Home page
     if (document.getElementById('kid-video-list')) {
         loadKidVideos();
+        loadLearningPaths();
         loadContinueWatching();
     }
 
@@ -76,9 +88,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadFavoritesPage();
     }
 
+    // Reward Initialization
+    await _initRewardState();
+
     _screenTimeStart = Date.now();
     _screenTimeFlushed = false;
 });
+
+async function _initRewardState() {
+    const session = _getChildSession();
+    if (!session || !session.$id) return;
+    try {
+        const rewards = await DataService.databases.listDocuments(
+            DataService.DB_ID, 
+            DataService.COLLECTIONS.KID_REWARDS, 
+            [Appwrite.Query.equal('childId', session.$id), Appwrite.Query.equal('rewardType', 'video_completion')]
+        );
+        _rewardedVideoIds = new Set(rewards.documents.map(d => d.sourceId));
+    } catch (e) {
+        console.warn('Reward state init error:', e.message);
+    }
+}
 
 async function checkAuth() {
     try {
@@ -114,10 +144,17 @@ function updateHeader(user) {
     const headerProfile = document.querySelector('.group .font-bold.text-gray-700');
     const headerAvatarImgs = document.querySelectorAll('.group img');
 
-    let displayName = user.firstName || user.name || "Kid";
     if (headerProfile) {
         headerProfile.textContent = `Hi, ${displayName}!`;
         headerProfile.classList.remove('hidden');
+    }
+
+    // Show Points
+    const pointsDisplay = document.getElementById('kid-points-display');
+    const pointsVal = document.getElementById('header-total-points');
+    if (pointsDisplay && pointsVal) {
+        pointsVal.textContent = user.totalPoints || 0;
+        pointsDisplay.classList.remove('hidden');
     }
 
     // Check for custom avatar from session prefs or child doc
@@ -195,6 +232,14 @@ function _buildVideoCard(video, extraClasses = '') {
             <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-200">
                 ${thumbHtml}
                 <span class="absolute top-2 left-2 bg-cubby-blue text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">${video.category || 'Video'}</span>
+                
+                <!-- Rewarded/Completed Badge -->
+                ${_rewardedVideoIds.has(videoDocId) ? `
+                    <div class="absolute top-2 right-2 bg-cubby-yellow text-white w-7 h-7 rounded-full flex items-center justify-center shadow-md animate-bounce">
+                        <i class="fa-solid fa-star text-xs"></i>
+                    </div>
+                ` : ''}
+
                 <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center transition-all">
                     <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center pl-1 shadow-lg">
                         <i class="fa-solid fa-play text-cubby-blue text-xl"></i>
@@ -211,6 +256,109 @@ function _buildVideoCard(video, extraClasses = '') {
                 </div>
             </div>
         </div>`;
+}
+
+// ── Learning Paths Logic ─────────────────────────────────────────────────────
+async function loadLearningPaths() {
+    const container = document.getElementById('learning-paths-list');
+    if (!container) return;
+
+    try {
+        const paths = await DataService.getPaths();
+        container.innerHTML = '';
+
+        if (!paths || paths.length === 0) {
+            container.closest('section')?.classList.add('hidden');
+            return;
+        }
+
+        // Fetch progress for all paths for this child
+        const session = _getChildSession();
+        let pathStatuses = [];
+        if (session?.$id) {
+            pathStatuses = await DataService.getPathStatusesByChild(session.$id);
+        }
+
+        paths.forEach(path => {
+            const status = pathStatuses.find(s => s.pathId === path.$id);
+            container.innerHTML += _buildPathCard(path, status);
+        });
+    } catch (e) {
+        console.warn('Error loading learning paths:', e.message);
+    }
+}
+
+function _buildPathCard(path, status) {
+    const completedCount = (status?.completedVideoIds || []).length;
+    const totalCount = (path.videoIds || []).length;
+    const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    const isCompleted = status?.currentStatus === 'completed' || percent >= 100;
+
+    return `
+        <div class="video-card group cursor-pointer bg-white rounded-2xl p-4 shadow-md border-b-4 border-gray-100 hover:shadow-xl hover:scale-[1.02] transition-all flex-shrink-0 min-w-[300px] max-w-[320px] snap-start border-l-4 ${isCompleted ? 'border-l-green-400' : 'border-l-cubby-purple'}"
+             onclick="openPathQuickView('${path.$id}')">
+            <div class="flex justify-between items-start mb-3">
+                <div class="bg-purple-50 text-cubby-purple p-2 rounded-xl">
+                    <i class="fa-solid fa-route text-lg"></i>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] font-black ${isCompleted ? 'text-green-500' : 'text-cubby-purple'} uppercase bg-gray-50 px-2 py-1 rounded-lg">
+                        ${isCompleted ? 'Finished!' : (percent > 0 ? percent + '%' : 'New Path')}
+                    </span>
+                </div>
+            </div>
+            
+            <h3 class="font-extrabold text-gray-800 text-sm leading-tight mb-2 line-clamp-1 group-hover:text-cubby-purple transition-colors">
+                ${path.title}
+            </h3>
+            <p class="text-[11px] text-gray-500 line-clamp-2 mb-4 h-8 leading-relaxed">
+                ${path.description || 'No description available.'}
+            </p>
+            
+            <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-50">
+                <div class="flex items-center gap-1.5">
+                    <div class="flex -space-x-2">
+                        <div class="w-5 h-5 rounded-full bg-gray-200 border border-white flex items-center justify-center text-[8px] font-bold">1</div>
+                        <div class="w-5 h-5 rounded-full bg-gray-100 border border-white flex items-center justify-center text-[8px] font-bold">2</div>
+                        <div class="w-5 h-5 rounded-full bg-gray-50 border border-white flex items-center justify-center text-[8px] font-bold">...</div>
+                    </div>
+                    <span class="text-[10px] font-bold text-gray-400 ml-1">${totalCount} Videos</span>
+                </div>
+                <div class="text-[10px] font-black text-orange-500 flex items-center gap-1">
+                    <i class="fa-solid fa-star"></i> +${path.bonusStars || 0}
+                </div>
+            </div>
+        </div>`;
+}
+
+async function openPathQuickView(pathId) {
+    try {
+        const path = await DataService.getPathById(pathId);
+        if (!path || !path.videoIds || path.videoIds.length === 0) return;
+
+        // Find the first uncompleted video or the first video
+        const session = _getChildSession();
+        let status = null;
+        if (session?.$id) {
+            status = await DataService.getPathProgress(session.$id, pathId);
+        }
+
+        const completedSet = new Set(status?.completedVideoIds || []);
+        let startVideoId = path.videoIds[0];
+        
+        for (const vidId of path.videoIds) {
+            if (!completedSet.has(vidId)) {
+                startVideoId = vidId;
+                break;
+            }
+        }
+
+        // Open the video with path context
+        openKidVideoModal(startVideoId, pathId);
+
+    } catch (e) {
+        console.error('Error opening path quick view:', e);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -261,7 +409,7 @@ async function loadContinueWatching() {
 // ─────────────────────────────────────────────────────────────────────────────
 // VIDEO PLAYER MODAL — YouTube-style (70/30 Layout)
 // ─────────────────────────────────────────────────────────────────────────────
-window.openKidVideoModal = async function (videoDocId) {
+window.openKidVideoModal = async function (videoDocId, pathId = null) {
     // Find video from cache or fetch it
     let video = _allApprovedVideos.find(v => v.$id === videoDocId);
     if (!video) {
@@ -276,10 +424,15 @@ window.openKidVideoModal = async function (videoDocId) {
 
     let playerHtml;
     if (isYouTube) {
-        playerHtml = `<iframe id="kid-modal-player" width="100%" height="100%" src="https://www.youtube.com/embed/${vidId}?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+        playerHtml = `<iframe id="kid-modal-player" width="100%" height="100%" src="https://www.youtube.com/embed/${vidId}?autoplay=1&enablejsapi=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
     } else {
         playerHtml = `<video id="kid-modal-player" src="${safeUrl}" class="w-full h-full" controls autoplay preload="metadata"></video>`;
     }
+
+    // Start Reward Tracking
+    const pointsArr = [video.pointsValue, 10]; // Fallback if pointsValue is missing
+    const finalPoints = pointsArr.find(p => p !== undefined && p !== null);
+    _startRewardTracking(videoDocId, video.duration || 0, finalPoints, pathId);
 
     // Log watch history
     const session = _getChildSession();
@@ -364,11 +517,127 @@ window.openKidVideoModal = async function (videoDocId) {
 };
 
 function _closeKidVideoModal() {
+    _stopRewardTracking();
     const modal = document.getElementById('kid-video-modal');
     if (modal) {
         modal.remove();
         document.body.style.overflow = '';
     }
+}
+
+// ── Reward Logic Implementation ──────────────────────────────────────────────
+async function _startRewardTracking(videoId, duration, points, pathId = null) {
+    _currentVideoId = videoId;
+    _currentPathId = pathId;
+    _currentPointsValue = points;
+    _elapsedPlayTime = 0;
+    _isRewardClaimed = _rewardedVideoIds.has(videoId);
+
+    if (_isRewardClaimed) {
+        console.log('Video already rewarded. No tracking needed.');
+        return;
+    }
+
+    if (!duration || duration <= 0) {
+        console.warn('Video duration unknown. Using 5 min fallback for reward threshold.');
+        duration = 300; 
+    }
+
+    const thresholdSeconds = duration * _completionThreshold;
+    console.log(`🎯 Tracking reward for ${videoId}. Need ${Math.round(thresholdSeconds)}s of watch time.`);
+
+    _rewardInterval = setInterval(() => {
+        const player = document.getElementById('kid-modal-player');
+        if (!player) return;
+
+        // Check if playing
+        let isPlaying = false;
+        if (player.tagName === 'VIDEO') {
+            isPlaying = !player.paused;
+        } else {
+            // Limited check for YouTube iframe (requires PostMessage or API, but for MVP we assume presence)
+            isPlaying = true; 
+        }
+
+        if (isPlaying) {
+            _elapsedPlayTime++;
+            if (_elapsedPlayTime >= thresholdSeconds && !_isRewardClaimed) {
+                _isRewardClaimed = true;
+                _claimReward();
+            }
+        }
+    }, 1000);
+
+    // Heartbeat every 10s to ensure active session
+    _heartbeatInterval = setInterval(_heartbeat, 10000);
+}
+
+function _stopRewardTracking() {
+    if (_rewardInterval) clearInterval(_rewardInterval);
+    if (_heartbeatInterval) clearInterval(_heartbeatInterval);
+    _rewardInterval = null;
+    _heartbeatInterval = null;
+    _currentVideoId = null;
+}
+
+function _heartbeat() {
+    const session = _getChildSession();
+    if (!session || !session.$id) return;
+    console.log('💓 Heartbeat... Kid is still here.');
+}
+
+async function _claimReward() {
+    const session = _getChildSession();
+    if (!session || !session.$id || !_currentVideoId) return;
+
+    try {
+        const reward = await DataService.recordVideoReward(session.$id, _currentVideoId, _currentPointsValue);
+        _rewardedVideoIds.add(_currentVideoId);
+        
+        // If within a Learning Path, update progress
+        if (_currentPathId) {
+            console.log(`🛣️ Updating progress for path: ${_currentPathId}`);
+            try {
+                await DataService.updatePathProgress(session.$id, _currentPathId, _currentVideoId);
+            } catch (pathErr) {
+                console.warn('Path progress update failed:', pathErr.message);
+            }
+        }
+
+        // Update header UI
+        const pointsVal = document.getElementById('header-total-points');
+        if (pointsVal) {
+            const current = parseInt(pointsVal.textContent) || 0;
+            pointsVal.textContent = current + _currentPointsValue;
+        }
+
+        showRewardCelebration(_currentPointsValue);
+        
+        // Update Video Card if visible (optional)
+        loadKidVideos(); 
+
+    } catch (e) {
+        console.error('Reward claim failed:', e.message);
+    }
+}
+
+function showRewardCelebration(points) {
+    const modal = document.getElementById('reward-celebration-modal');
+    const msg = document.getElementById('reward-message');
+    const container = document.getElementById('celebration-container');
+    
+    if (!modal || !msg || !container) return;
+
+    msg.textContent = `+${points} Stars Earned!`;
+    modal.classList.remove('hidden');
+    
+    // Animate scale
+    setTimeout(() => {
+        container.classList.remove('scale-0');
+        container.classList.add('scale-100');
+    }, 10);
+
+    // Auto-hide after 5s or wait for button
 }
 
 // ─── Recommendation Logic ────────────────────────────────────────────────────
@@ -402,7 +671,7 @@ function _buildRecommendations(currentVideo) {
 
         return `
             <div class="flex gap-3 cursor-pointer group hover:bg-white/5 rounded-xl p-2 transition-colors"
-                 onclick="document.getElementById('kid-video-modal').remove(); document.body.style.overflow=''; openKidVideoModal('${v.$id}')">
+                 onclick="document.getElementById('kid-video-modal').remove(); document.body.style.overflow=''; openKidVideoModal('${v.$id}', _currentPathId)">
                 <div class="w-40 min-w-[160px] aspect-video rounded-lg overflow-hidden bg-gray-800 relative flex-shrink-0">
                     ${thumbEl}
                     <span class="absolute bottom-1 right-1 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">${v.category || 'Video'}</span>

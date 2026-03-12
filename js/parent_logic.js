@@ -435,6 +435,7 @@ async function renderKidsAndStats(user) {
     // Render child-specific modules
     renderActivityLogs();
     renderSafetyAlerts();
+    renderRewardsAndPaths();
     changeTimeMode(currentScreenTimeMode);
 }
 
@@ -576,7 +577,7 @@ async function renderSafetyAlerts() {
                     <h4 class="text-[13px] font-bold text-[#1C1D21]">Chat Moderation Alert</h4>
                     <span class="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded ml-2 whitespace-nowrap">${timeStr}</span>
                 </div>
-                <p class="text-[11px] text-gray-500 font-medium italic mb-3 line-clamp-2 ml-2 leading-relaxed bg-gray-50 p-2 rounded-lg">"${escHtml(excerpt)}"</p>
+                <p class="text-[11px] text-gray-400 font-medium italic mb-3 line-clamp-2 ml-2 leading-relaxed bg-gray-50 p-2 rounded-lg">"${escHtml(excerpt)}"</p>
                 <div class="flex justify-between items-center ml-2 border-t border-gray-50 pt-2">
                     <span class="text-[9px] font-bold px-2 py-1 rounded-md ${resolved ? 'bg-green-50 text-green-600' : 'bg-[#FFF1F2] text-[#FF456A]'} uppercase tracking-wider">
                         ${threat.status || 'pending'}
@@ -586,6 +587,106 @@ async function renderSafetyAlerts() {
         `;
         listEl.insertAdjacentHTML('beforeend', html);
     });
+}
+
+async function renderRewardsAndPaths() {
+    const container = document.getElementById('rewards-progress-container');
+    if (!container || !_selectedChildId) return;
+
+    container.innerHTML = '<div class="flex items-center justify-center py-12"><i class="fa-solid fa-spinner fa-spin text-2xl text-orange-400"></i></div>';
+
+    try {
+        const [rewards, pathStatuses, allPaths] = await Promise.all([
+            DataService.getRewardsByChild(_selectedChildId).catch(() => []),
+            DataService.getPathStatusesByChild(_selectedChildId).catch(() => []),
+            DataService.getPaths().catch(() => [])
+        ]);
+
+        if (rewards.length === 0 && pathStatuses.length === 0) {
+            container.innerHTML = `
+                <div class="h-full flex flex-col items-center justify-center text-center py-10 opacity-70">
+                    <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-300">
+                        <i class="fa-solid fa-medal text-3xl"></i>
+                    </div>
+                    <p class="text-[15px] font-bold text-gray-500">No rewards yet.</p>
+                    <p class="text-xs text-gray-400 mt-1 font-medium">Progress will appear as they watch videos.</p>
+                </div>`;
+            return;
+        }
+
+        let html = '<div class="space-y-6">';
+
+        // ── 1. Active Learning Paths Status ─────────────────────────────────────
+        if (pathStatuses.length > 0) {
+            html += `<div>
+                <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-route text-cubby-purple"></i> Path Progress
+                </h4>
+                <div class="grid grid-cols-1 gap-3">`;
+            
+            pathStatuses.forEach(status => {
+                const path = allPaths.find(p => p.$id === status.pathId);
+                if (!path) return;
+
+                const completedCount = (status.completedVideoIds || []).length;
+                const totalCount = (path.videoIds || []).length;
+                const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+                const isCompleted = status.currentStatus === 'completed' || percent >= 100;
+
+                html += `
+                    <div class="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <h5 class="text-[13px] font-bold text-gray-800 truncate pr-2">${escHtml(path.title)}</h5>
+                            <span class="text-[10px] font-black ${isCompleted ? 'text-green-500' : 'text-cubby-purple'} bg-white px-2 py-0.5 rounded shadow-sm border border-gray-50">
+                                ${isCompleted ? 'COMPLETE' : percent + '%'}
+                            </span>
+                        </div>
+                        <div class="w-full bg-white h-2 rounded-full border border-gray-100 overflow-hidden">
+                            <div class="h-full ${isCompleted ? 'bg-green-400' : 'bg-cubby-purple'} transition-all duration-1000" style="width: ${percent}%"></div>
+                        </div>
+                        <div class="flex justify-between mt-2 text-[10px] font-bold text-gray-400">
+                            <span>${completedCount} / ${totalCount} Videos</span>
+                            ${isCompleted ? '<span class="text-green-500"><i class="fa-solid fa-circle-check"></i> Bonus Earned</span>' : ''}
+                        </div>
+                    </div>`;
+            });
+            html += `</div></div>`;
+        }
+
+        // ── 2. Recent Rewards Timeline ──────────────────────────────────────────
+        if (rewards.length > 0) {
+            html += `<div>
+                <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-bolt text-orange-400"></i> Recent Achievements
+                </h4>
+                <div class="space-y-2">`;
+            
+            rewards.slice(0, 10).forEach(reward => {
+                const timeStr = timeAgo(reward.earnedAt);
+                const isPathBonus = reward.rewardType === 'path_bonus';
+                
+                html += `
+                    <div class="flex items-center gap-3 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm group hover:border-orange-200 transition-colors">
+                        <div class="w-8 h-8 rounded-xl ${isPathBonus ? 'bg-purple-50 text-cubby-purple' : 'bg-orange-50 text-orange-500'} flex items-center justify-center shrink-0">
+                            <i class="fa-solid ${isPathBonus ? 'fa-trophy' : 'fa-star'} text-[10px]"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[11px] font-bold text-gray-800 truncate">${isPathBonus ? 'Learning Path Complete!' : 'Video Watch Reward'}</p>
+                            <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">${timeStr}</p>
+                        </div>
+                        <div class="text-[11px] font-black text-orange-500">+${reward.points}</div>
+                    </div>`;
+            });
+            html += `</div></div>`;
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error('renderRewardsAndPaths error:', e);
+        container.innerHTML = '<div class="text-center py-10 text-red-400 font-bold">Error loading progress data.</div>';
+    }
 }
 
 function escHtml(str) {

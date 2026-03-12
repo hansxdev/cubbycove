@@ -9,7 +9,12 @@ const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 // ─── State ───────────────────────────────────────────────────────────────────
 let currentUser = null;
 let creatorVideos = [];
+let creatorPaths = [];
 let statsPeriod = 'day';
+
+// Path Creation State
+let selectedPathVideos = []; // Array of video objects
+let editingPathId = null; 
 
 // ─── Chart instances ─────────────────────────────────────────────────────────
 let chartSubscribers = null;
@@ -50,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Load tab data
         if (tabName === 'uploads') loadMyUploads();
         if (tabName === 'statistics') loadStatistics();
+        if (tabName === 'paths') loadLearningPaths();
     };
 
     // Upload Form
@@ -651,4 +657,282 @@ window.setVideoStatsPeriod = function (period) {
     });
 
     if (currentDetailVideo) renderVideoSubscribersChart(currentDetailVideo, period);
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  LEARNING PATHS LOGIC
+// ═════════════════════════════════════════════════════════════════════════════
+
+async function loadLearningPaths() {
+    const listEl = document.getElementById('paths-list');
+    if (!listEl) return;
+    
+    listEl.innerHTML = '<div class="col-span-full text-center p-12"><i class="fa-solid fa-spinner fa-spin text-2xl text-cubby-purple"></i></div>';
+
+    try {
+        const paths = await DataService.getPaths();
+        // Filter by current creator (optional, but good practice if API returns all)
+        creatorPaths = paths.filter(p => p.creatorId === currentUser.$id || p.creatorEmail === currentUser.email);
+
+        if (creatorPaths.length === 0) {
+            listEl.innerHTML = `
+                <div class="col-span-full py-20 text-center text-gray-400 font-bold bg-white rounded-2xl border-2 border-dashed border-gray-100">
+                    <i class="fa-solid fa-route text-4xl mb-3 opacity-20"></i>
+                    <p>No learning paths yet. Start building one!</p>
+                </div>`;
+            return;
+        }
+
+        listEl.innerHTML = creatorPaths.map(path => {
+            const videoCount = (path.videoIds || []).length;
+            return `
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all group">
+                    <div class="h-32 bg-gradient-to-br from-purple-500 to-indigo-600 p-6 flex items-end">
+                        <div class="text-white">
+                            <h4 class="font-black text-lg line-clamp-1">${escapeHtml(path.title)}</h4>
+                            <p class="text-white/70 text-xs font-bold uppercase tracking-wider">${path.type || 'Sequential'}</p>
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        <p class="text-sm text-gray-500 line-clamp-2 mb-4 h-10">${escapeHtml(path.description || 'No description provided.')}</p>
+                        <div class="flex items-center justify-between mt-auto">
+                            <div class="flex items-center gap-3">
+                                <div class="bg-gray-50 px-3 py-1.5 rounded-lg text-center">
+                                    <span class="block text-sm font-black text-gray-700">${videoCount}</span>
+                                    <span class="block text-[8px] font-bold text-gray-400 uppercase">Videos</span>
+                                </div>
+                                <div class="bg-gray-50 px-3 py-1.5 rounded-lg text-center">
+                                    <span class="block text-sm font-black text-cubby-blue">${path.bonusPoints || 0}</span>
+                                    <span class="block text-[8px] font-bold text-gray-400 uppercase">Bonus</span>
+                                </div>
+                            </div>
+                            <button onclick="editLearningPath('${path.$id}')" class="text-gray-400 hover:text-cubby-purple transition-colors p-2">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+
+    } catch (e) {
+        console.error('Load paths error:', e);
+        listEl.innerHTML = '<div class="col-span-full text-center p-12 text-red-400 font-bold">Error loading learning paths</div>';
+    }
+}
+
+window.openCreatePathModal = function() {
+    editingPathId = null;
+    selectedPathVideos = [];
+    document.getElementById('path-title').value = '';
+    document.getElementById('path-description').value = '';
+    document.getElementById('path-type').value = 'sequential';
+    document.getElementById('path-bonus').value = 50;
+    
+    // Update Modal Title & Button
+    document.querySelector('#path-create-modal h3').textContent = 'Create Learning Path';
+    document.getElementById('save-path-btn').textContent = 'Create Learning Path';
+    // Remove delete button if exists
+    const existingDel = document.getElementById('delete-path-btn');
+    if (existingDel) existingDel.remove();
+
+    renderSelectedVideos();
+    renderAvailableVideos();
+    
+    document.getElementById('path-create-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+};
+
+window.editLearningPath = function(pathId) {
+    const path = creatorPaths.find(p => p.$id === pathId);
+    if (!path) return;
+
+    editingPathId = pathId;
+    document.getElementById('path-title').value = path.title;
+    document.getElementById('path-description').value = path.description || '';
+    document.getElementById('path-type').value = path.type || 'sequential';
+    document.getElementById('path-bonus').value = path.bonusPoints || 50;
+
+    // Load selected videos from ID list
+    selectedPathVideos = (path.videoIds || []).map(id => {
+        return creatorVideos.find(v => v.$id === id) || { $id: id, title: 'Unknown Video', url: '' };
+    });
+
+    // Update Modal Title & Button
+    document.querySelector('#path-create-modal h3').textContent = 'Edit Learning Path';
+    document.getElementById('save-path-btn').textContent = 'Save Changes';
+
+    // Add Delete Button if not exists
+    let delBtn = document.getElementById('delete-path-btn');
+    if (!delBtn) {
+        delBtn = document.createElement('button');
+        delBtn.id = 'delete-path-btn';
+        delBtn.className = 'text-red-500 hover:text-red-700 font-bold text-xs mr-auto ml-6';
+        delBtn.innerHTML = '<i class="fa-solid fa-trash mr-1"></i> Delete Path';
+        delBtn.onclick = () => deleteLearningPath(pathId);
+        document.querySelector('#path-create-modal .p-6.border-t').prepend(delBtn);
+    }
+
+    renderSelectedVideos();
+    renderAvailableVideos();
+
+    document.getElementById('path-create-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+};
+
+async function deleteLearningPath(pathId) {
+    if (!confirm('Are you sure you want to delete this learning path? This cannot be undone.')) return;
+
+    try {
+        await DataService.deletePath(pathId);
+        closeCreatePathModal();
+        loadLearningPaths();
+    } catch (e) {
+        console.error('Delete path error:', e);
+        alert('Failed to delete path.');
+    }
+}
+
+window.closeCreatePathModal = function() {
+    document.getElementById('path-create-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+};
+
+async function renderAvailableVideos() {
+    const container = document.getElementById('available-videos-list');
+    if (!container) return;
+
+    // Use creatorVideos if loaded, otherwise fetch
+    let videos = creatorVideos.filter(v => v.status === 'approved');
+    if (videos.length === 0) {
+         // Try loading again
+         await loadMyUploads();
+         videos = creatorVideos.filter(v => v.status === 'approved');
+    }
+
+    if (videos.length === 0) {
+        container.innerHTML = '<p class="col-span-full text-center text-xs text-gray-400 py-4">No approved videos found to add.</p>';
+        return;
+    }
+
+    container.innerHTML = videos.map(v => {
+        const isAdded = selectedPathVideos.find(sv => sv.$id === v.$id);
+        return `
+            <div class="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-100 hover:border-purple-200 transition-colors cursor-pointer"
+                 onclick="toggleVideoInPath('${v.$id}')">
+                <div class="w-16 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                    ${getVideoThumbnail(v.url)}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[10px] font-bold text-gray-800 truncate">${escapeHtml(v.title)}</p>
+                    <p class="text-[8px] text-gray-400">${v.category || 'General'}</p>
+                </div>
+                <div class="w-6 h-6 rounded-full flex items-center justify-center ${isAdded ? 'bg-cubby-purple text-white' : 'bg-gray-100 text-gray-300'}">
+                    <i class="fa-solid ${isAdded ? 'fa-check' : 'fa-plus'} text-[10px]"></i>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+window.toggleVideoInPath = function(videoId) {
+    const video = creatorVideos.find(v => v.$id === videoId);
+    if (!video) return;
+
+    const index = selectedPathVideos.findIndex(v => v.$id === videoId);
+    if (index > -1) {
+        selectedPathVideos.splice(index, 1);
+    } else {
+        selectedPathVideos.push(video);
+    }
+
+    renderSelectedVideos();
+    renderAvailableVideos();
+};
+
+function renderSelectedVideos() {
+    const container = document.getElementById('path-video-selection');
+    const countEl = document.getElementById('path-video-count');
+    const saveBtn = document.getElementById('save-path-btn');
+    
+    if (selectedPathVideos.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-gray-400 text-xs font-bold">No videos added yet. Select from your approved videos below.</div>';
+        countEl.textContent = '0 Videos Selected';
+        saveBtn.disabled = true;
+        return;
+    }
+
+    saveBtn.disabled = false;
+    countEl.textContent = `${selectedPathVideos.length} Videos Selected`;
+
+    container.innerHTML = selectedPathVideos.map((v, idx) => `
+        <div class="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm border border-gray-100 group">
+            <span class="text-xs font-black text-gray-300 w-4">${idx + 1}</span>
+            <div class="w-20 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                ${getVideoThumbnail(v.url)}
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-xs font-bold text-gray-800 truncate">${escapeHtml(v.title)}</p>
+            </div>
+            <div class="flex gap-1">
+                <button onclick="moveVideoInPath(${idx}, -1)" class="p-1.5 text-gray-400 hover:text-cubby-purple" ${idx === 0 ? 'disabled' : ''}>
+                    <i class="fa-solid fa-chevron-up text-xs"></i>
+                </button>
+                <button onclick="moveVideoInPath(${idx}, 1)" class="p-1.5 text-gray-400 hover:text-cubby-purple" ${idx === selectedPathVideos.length - 1 ? 'disabled' : ''}>
+                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                </button>
+                <button onclick="toggleVideoInPath('${v.$id}')" class="p-1.5 text-gray-400 hover:text-red-500">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+window.moveVideoInPath = function(index, direction) {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= selectedPathVideos.length) return;
+    
+    const temp = selectedPathVideos[index];
+    selectedPathVideos[index] = selectedPathVideos[newIndex];
+    selectedPathVideos[newIndex] = temp;
+    
+    renderSelectedVideos();
+};
+
+window.saveLearningPath = async function() {
+    const title = document.getElementById('path-title').value.trim();
+    const description = document.getElementById('path-description').value.trim();
+    const type = document.getElementById('path-type').value;
+    const bonus = parseInt(document.getElementById('path-bonus').value) || 0;
+
+    if (!title) { alert('Please enter a title for the path.'); return; }
+    if (selectedPathVideos.length === 0) { alert('Please add at least one video to the path.'); return; }
+
+    const saveBtn = document.getElementById('save-path-btn');
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...';
+
+    try {
+        const pathData = {
+            title,
+            description,
+            type,
+            bonusPoints: bonus,
+            videoIds: selectedPathVideos.map(v => v.$id),
+            creatorId: currentUser.$id,
+            creatorEmail: currentUser.email
+        };
+
+        await DataService.addPath(pathData);
+        
+        closeCreatePathModal();
+        loadLearningPaths();
+        alert('Learning Path created successfully! 🚀');
+
+    } catch (e) {
+        console.error('Save path error:', e);
+        alert('Failed to save learning path. Please try again.');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Create Learning Path';
+    }
 };

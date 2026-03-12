@@ -62,6 +62,10 @@
                     class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
                     <i class="fa-solid fa-chart-line w-5 text-center"></i> Statistics
                 </a>
+                <a href="#" onclick="showTab('paths')" id="nav-paths"
+                    class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
+                    <i class="fa-solid fa-route w-5 text-center text-cubby-purple"></i> Learning Paths
+                </a>
             </nav>
 
             <div class="p-4 border-t border-gray-100">
@@ -334,7 +338,111 @@
                     </div>
                 </div>
 
+                <!-- ═════════════════════════════════════════
+                     TAB 4: LEARNING PATHS
+                ═════════════════════════════════════════ -->
+                <div id="tab-paths" class="hidden space-y-6 max-w-5xl mx-auto">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">Learning Paths</h3>
+                            <p class="text-sm text-gray-500">Group your videos into structured journeys for kids.</p>
+                        </div>
+                        <button onclick="openCreatePathModal()"
+                            class="bg-cubby-purple hover:bg-purple-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-md shadow-purple-100 transition-all active:scale-95">
+                            <i class="fa-solid fa-plus"></i> Create New Path
+                        </button>
+                    </div>
+
+                    <!-- Paths List -->
+                    <div id="paths-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Dynamic: Path Cards -->
+                        <div class="col-span-full py-20 text-center text-gray-400 font-bold bg-white rounded-2xl border-2 border-dashed border-gray-100">
+                            <i class="fa-solid fa-route text-4xl mb-3 opacity-20"></i>
+                            <p>No learning paths yet. Start building one!</p>
+                        </div>
+                    </div>
+                </div>
+
             </main>
+        </div>
+    </div>
+
+    <!-- ═════════════════════════════════════════
+         CREATE PATH MODAL
+    ═════════════════════════════════════════ -->
+    <div id="path-create-modal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col relative">
+            <button onclick="closeCreatePathModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl z-10">
+                <i class="fa-solid fa-times"></i>
+            </button>
+
+            <div class="p-6 border-b border-gray-100">
+                <h3 class="text-xl font-bold text-gray-800">Create Learning Path</h3>
+                <p class="text-sm text-gray-500">Structure your videos into a thematic or sequential journey.</p>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <!-- Step 1: Basic Info -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Path Title</label>
+                        <input type="text" id="path-title" placeholder="e.g. Colors & Shapes Adventure"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Description</label>
+                        <textarea id="path-description" rows="2" placeholder="What will kids learn in this path?"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Path Type</label>
+                        <select id="path-type"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            <option value="sequential">Strictly Sequential (Episodes)</option>
+                            <option value="thematic">Thematic (Any Order)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Bonus Stars</label>
+                        <input type="number" id="path-bonus" value="50" min="0"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+                </div>
+
+                <!-- Step 2: Video Selection -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Videos in this Path (Drag to reorder)</label>
+                    <div id="path-video-selection" class="space-y-2 max-h-60 overflow-y-auto p-2 bg-gray-50 rounded-xl border border-gray-200">
+                        <!-- List of selected videos -->
+                        <div class="text-center py-8 text-gray-400 text-xs font-bold">
+                            No videos added yet. Select from your approved videos below.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Available Videos -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Available Approved Videos</label>
+                    <div id="available-videos-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto no-scrollbar">
+                        <!-- Loading or list of approved videos -->
+                        <p class="text-center text-xs text-gray-400 py-4 col-span-full font-bold italic">Loading your approved videos...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+                <span id="path-video-count" class="text-xs font-bold text-gray-400 uppercase">0 Videos Selected</span>
+                <button onclick="saveLearningPath()" id="save-path-btn"
+                    class="bg-cubby-purple hover:bg-purple-600 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50"
+                    disabled>
+                    Create Learning Path
+                </button>
+            </div>
         </div>
     </div>
 

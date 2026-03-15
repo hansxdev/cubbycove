@@ -309,50 +309,64 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     for (const coll of schema) {
+        let collectionExists = false;
         try {
-            console.log(`Creating Collection [${coll.name}]...`);
-            await databases.createCollection(DB_ID, coll.id, coll.name);
-            console.log(`✅ Collection [${coll.name}] created.`);
-
-            console.log(`  -> Generating attributes for [${coll.name}]...`);
-            for (const attr of coll.attributes) {
-                try {
-                    if (attr.type === 'string') {
-                        await databases.createStringAttribute(DB_ID, coll.id, attr.key, attr.size, attr.required, attr.xdefault, attr.array || false);
-                    } else if (attr.type === 'integer') {
-                        const def = attr.xdefault !== undefined ? attr.xdefault : null;
-                        await databases.createIntegerAttribute(DB_ID, coll.id, attr.key, attr.required, 0, 9007199254740991, def, attr.array || false);
-                    } else if (attr.type === 'double') {
-                         await databases.createFloatAttribute(DB_ID, coll.id, attr.key, attr.required, 0, 999999999, attr.xdefault, attr.array || false);
-                    } else if (attr.type === 'boolean') {
-                        const def = attr.xdefault !== undefined ? attr.xdefault : null;
-                        await databases.createBooleanAttribute(DB_ID, coll.id, attr.key, attr.required, def, attr.array || false);
-                    }
-                    console.log(`    🟢 Added attribute: ${attr.key}`);
-                    await sleep(300); // Prevent rate limiting
-                } catch (e) {
-                    if(e.code !== 409) console.error(`    ❌ Failed to add attribute ${attr.key}:`, e.message);
-                }
-            }
-
-            if (coll.indexes) {
-                console.log(`  -> Waiting 3s for attributes to initialize before creating indexes...`);
-                await sleep(3000); 
-                for (const idx of coll.indexes) {
-                    try {
-                        await databases.createIndex(DB_ID, coll.id, idx.key, idx.type, idx.attributes, [], ['ASC']);
-                        console.log(`    🔵 Added index: ${idx.key}`);
-                    } catch (e) {
-                         if(e.code !== 409) console.error(`    ❌ Failed to add index ${idx.key}:`, e.message);
-                    }
-                }
-            }
-            
+            await databases.getCollection(DB_ID, coll.id);
+            console.log(`⚠️ Collection [${coll.name}] already exists.`);
+            collectionExists = true;
         } catch (e) {
-            if (e.code === 409) {
-                console.log(`⚠️ Collection [${coll.name}] already exists. Skipping creation...`);
+            if (e.code === 404) {
+                console.log(`Creating Collection [${coll.name}]...`);
+                await databases.createCollection(DB_ID, coll.id, coll.name);
+                console.log(`✅ Collection [${coll.name}] created.`);
             } else {
-                console.error(`❌ Failed to create collection [${coll.name}]:`, e.message);
+                console.error(`❌ Failed to check for collection [${coll.name}]:`, e.message);
+                continue;
+            }
+        }
+
+        console.log(`  -> Syncing attributes for [${coll.name}]...`);
+        const existingAttributes = collectionExists ? (await databases.listAttributes(DB_ID, coll.id)).attributes.map(a => a.key) : [];
+
+        for (const attr of coll.attributes) {
+            if (existingAttributes.includes(attr.key)) {
+                console.log(`    🔵 Attribute [${attr.key}] already exists. Skipping...`);
+                continue;
+            }
+
+            try {
+                if (attr.type === 'string') {
+                    await databases.createStringAttribute(DB_ID, coll.id, attr.key, attr.size, attr.required, attr.xdefault, attr.array || false);
+                } else if (attr.type === 'integer') {
+                    const def = attr.xdefault !== undefined ? attr.xdefault : null;
+                    await databases.createIntegerAttribute(DB_ID, coll.id, attr.key, attr.required, 0, 9007199254740991, def, attr.array || false);
+                } else if (attr.type === 'double') {
+                     await databases.createFloatAttribute(DB_ID, coll.id, attr.key, attr.required, 0, 999999999, attr.xdefault, attr.array || false);
+                } else if (attr.type === 'boolean') {
+                    const def = attr.xdefault !== undefined ? attr.xdefault : null;
+                    await databases.createBooleanAttribute(DB_ID, coll.id, attr.key, attr.required, def, attr.array || false);
+                }
+                console.log(`    🟢 Added attribute: ${attr.key}`);
+                await sleep(300); // Prevent rate limiting
+            } catch (e) {
+                console.error(`    ❌ Failed to add attribute ${attr.key}:`, e.message);
+            }
+        }
+
+        if (coll.indexes) {
+            console.log(`  -> Syncing indexes for [${coll.name}]...`);
+            const existingIndexes = (await databases.listIndexes(DB_ID, coll.id)).indexes.map(i => i.key);
+            for (const idx of coll.indexes) {
+                if (existingIndexes.includes(idx.key)) {
+                    console.log(`    🔵 Index [${idx.key}] already exists. Skipping...`);
+                    continue;
+                }
+                try {
+                    await databases.createIndex(DB_ID, coll.id, idx.key, idx.type, idx.attributes, [], ['ASC']);
+                    console.log(`    🟢 Added index: ${idx.key}`);
+                } catch (e) {
+                    console.error(`    ❌ Failed to add index ${idx.key}:`, e.message);
+                }
             }
         }
         await sleep(1000);

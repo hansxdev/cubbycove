@@ -11,7 +11,7 @@ try {
 
     const client = new Client()
         .setEndpoint('https://sgp.cloud.appwrite.io/v1') // Updated from .env
-        .setProject('69904f4900396667cf4c'); // Updated from .env
+        .setProject('69b554060007d12c46ee'); // Updated from .env
 
     const account = new Account(client);
     const databases = new Databases(client);
@@ -19,7 +19,7 @@ try {
     const functions = new Functions(client);
 
     // Database & Collection IDs (Constants)
-    const DB_ID = '699054e500210206c665'; // REPLACE with your Database ID
+    const DB_ID = '69b5543d0007695488c5'; // REACHED NEW DB ID
     const COLLECTIONS = {
         USERS: 'users',
         CHILDREN: 'children',

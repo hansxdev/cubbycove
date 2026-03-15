@@ -29,16 +29,18 @@ Stores additional user information linked to the Appwrite Auth Account.
 
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `role` | String | Yes | Enum: `super_admin`, `admin`, `assistant`, `creator`, `parent`. |
-| `status` | String | Yes | Enum: `pending`, `active`, `suspended`. Default: `pending` on registration. |
-| `firstName` | String | Yes | User's first name. |
-| `middleName` | String | No | User's middle name. |
-| `lastName` | String | Yes | User's last name. |
-| `email` | String | Yes | User's email address. |
-| `faceId` | String | No | Appwrite Storage file ID of the face selfie captured during registration. |
-| `idDocumentId` | String | No | Appwrite Storage file ID of the uploaded government ID document. |
+| `role` | String (Size 50) | Yes | Enum: `super_admin`, `admin`, `assistant`, `creator`, `parent`. |
+| `status` | String (Size 50) | Yes | Enum: `pending`, `active`, `suspended`. Default: `pending` on registration. |
+| `firstName` | String (Size 100) | Yes | User's first name. |
+| `middleName` | String (Size 100) | No | User's middle name. |
+| `lastName` | String (Size 100) | Yes | User's last name. |
+| `email` | String (Size 255) | Yes | User's email address. |
+| `faceId` | String (Size 5000) | Yes | Appwrite Storage file ID of the face selfie captured during registration. |
+| `idDocumentId` | Text (Size 65535) | No | Appwrite Storage file ID of the uploaded government ID document. |
 | `children` | String[] | No | Array of Child IDs linked to this parent. |
-| `createdAt` | Datetime | Yes | Account creation timestamp. |
+| `createdAt` | String (Size 50) | No | Account creation timestamp. |
+| `isPremium` | Boolean | No | Premium account status. Default `false`. |
+| `staffId` | Text (Size 65535) | No | Legacy/alternative ID. |
 
 #### Collection: `Children`
 Stores profiles of children registered by parents.
@@ -48,41 +50,62 @@ Stores profiles of children registered by parents.
 | `parentId` | String | Yes | Relationship: `Users` collection (The parent). |
 | `name` | String | Yes | Child's Display Name. |
 | `username` | String | Yes | Unique username for child login. |
-| `password` | String | Yes | Simple password for child login. |
-| `avatar` | String | Yes | Avatar seed string. |
-| `allowChat` | Boolean | Yes | Permission setting. |
-| `allowGames` | Boolean | Yes | Permission setting. |
-| `isOnline` | Boolean | Yes | Real-time status. Default: `false`. |
-| `threatsDetected` | Integer | Yes | Counter for harmful messages/interactions. Default: `0`. |
-| `screenTimeLogs` | JSON | No | Logs screen time. Format: `[{ "date": "2023-10-27", "minutes": 45 }]` |
+| `password` | String (Size 100) | Yes | Simple password for child login. |
+| `avatar` | String (Size 100) | No | Avatar seed string. |
+| `allowChat` | Boolean | No | Permission setting. Default: `false`. |
+| `allowGames` | Boolean | No | Permission setting. Default: `false`. |
+| `isOnline` | Boolean | No | Real-time status. Default: `false`. |
+| `threatScore` | Integer | No | Counter for harmful messages/interactions. Default: `0`. |
+| `threatsDetected` | Integer | No | Legacy counter. Default: `0`. |
+| `screenTimeLogs` | String (Size 65535) | No | Logs screen time. Format: `[{ "date": "2023-10-27", "minutes": 45 }]` |
 | `activityLogs` | JSON | No | History of actions. Format: `[{ "action": "Played Math Game", "timestamp": "...", "link": "/games/math" }]` |
 | `status` | String | Yes | Enum: `active`, `inactive`. |
-| `totalPoints` | Integer | Yes | Total points earned via Watch-to-Earn. Default: `0`. |
+| `totalPoints` | Integer | No | Total points earned via Watch-to-Earn. Default: `0`. |
+| `kidId` | String (Size 10) | No | Public shareable ID like `#XXXXXX`. |
+| `avatarImage` | String (Size 1000000) | No | Custom uploaded avatar image (Base64/URL). |
+| `avatarBgColor` | String (Size 50) | No | Background color for custom avatar. |
 
 #### Collection: `Videos` (Content Library)
 Stores video content metadata, approval status, and creator details.
 
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `title` | String | Yes | Video Title. |
-| `url` | String | Yes | YouTube URL or ID. |
-| `category` | String | Yes | Enum: `Learning`, `Gaming`, `Music`, `Cartoons`, `Vlog`. |
-| `creatorEmail` | String | Yes | Email of the creator who uploaded it. |
-| `status` | String | Yes | Enum: `pending`, `approved`, `rejected`. Default: `pending`. |
-| `views` | Integer | Yes | View count. Default: `0`. |
-| `uploadedAt` | Datetime | Yes | Timestamp of submission. |
+| `title` | String (Size 255) | Yes | Video Title. |
+| `url` | String (Size 255) | Yes | YouTube URL or ID. |
+| `category` | String (Size 100) | Yes | Enum: `Learning`, `Gaming`, `Music`, `Cartoons`, `Vlog`. |
+| `creatorEmail` | String (Size 255) | Yes | Email of the creator who uploaded it. |
+| `status` | String (Size 50) | Yes | Enum: `pending`, `approved`, `rejected`. Default: `pending`. |
+| `views` | Integer | No | View count. Default: `0`. |
+| `uploadedAt` | String (Size 50) | No | Timestamp of submission. |
+| `likes` | Integer | No | Like count. Default: `0`. |
+| `dislikes` | Integer | No | Dislike count. Default: `0`. |
+| `subscriberGains` | Integer | No | Sub gains from this video. |
+| `thumbnailUrl` | Text (Size 65535) | No | Custom thumbnail URL uploaded by the creator. |
 | `duration` | Integer | No | Duration in seconds (for Watch-to-Earn logic). |
-| `pointsValue` | Integer | Yes | Points awarded for completing this video. Default: `10`. |
+| `pointsValue` | Integer | No | Points awarded for completing this video. Default: `10`. |
 
 #### Collection: `ThreatLogs` (New)
 Detailed logs of detected threats for review.
 
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `childId` | String | Yes | The child involved. |
-| `content` | String | Yes | The blocked message or action. |
-| `timestamp` | Datetime | Yes | Time of detection. |
-| `resolved` | Boolean | Yes | Whether parent reviewed it. |
+| `childId` | String (Size 50) | Yes | The child reported. |
+| `content` | String (Size 5000) | Yes | The blocked message or action. |
+| `timestamp` | String (Size 50) | No | Time of detection. |
+| `resolved` | Boolean | No | Whether parent reviewed it. Default `false`. |
+| `reason` | String (Size 255) | No | The reason for the report. |
+| `reporterChildId` | String (Size 50) | No | Child ID of the reporter. |
+| `reporterChildName` | String (Size 100) | No | Name of the reporter. |
+| `reporterParentEmail` | String (Size 255) | No | Parent email of the reporter. |
+| `reportedChildId` | String (Size 50) | No | Child ID of the reported user. |
+| `reportedChildName` | String (Size 100) | No | Name of the reported user. |
+| `reportedParentEmail` | String (Size 255) | No | Parent email of the reported user. |
+| `messageContent` | String (Size 2000) | No | Full message context. |
+| `violationType` | String (Size 100) | No | AI category of violation. |
+| `status` | String (Size 50) | No | Resolution status: `pending`, `resolved`. |
+| `resolution` | String (Size 100) | No | Status note. |
+| `senderId` | String (Size 50) | No | Associated sender. |
+| `receiverId` | String (Size 50) | No | Associated receiver. |
 
 #### Collection: `AccessLogs`
 Logs for check-in/check-out events.
@@ -124,39 +147,39 @@ Tracks friend relationships and pending requests between children.
 
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `fromChildId` | String | Yes | Child who sent the request. |
-| `toChildId` | String | Yes | Child who received the request. |
-| `fromUsername` | String | Yes | Sender's display username. |
-| `toUsername` | String | Yes | Receiver's display username. |
-| `fromKidId` | String | No | Sender's short `#XXXXXX` ID. |
-| `toKidId` | String | No | Receiver's short `#XXXXXX` ID. |
-| `status` | String | Yes | Enum: `pending`, `accepted`, `declined`. |
-| `createdAt` | String | Yes | ISO timestamp. |
-| `updatedAt` | String | No | ISO timestamp of last status change. |
+| `fromChildId` | String (Size 50) | Yes | Child who sent the request. |
+| `toChildId` | String (Size 50) | Yes | Child who received the request. |
+| `fromUsername` | String (Size 50) | Yes | Sender's display username. |
+| `toUsername` | String (Size 50) | Yes | Receiver's display username. |
+| `fromKidId` | String (Size 10) | No | Sender's short `#XXXXXX` ID. |
+| `toKidId` | String (Size 10) | No | Receiver's short `#XXXXXX` ID. |
+| `status` | String (Size 20) | Yes | Enum: `pending`, `accepted`, `declined`. |
+| `createdAt` | String (Size 50) | Yes | ISO timestamp. |
+| `updatedAt` | String (Size 50) | No | ISO timestamp of last status change. |
 
 #### Collection: `parent_notifications`
 Real-time notifications delivered to parents about buddy and chat events.
 
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `parentId` | String | Yes | The parent to notify (`users.$id`). |
-| `type` | String | Yes | Enum: `buddy_request` (someone wants to add child), `buddy_added` (child initiated add), `buddy_accepted`. |
-| `message` | String | Yes | Human-readable notification text. |
-| `childId` | String | No | The child involved. |
-| `buddyId` | String | No | The buddy child involved. |
+| `parentId` | String (Size 50) | Yes | The parent to notify (`users.$id`). |
+| `type` | String (Size 50) | Yes | Enum: `buddy_request` (someone wants to add child), `buddy_added` (child initiated add), `buddy_accepted`. |
+| `message` | String (Size 500) | Yes | Human-readable notification text. |
+| `childId` | String (Size 50) | No | The child involved. |
+| `buddyId` | String (Size 50) | No | The buddy child involved. |
 | `isRead` | Boolean | No | Default `false`. Shown as blue dot until dismissed. |
-| `createdAt` | String | Yes | ISO timestamp. |
+| `createdAt` | String (Size 50) | Yes | ISO timestamp. |
 
 #### Collection: `chat_messages`
 Stores chat messages between buddies. Powered by Appwrite Realtime.
 
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `conversationId` | String | Yes | Stable ID: `[childIdA, childIdB].sort().join('_')`. |
-| `fromChildId` | String | Yes | Sender's child document ID. |
-| `fromUsername` | String | Yes | Sender's display name. |
-| `text` | String | Yes | Message content (max 1000 chars). |
-| `sentAt` | String | Yes | ISO timestamp. |
+| `conversationId` | String (Size 120) | Yes | Stable ID: `[childIdA, childIdB].sort().join('_')`. |
+| `fromChildId` | String (Size 50) | Yes | Sender's child document ID. |
+| `fromUsername` | String (Size 50) | Yes | Sender's display name. |
+| `text` | String (Size 1000) | Yes | Message content (max 1000 chars). |
+| `sentAt` | String (Size 50) | Yes | ISO timestamp. |
 
 > **Setup**: Run `js/appwrite_add_chat.js` in your Appwrite Console F12 to create this collection.
 > **Realtime**: Enable Realtime in your Appwrite project settings so `subscribeToChatMessages()` works live.
@@ -166,13 +189,13 @@ Tracks which videos each kid has watched and when.
 
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `childId` | String | Yes | The child who watched. |
-| `videoId` | String | Yes | The video document ID. |
-| `videoTitle` | String | No | Cached video title for display. |
-| `videoCategory` | String | No | Cached video category. |
-| `videoUrl` | String | No | Cached video URL. |
-| `thumbnailUrl` | String | No | Cached thumbnail URL. |
-| `watchedAt` | String | Yes | ISO timestamp of when the video was opened. |
+| `childId` | Text (Size 65535) | Yes | The child who watched. |
+| `videoId` | Text (Size 65535) | Yes | The video document ID. |
+| `videoTitle` | Text (Size 65535) | No | Cached video title for display. |
+| `videoCategory` | Text (Size 65535) | No | Cached video category. |
+| `videoUrl` | Text (Size 65535) | No | Cached video URL. |
+| `thumbnailUrl` | Text (Size 65535) | No | Cached thumbnail URL. |
+| `watchedAt` | Text (Size 65535) | Yes | ISO timestamp of when the video was opened. |
 
 > **Permissions**: `create`: `any` (kids have no Appwrite auth session); `read`: `any`.
 
@@ -181,54 +204,88 @@ Stores videos a kid has marked as favorite.
 
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `childId` | String | Yes | The child who favorited. |
-| `videoId` | String | Yes | The video document ID. |
-| `videoTitle` | String | No | Cached video title. |
-| `videoCategory` | String | No | Cached video category. |
-| `videoUrl` | String | No | Cached video URL. |
-| `thumbnailUrl` | String | No | Cached thumbnail URL. |
-| `addedAt` | String | Yes | ISO timestamp. |
+| `childId` | Text (Size 65535) | Yes | The child who favorited. |
+| `videoId` | Text (Size 65535) | Yes | The video document ID. |
+| `videoTitle` | Text (Size 65535) | No | Cached video title. |
+| `videoCategory` | Text (Size 65535) | No | Cached video category. |
+| `videoUrl` | Text (Size 65535) | No | Cached video URL. |
+| `thumbnailUrl` | Text (Size 65535) | No | Cached thumbnail URL. |
+| `addedAt` | Text (Size 65535) | Yes | ISO timestamp. |
 
 > **Permissions**: `create`: `any`; `read`: `any`; `delete`: `any`.
-
-#### Videos Collection — New Attribute
-
-| Attribute | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `thumbnailUrl` | String | No | Custom thumbnail URL uploaded by the creator. If empty, auto-generate from YouTube/video. |
 
 #### Collection: `paths` (New)
 Stores learning paths/series created by creators.
 
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `title` | String | Yes | Path Title. |
-| `description` | String | No | Short description for kids. |
-| `creatorEmail` | String | Yes | Link to the creator document. |
-| `type` | String | Yes | Enum: `ordered`, `flexible`. |
-| `videoIds` | String[] | Yes | Array of video document IDs. |
-| `bonusPoints` | Integer | Yes | Points awarded on finishing path. |
-| `createdAt` | Datetime | Yes | ISO timestamp. |
+| `title` | String (Size 255) | Yes | Path Title. |
+| `description` | String (Size 1000) | No | Short description for kids. |
+| `creatorEmail` | String (Size 255) | Yes | Link to the creator document. |
+| `type` | String (Size 50) | Yes | Enum: `ordered`, `flexible`. |
+| `videoIds` | String[] (Size 255) | Yes | Array of video document IDs. |
+| `bonusPoints` | Integer | No | Points awarded on finishing path. |
+| `createdAt` | String (Size 50) | No | ISO timestamp. |
+| `bonusStars` | Integer | No | Original name for bonusPoints, fallback. |
 
 #### Collection: `kid_rewards` (New)
 Ledger of point-earning events.
 
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `childId` | String | Yes | The kid who earned points. |
-| `rewardType` | String | Yes | Enum: `video_completion`, `path_bonus`. |
+| `childId` | String (Size 50) | Yes | The kid who earned points. |
+| `rewardType` | String (Size 50) | Yes | Enum: `video_completion`, `path_bonus`. |
 | `points` | Integer | Yes | Points awarded. |
-| `sourceId` | String | Yes | ID of video or path. |
-| `earnedAt` | Datetime | Yes | ISO timestamp. |
+| `sourceId` | String (Size 50) | No | ID of video or path. |
+| `rewardId` | String (Size 100) | Yes | Unique deduplication key e.g. `video_{childId}_{videoId}`. |
+| `earnedAt` | String (Size 50) | Yes | ISO timestamp. |
 
 #### Collection: `kid_path_status` (New)
 Tracks progress within a specific path.
 
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `childId` | String | Yes | The child's ID ($id). |
-| `pathId` | String | Yes | The path ID ($id). |
-| `completedVideoIds` | String[] | No | IDs of finished videos in this path. |
-| `currentStatus` | String | Yes | Enum: `in_progress`, `completed`. |
-| `updatedAt` | Datetime | Yes | ISO timestamp. |
+| `childId` | String (Size 50) | Yes | The child's ID ($id). |
+| `pathId` | String (Size 50) | Yes | The path ID ($id). |
+| `completedVideoIds` | String[] (Size 255) | No | IDs of finished videos in this path. |
+| `currentStatus` | String (Size 50) | Yes | Enum: `in_progress`, `completed`. |
+| `updatedAt` | String (Size 50) | Yes | ISO timestamp. |
+
+#### Collection: `login_requests` (New / Missing from original doc)
+Handles the handshake for a child logging into a parent-managed account.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `childUsername` | String (Size 50) | Yes | The username the child entered. |
+| `parentEmail` | String (Size 255) | Yes | The parent's email to notify. |
+| `status` | String (Size 20) | Yes | Enum: `pending`, `approved`, `denied`. |
+| `requestedAt` | String (Size 50) | Yes | ISO timestamp. |
+| `deviceInfo` | String (Size 500) | No | Browser/OS info of the requester (max 500 chars). |
+| `expiresAt` | String (Size 50) | No | ISO timestamp (usually +5 mins). |
+| `childName` | String (Size 100) | No | Child's display name. |
+| `childId` | String (Size 50) | No | The child's profile ID. |
+| `parentId` | String (Size 50) | No | The parent's user ID. |
+
+#### Collection: `pending_staff` (New / Missing from original doc)
+Temporary public ledger for staff and creators to claim accounts pre-created by an admin.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `email` | String (Size 255) | Yes | Unclaimed user email. |
+| `firstName` | String (Size 100) | Yes | Unclaimed user first name. |
+| `lastName` | String (Size 100) | Yes | Unclaimed user last name. |
+| `role` | String (Size 50) | Yes | The assigned role (`creator`, `assistant`). |
+| `staffId` | String (Size 20) | Yes | Quick login staff ID (e.g. `#STF-123456`). |
+| `usersDocId` | String (Size 50) | Yes | Link to the pre-created profile in `users`. |
+| `isClaimed` | Boolean | No | Defaults to `false`. |
+
+#### Collection: `screen_time_logs` (New / Missing from original doc)
+Tracks how many minutes a child spends in the app per day/category.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `childId` | String (Size 50) | No | Child profile ID. |
+| `date` | String (Size 20) | No | Format: `YYYY-MM-DD`. |
+| `minutes` | Double | No | Minutes spent. |
+| `category` | String (Size 50) | No | e.g. `general`, `learning`. |
 

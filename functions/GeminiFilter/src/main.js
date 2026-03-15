@@ -21,45 +21,57 @@ export default async ({ req, res, log, error }) => {
     return res.json({ success: false, error: 'Prompt is required.' }, 400);
   }
 
-  // 3. Call the Gemini API securely
-  const apiKey = process.env.GEMINI_API_KEY; 
-  
-  if (!apiKey) {
-      error('API Key is missing from Environment Variables');
-      return res.json({ success: false, error: 'Server configuration error.' }, 500);
+  // 3. Call the Gemini API securely (Primary)
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const groqApiKey = process.env.GROQ_API_KEY;
+
+  async function tryGemini(prompt) {
+    if (!geminiApiKey) throw new Error('Gemini API Key missing');
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    const data = await response.json();
+    if (data.error) throw new Error(`Gemini Error: ${data.error.message}`);
+    return data.candidates[0].content.parts[0].text;
   }
-  
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+
+  async function tryGroq(prompt) {
+    if (!groqApiKey) throw new Error('Groq API Key missing');
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${groqApiKey}`
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{ text: userPrompt }]
-        }]
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }]
       })
     });
-
     const data = await response.json();
+    if (data.error) throw new Error(`Groq Error: ${data.error.message}`);
+    return data.choices[0].message.content;
+  }
+
+  try {
+    log('Attempting Gemini...');
+    const result = await tryGemini(userPrompt);
+    return res.json({ success: true, result, provider: 'gemini' });
+  } catch (geminiErr) {
+    error(`Gemini failed: ${geminiErr.message}`);
     
-    // Check if Google returned an error
-    if (data.error) {
-        error(`Google API Error: ${data.error.message}`);
-        return res.json({ success: false, error: 'Gemini API rejected the request.' }, 500);
+    if (groqApiKey) {
+      try {
+        log('Attempting Groq fallback...');
+        const result = await tryGroq(userPrompt);
+        return res.json({ success: true, result, provider: 'groq' });
+      } catch (groqErr) {
+        error(`Groq fallback failed: ${groqErr.message}`);
+      }
     }
-
-    const geminiText = data.candidates[0].content.parts[0].text;
-
-    // 4. Send the result back
-    return res.json({
-      success: true,
-      result: geminiText
-    });
-
-  } catch (err) {
-    error(`Fetch Error: ${err.message}`);
-    return res.json({ success: false, error: 'Failed to connect to Gemini.' }, 500);
+    
+    return res.json({ success: false, error: 'All AI providers failed.' }, 500);
   }
 };

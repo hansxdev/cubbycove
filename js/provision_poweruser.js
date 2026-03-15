@@ -2,7 +2,7 @@
  * Poweruser Provisioning Script
  * Run this from the terminal using: node js/provision_poweruser.js
  */
-const { Client, Users, Databases, ID, Query } = require('node-appwrite');
+const { Client, Users, Databases, ID, Query, Permission, Role } = require('node-appwrite');
 
 const PROJECT_ID = '69b554060007d12c46ee';
 const DB_ID = '69b5543d0007695488c5';
@@ -45,7 +45,12 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
         console.log(`Checking Database record for [${userId}]...`);
         try {
             await databases.getDocument(DB_ID, 'users', userId);
-            console.log("🟢 Database record already exists.");
+            console.log("🟢 Database record already exists. Updating permissions...");
+            await databases.updateDocument(DB_ID, 'users', userId, undefined, [
+                Permission.read(Role.user(userId)),
+                Permission.update(Role.user(userId)),
+                Permission.read(Role.users()),
+            ]);
         } catch (e) {
             if (e.code === 404) {
                 console.log(`⚠️ Database record not found. Creating profile for [${userId}]...`);
@@ -57,7 +62,11 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                     email: email,
                     faceId: 'N/A', // Placeholder as it's required in schema
                     createdAt: new Date().toISOString()
-                });
+                }, [
+                    Permission.read(Role.user(userId)),
+                    Permission.update(Role.user(userId)),
+                    Permission.read(Role.users()),
+                ]);
                 console.log("✅ Database record created successfully.");
             } else {
                 throw e;

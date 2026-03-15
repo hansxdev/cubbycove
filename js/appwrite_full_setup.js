@@ -1,8 +1,4 @@
-/**
- * Appwrite Master Migration Script (Node.js Version)
- * Run this from the terminal using: node js/appwrite_full_setup.js
- */
-const { Client, Databases } = require('node-appwrite');
+const { Client, Databases, Permission, Role } = require('node-appwrite');
 
 const PROJECT_ID = '69b554060007d12c46ee';
 const DB_ID = '69b5543d0007695488c5';
@@ -55,6 +51,12 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
             indexes: [
                 { key: 'email_idx', type: 'unique', attributes: ['email'] },
                 { key: 'role_idx', type: 'key', attributes: ['role'] }
+            ],
+            permissions: [
+                Permission.read(Role.users()),
+                Permission.create(Role.any()),
+                Permission.update(Role.users()),
+                Permission.delete(Role.users()),
             ]
         },
         // ── 2. CHILDREN ──
@@ -83,6 +85,12 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
             indexes: [
                 { key: 'parentId_idx', type: 'key', attributes: ['parentId'] },
                 { key: 'username_unique', type: 'unique', attributes: ['username'] }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.users()),
+                Permission.update(Role.users()),
+                Permission.delete(Role.users()),
             ]
         },
         // ── 3. VIDEOS ──
@@ -103,6 +111,12 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'string', key: 'thumbnailUrl', required: false, size: 65535 },
                 { type: 'integer', key: 'duration', required: false },
                 { type: 'integer', key: 'pointsValue', required: false, xdefault: 10 }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.users()),
+                Permission.update(Role.users()),
+                Permission.delete(Role.users()),
             ]
         },
         // ── 4. THREAT LOGS ──
@@ -118,7 +132,7 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'string', key: 'reporterChildId', required: false, size: 50 },
                 { type: 'string', key: 'reporterChildName', required: false, size: 100 },
                 { type: 'string', key: 'reporterParentEmail', required: false, size: 255 },
-                { type: 'string', key: 'reportedChildId', required: false, size: 50 },
+                { type: 'reportedChildId', key: 'reportedChildId', required: false, size: 50 },
                 { type: 'string', key: 'reportedChildName', required: false, size: 100 },
                 { type: 'string', key: 'reportedParentEmail', required: false, size: 255 },
                 { type: 'string', key: 'messageContent', required: false, size: 2000 },
@@ -127,6 +141,12 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'string', key: 'resolution', required: false, size: 100 },
                 { type: 'string', key: 'senderId', required: false, size: 50 },
                 { type: 'string', key: 'receiverId', required: false, size: 50 }
+            ],
+            permissions: [
+                Permission.read(Role.users()),
+                Permission.create(Role.any()),
+                Permission.update(Role.users()),
+                Permission.delete(Role.users()),
             ]
         },
         // ── 5. ACCESS LOGS ──
@@ -138,6 +158,10 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'string', key: 'childId', required: false, size: 50 },
                 { type: 'string', key: 'action', required: true, size: 50 },
                 { type: 'string', key: 'timestamp', required: true, size: 50 } 
+            ],
+            permissions: [
+                Permission.read(Role.users()),
+                Permission.create(Role.users()),
             ]
         },
         // ── 6. BUDDIES ──
@@ -158,6 +182,11 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
             indexes: [
                 { key: 'fromChild', type: 'key', attributes: ['fromChildId'] },
                 { key: 'toChild', type: 'key', attributes: ['toChildId'] }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
+                Permission.update(Role.any()),
             ]
         },
         // ── 7. PARENT NOTIFICATIONS ──
@@ -175,6 +204,11 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
             ],
             indexes: [
                  { key: 'parentId_idx', type: 'key', attributes: ['parentId'] }
+            ],
+            permissions: [
+                Permission.read(Role.users()),
+                Permission.update(Role.users()),
+                Permission.create(Role.any()),
             ]
         },
         // ── 8. CHAT MESSAGES ──
@@ -190,6 +224,10 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
             ],
             indexes: [
                 { key: 'convo_idx', type: 'key', attributes: ['conversationId'] }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
             ]
         },
         // ── 9. KID WATCH HISTORY ──
@@ -204,6 +242,12 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'string', key: 'videoUrl', required: false, size: 65535 },
                 { type: 'string', key: 'thumbnailUrl', required: false, size: 65535 },
                 { type: 'string', key: 'watchedAt', required: true, size: 65535 }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
+                Permission.update(Role.any()),
+                Permission.delete(Role.any()),
             ]
         },
         // ── 10. KID FAVORITES ──
@@ -218,6 +262,12 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'string', key: 'videoUrl', required: false, size: 65535 },
                 { type: 'string', key: 'thumbnailUrl', required: false, size: 65535 },
                 { type: 'string', key: 'addedAt', required: true, size: 65535 }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
+                Permission.update(Role.any()),
+                Permission.delete(Role.any()),
             ]
         },
         // ── 11. PATHS ──
@@ -233,6 +283,12 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'integer', key: 'bonusPoints', required: false },
                 { type: 'string', key: 'createdAt', required: false, size: 50 },
                 { type: 'integer', key: 'bonusStars', required: false }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.users()),
+                Permission.update(Role.users()),
+                Permission.delete(Role.users()),
             ]
         },
         // ── 12. KID REWARDS ──
@@ -249,6 +305,10 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
             ],
             indexes: [
                 { key: 'rewardId_idx', type: 'unique', attributes: ['rewardId'] }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
             ]
         },
         // ── 13. KID PATH STATUS ──
@@ -261,6 +321,11 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'string', key: 'completedVideoIds', required: false, size: 255, array: true },
                 { type: 'string', key: 'currentStatus', required: true, size: 50 },
                 { type: 'string', key: 'updatedAt', required: true, size: 50 }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
+                Permission.update(Role.any()),
             ]
         },
         // ── 14. LOGIN REQUESTS ──
@@ -277,6 +342,11 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'string', key: 'childName', required: false, size: 100 },
                 { type: 'string', key: 'childId', required: false, size: 50 },
                 { type: 'string', key: 'parentId', required: false, size: 50 }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
+                Permission.update(Role.any()),
             ]
         },
         // ── 15. PENDING STAFF ──
@@ -291,6 +361,10 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'string', key: 'staffId', required: true, size: 20 },
                 { type: 'string', key: 'usersDocId', required: true, size: 50 },
                 { type: 'boolean', key: 'isClaimed', required: false, xdefault: false }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.update(Role.any()),
             ]
         },
         // ── 16. SCREEN TIME LOGS ──
@@ -302,6 +376,11 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'string', key: 'date', required: false, size: 20 },
                 { type: 'double', key: 'minutes', required: false },
                 { type: 'string', key: 'category', required: false, size: 50 }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
+                Permission.update(Role.any()),
             ]
         }
     ];
@@ -312,12 +391,13 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
         let collectionExists = false;
         try {
             await databases.getCollection(DB_ID, coll.id);
-            console.log(`⚠️ Collection [${coll.name}] already exists.`);
+            console.log(`⚠️ Collection [${coll.name}] already exists. Syncing permissions...`);
+            await databases.updateCollection(DB_ID, coll.id, coll.name, coll.permissions || []);
             collectionExists = true;
         } catch (e) {
             if (e.code === 404) {
                 console.log(`Creating Collection [${coll.name}]...`);
-                await databases.createCollection(DB_ID, coll.id, coll.name);
+                await databases.createCollection(DB_ID, coll.id, coll.name, coll.permissions || []);
                 console.log(`✅ Collection [${coll.name}] created.`);
             } else {
                 console.error(`❌ Failed to check for collection [${coll.name}]:`, e.message);
@@ -362,7 +442,7 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                     continue;
                 }
                 try {
-                    await databases.createIndex(DB_ID, coll.id, idx.key, idx.type, idx.attributes, [], ['ASC']);
+                    await databases.createIndex(DB_ID, coll.id, idx.key, idx.type, idx.attributes, idx.attributes.map(() => 'ASC'));
                     console.log(`    🟢 Added index: ${idx.key}`);
                 } catch (e) {
                     console.error(`    ❌ Failed to add index ${idx.key}:`, e.message);

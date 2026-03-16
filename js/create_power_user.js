@@ -6,8 +6,8 @@
 
 (async function masterRestore() {
 
-    const PROJECT_ID = '69904f4900396667cf4c';
-    const DB_ID = '699054e500210206c665';
+    const PROJECT_ID = '69b554060007d12c46ee';
+    const DB_ID = '69b5543d0007695488c5';
     const ENDPOINT = 'https://sgp.cloud.appwrite.io/v1';
 
     console.log("🚀 Starting System Restore...");

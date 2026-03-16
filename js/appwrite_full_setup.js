@@ -362,6 +362,9 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'string', key: 'usersDocId', required: true, size: 50 },
                 { type: 'boolean', key: 'isClaimed', required: false, xdefault: false }
             ],
+            indexes: [
+                { key: 'email_idx', type: 'unique', attributes: ['email'] }
+            ],
             permissions: [
                 Permission.read(Role.any()),
                 Permission.update(Role.any()),

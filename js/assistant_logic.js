@@ -239,7 +239,7 @@ async function _loadVerificationImages(parent) {
     if (!svc) return;
 
     const endpoint = (svc.client?.config?.endpoint || 'https://sgp.cloud.appwrite.io/v1').replace(/\/$/, '');
-    const projectId = svc.client?.config?.project || '69904f4900396667cf4c';
+    const projectId = svc.client?.config?.project;
     const bucketId = svc.BUCKET_PARENT_DOCS || 'parent_docs';
 
     const fetchImage = async (fileId, jwtToken) => {

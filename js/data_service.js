@@ -1434,14 +1434,14 @@ const DataService = {
             }
 
             // --- Step 2: Create the child document ---
-            // Only include attributes that actually exist in the Appwrite children collection:
-            // parentId, name, username, password, isOnline, threatScore
+            // Attributes required by the Appwrite children collection schema
             const childId = ID.unique();
             const newChild = {
                 parentId: resolvedParentId,
                 name: childData.name,
                 username: childData.username,
                 password: childData.password,
+                status: childData.status || 'active', // required field in schema
                 avatar: childData.avatar || 'Felix',
                 allowChat: childData.allowChat !== undefined ? childData.allowChat : false,
                 allowGames: childData.allowGames !== undefined ? childData.allowGames : true,

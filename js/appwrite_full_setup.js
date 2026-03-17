@@ -2,7 +2,9 @@ const { Client, Databases, Permission, Role } = require('node-appwrite');
 
 const PROJECT_ID = '69b554060007d12c46ee';
 const DB_ID = '69b5543d0007695488c5';
-const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a0046db0408f9814bfd0f93db7238d83f0b553aae0c831d456f08813851c749a032fef50ef4ae9f936398bc542f05d767c7fb3389511257ee5e5b434313cb6ee545f8c4cd61c60228dc9946e0283eed0f8adc85f2823e50c92155ee008bcdfa48be7bfb8fdc';
+// ⚠️  ROTATE THIS KEY: Go to Appwrite Console → Settings → API Keys, delete the old key,
+//     create a new one, paste it below ONLY when running this script, then clear it again.
+const API_KEY = 'standard_72d19ea13e40ea4ea169dafb068240da352214d39595e5e97c1fbb41a46d8377c19f7282850a3fe3b3f391da91233b3f26a6c889ad59fdf11451240fd323caf87a9a5a2d36dc375f231f6661d9b36267e0c61d6a968b32223e62c6600a15c21e7c8d3621a6a98b601655c248f1fac37fab22f3ddd45fa0bf0680dc69230fd546';
 
 (async () => {
     console.log("🚀 Starting Appwrite Migration Initialization via Node.js CLI...");
@@ -363,11 +365,12 @@ const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a
                 { type: 'boolean', key: 'isClaimed', required: false, xdefault: false }
             ],
             indexes: [
-                { key: 'email_idx', type: 'unique', attributes: ['email'] }
+                { key: 'email_idx', type: 'key', attributes: ['email'] }  // 'key' (not 'unique') allows multiple docs per email across re-claims
             ],
             permissions: [
-                Permission.read(Role.any()),
-                Permission.update(Role.any()),
+                Permission.read(Role.any()),     // claim page reads without auth
+                Permission.create(Role.users()), // ✅ FIXED: logged-in admins can create pending_staff docs
+                Permission.update(Role.any()),   // claim page updates isClaimed flag without auth
             ]
         },
         // ── 16. SCREEN TIME LOGS ──

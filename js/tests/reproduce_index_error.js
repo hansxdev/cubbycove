@@ -4,7 +4,8 @@ async function reproduceIndexError() {
     const PROJECT_ID = '69b554060007d12c46ee';
     const DB_ID = '69b5543d0007695488c5';
     const COLLECTION_ID = 'pending_staff';
-    const API_KEY = 'standard_891b68b5781dfbea2893d06a8a5a2700167f8199db7ad90f728e4a0046db0408f9814bfd0f93db7238d83f0b553aae0c831d456f08813851c749a032fef50ef4ae9f936398bc542f05d767c7fb3389511257ee5e5b434313cb6ee545f8c4cd61c60228dc9946e0283eed0f8adc85f2823e50c92155ee008bcdfa48be7bfb8fdc';
+    // ⚠️  Paste a fresh API key here only when running this test, then clear it.
+    const API_KEY = 'PASTE_API_KEY_HERE';
 
     const client = new Client()
         .setEndpoint('https://sgp.cloud.appwrite.io/v1')

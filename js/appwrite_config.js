@@ -36,8 +36,8 @@ try {
     };
 
     // Storage Bucket IDs
-    const BUCKET_PARENT_DOCS = 'parent_docs'; // Use this bucket in your Appwrite project for docs AND avatars
-    const BUCKET_PROFILE_PICS = 'parent_docs';
+    const BUCKET_PARENT_DOCS = '69b578300038f9545b4f'; // Verified bucket ID from Appwrite Console
+    const BUCKET_PROFILE_PICS = '69b578300038f9545b4f';
 
     // Function IDs
     const FUNCTION_GEMINI_FILTER = '69aed56d0034b1b68f9e'; // REPLACE with your Function ID

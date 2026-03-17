@@ -8,6 +8,7 @@ let _unsubscribeChat = null;
 let _lastMessageTime = null;
 let _knownMessageIds = new Set();
 let _lastRenderedMsg = null;
+let _isSending = false; // Guard against double-send (e.g., two AI APIs resolving)
 
 // Report state
 let _pendingReportMsgId = '';
@@ -302,6 +303,8 @@ async function sendMessage() {
     const sendBtn = $('send-btn');
     const text = input.value.trim();
     if (!text || !_conversationId || !_currentChild) return;
+    if (_isSending) return; // Prevent double-send from duplicate AI API resolutions
+    _isSending = true;
 
     // ── MUTE CHECK ──────────────────────────────────────────────
     try {
@@ -340,6 +343,7 @@ async function sendMessage() {
     } catch (e) {
         showSafetyWarning('Could not send. Check your connection.');
     } finally {
+        _isSending = false;
         sendBtn.disabled = false;
         sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i>';
         input.focus();
@@ -445,4 +449,4 @@ function formatTime(isoStr) {
 
 // Safely terminates message polling when the user navigates away from the page.
 window.addEventListener('beforeunload', stopRealtimeChat);
-window.addEventListener('pagehide', stopPolling);
+window.addEventListener('pagehide', stopRealtimeChat); // stopPolling was removed; realtime is the active transport

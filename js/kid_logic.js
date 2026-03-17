@@ -99,9 +99,10 @@ async function _initRewardState() {
     const session = _getChildSession();
     if (!session || !session.$id) return;
     try {
-        const rewards = await DataService.databases.listDocuments(
-            DataService.DB_ID, 
-            DataService.COLLECTIONS.KID_REWARDS, 
+        const { databases, DB_ID, COLLECTIONS } = window.AppwriteService;
+        const rewards = await databases.listDocuments(
+            DB_ID,
+            COLLECTIONS.KID_REWARDS,
             [Appwrite.Query.equal('childId', session.$id), Appwrite.Query.equal('rewardType', 'video_completion')]
         );
         _rewardedVideoIds = new Set(rewards.documents.map(d => d.sourceId));

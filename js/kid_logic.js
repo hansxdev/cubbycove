@@ -145,7 +145,7 @@ function updateHeader(user) {
     const headerAvatarImgs = document.querySelectorAll('.group img');
 
     if (headerProfile) {
-        headerProfile.textContent = `Hi, ${displayName}!`;
+        headerProfile.textContent = `Hi, ${user.username || user.firstName || 'Explorer'}!`;
         headerProfile.classList.remove('hidden');
     }
 

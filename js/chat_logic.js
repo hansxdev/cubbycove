@@ -313,6 +313,10 @@ async function sendMessage() {
             const durEl = $('mute-duration-text');
             if (durEl) durEl.textContent = muteStatus.durationStr;
             $('mute-modal').classList.remove('hidden');
+            // Reset the send guard before early return — otherwise the lock stays
+            // set permanently and the next send sees _isSending = true even though
+            // nothing is actually in-flight, causing the first real send to be missed.
+            _isSending = false;
             return;
         }
     } catch (e) {

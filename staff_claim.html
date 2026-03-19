@@ -221,6 +221,8 @@
                 }
 
                 // 2. Log in to get a session (needed to update the users doc)
+                // Clear any existing session first — Appwrite throws 401 if a session is already active
+                try { await account.deleteSession('current'); } catch (_) { }
                 await account.createEmailPasswordSession(_pendingDoc.email, newPw);
 
                 // 3. Activate the users doc (now authenticated)

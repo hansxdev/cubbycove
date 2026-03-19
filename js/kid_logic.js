@@ -19,6 +19,8 @@ let _elapsedPlayTime = 0;
 let _completionThreshold = 0.8; // 80%
 let _isRewardClaimed = false;
 let _rewardedVideoIds = new Set(); // Cache of completed videos for badges
+let _likedVideoIds = new Set();   // Per-session like guard (one like per video per session)
+let _dislikedVideoIds = new Set(); // Per-session dislike guard
 
 function _getPageCategory() {
     const path = window.location.pathname.toLowerCase();
@@ -688,19 +690,57 @@ function _buildRecommendations(currentVideo) {
 
 // ─── Action Button Handlers ──────────────────────────────────────────────────
 window._kidLikeVideo = async function (videoId) {
+    // Guard: one like per video per session
+    if (_likedVideoIds.has(videoId)) return;
+    _likedVideoIds.add(videoId);
+
+    // Visually disable the like button immediately so double-tap has no effect
+    const likeBtn = document.querySelector(`button[onclick="window._kidLikeVideo('${videoId}')"]`);
+    if (likeBtn) {
+        likeBtn.disabled = true;
+        likeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
     try {
         const updated = await DataService.likeVideo(videoId);
         const el = document.getElementById('kid-like-count');
         if (el && updated) el.textContent = updated.likes;
-    } catch (e) { console.warn(e); }
+    } catch (e) {
+        // Roll back guard on failure so the user can retry
+        _likedVideoIds.delete(videoId);
+        if (likeBtn) {
+            likeBtn.disabled = false;
+            likeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        console.warn(e);
+    }
 };
 
 window._kidDislikeVideo = async function (videoId) {
+    // Guard: one dislike per video per session
+    if (_dislikedVideoIds.has(videoId)) return;
+    _dislikedVideoIds.add(videoId);
+
+    // Visually disable the dislike button immediately
+    const dislikeBtn = document.querySelector(`button[onclick="window._kidDislikeVideo('${videoId}')"]`);
+    if (dislikeBtn) {
+        dislikeBtn.disabled = true;
+        dislikeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
     try {
         const updated = await DataService.dislikeVideo(videoId);
         const el = document.getElementById('kid-dislike-count');
         if (el && updated) el.textContent = updated.dislikes;
-    } catch (e) { console.warn(e); }
+    } catch (e) {
+        // Roll back guard on failure so the user can retry
+        _dislikedVideoIds.delete(videoId);
+        if (dislikeBtn) {
+            dislikeBtn.disabled = false;
+            dislikeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        console.warn(e);
+    }
 };
 
 window._kidToggleFavorite = async function (videoId, title, category, url, thumbUrl) {

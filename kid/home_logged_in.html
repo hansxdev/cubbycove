@@ -29,15 +29,6 @@
             background-blend-mode: overlay;
             background-color: rgba(255, 255, 255, 0.4); /* Opacity overlay */
         }
-        #sidebar {
-            background-image: url('../images/bg_sky.png');
-            background-size: cover;
-            background-position: left;
-            background-blend-mode: overlay;
-            background-color: rgba(255, 255, 255, 0.85); /* Sidebar is softer and playful */
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
     </style>
 
 </head>
@@ -45,7 +36,11 @@
 <body class="text-gray-800 antialiased overflow-x-hidden">
 
     <!-- TOP NAVIGATION BAR -->
-    <nav class="fixed top-0 left-0 w-full bg-white shadow-md z-50 h-16 flex items-center justify-between px-4 lg:px-6">
+    <nav class="fixed top-0 left-0 w-full bg-white z-50 h-[5.5rem] flex items-center justify-between px-4 lg:px-6">
+        <!-- Cloud Edge Divider -->
+        <div class="absolute top-full left-0 w-full overflow-hidden leading-none pointer-events-none z-40 -mt-[1px]" style="height: 35px;">
+            <svg viewBox="0 0 1440 100" class="w-full h-full" preserveAspectRatio="none" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.08))"><path fill="#ffffff" d="M0,0 C120,70 240,70 360,0 C480,70 600,70 720,0 C840,70 960,70 1080,0 C1200,70 1320,70 1440,0 L1440,0 L0,0 Z"></path></svg>
+        </div>
 
         <!-- Left: Logo & Menu Toggle -->
         <div class="flex items-center gap-4">
@@ -89,15 +84,14 @@
 
             <button class="sm:hidden text-xl text-gray-600"><i class="fa-solid fa-magnifying-glass"></i></button>
 
-            <!-- Parent Gate (Still there for settings, but less intrusive) -->
-            <button onclick="alert('Ask your parent to open settings.')"
-                class="text-gray-400 hover:text-red-500 transition-colors tooltip" title="Parent Settings">
-                <i class="fa-solid fa-lock"></i>
-            </button>
-
-            <!-- User Profile (Logged In State) -->
+            <!-- User Profile & Parent Gate -->
             <div class="flex items-center gap-3 cursor-pointer group" onclick="openKidSettingsModal()">
-                <span class="hidden md:block font-bold text-gray-700 group-hover:text-cubby-blue">Loading...</span>
+                <div class="hidden md:flex items-center gap-2 text-gray-400">
+                    <button onclick="event.stopPropagation(); alert('Ask your parent to open settings.')" class="hover:text-red-500 transition-colors tooltip flex items-center" title="Parent Settings">
+                        <i class="fa-solid fa-lock"></i>
+                    </button>
+                    <span class="font-bold text-gray-700 group-hover:text-cubby-blue transition-colors">Loading...</span>
+                </div>
                 <div class="relative">
                     <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Guest" alt="Avatar"
                         class="w-10 h-10 rounded-full bg-cubby-blue p-0.5 border-2 border-white shadow-sm transition-transform group-hover:scale-105">
@@ -115,10 +109,10 @@
 
     <!-- SIDEBAR -->
     <aside id="sidebar"
-        class="fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 overflow-y-auto transform lg:translate-x-0 -translate-x-full transition-all duration-300 ease-in-out z-40 pb-10 border-r-[6px] border-white/60 shadow-[5px_0_15px_-5px_rgba(0,0,0,0.1)] overflow-x-hidden">
+        class="fixed top-[7rem] left-0 h-[calc(100vh-7rem)] w-64 overflow-y-auto transform lg:translate-x-0 -translate-x-full transition-all duration-300 ease-in-out z-40 pb-10 overflow-x-hidden no-scrollbar">
 
         <!-- Main Links -->
-        <div class="p-3 space-y-2">
+        <div class="mx-5 mb-4 bg-white rounded-[2rem] shadow-sm p-3 border border-gray-100/50 space-y-2">
             <a href="home_logged_in.html"
                 class="flex items-center gap-4 px-4 py-3 bg-cubby-blue/20 border-[3px] border-cubby-blue text-cubby-blue rounded-2xl shadow-[0_4px_0_#3b82f6] font-black text-lg sidebar-link transition-all duration-300 active:translate-y-1 active:shadow-none">
                 <i class="fa-solid fa-house text-xl w-6 text-center"></i>
@@ -154,10 +148,8 @@
             </a>
         </div>
 
-        <hr class="border-[2px] border-white/60 mx-4 my-2 rounded-full">
-
         <!-- My Buddies (Dynamic) -->
-        <div class="p-4 sidebar-hide-mini transition-all duration-300 overflow-hidden bg-white/30 mx-3 rounded-[2rem] border-[3px] border-white/50 shadow-sm mt-2">
+        <div class="p-4 sidebar-hide-mini transition-all duration-300 overflow-hidden bg-white mx-5 mb-4 rounded-[2rem] shadow-sm border border-gray-100/50">
             <div class="p-1">
 
                 <!-- Incoming Requests Badge -->
@@ -198,7 +190,7 @@
         </div>
 
         <!-- Bottom Graphic -->
-        <div class="px-5 mt-6 sidebar-promo">
+        <div class="px-5 mb-6 sidebar-promo">
             <div
                 class="bg-gradient-to-br from-cubby-yellow to-orange-400 border-[4px] border-orange-300 rounded-3xl p-4 text-white text-center shadow-[0_6px_0_#f97316] transform hover:-translate-y-1 hover:shadow-[0_8px_0_#f97316] active:translate-y-2 active:shadow-none transition-all cursor-pointer group">
                 <i class="fa-solid fa-star text-3xl mb-2 text-yellow-100 group-hover:scale-110 transition-transform"></i>
@@ -269,7 +261,7 @@
     <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
 
     <!-- MAIN CONTENT -->
-    <main id="main-content" class="lg:ml-64 pt-16 min-h-screen transition-all duration-300 ease-in-out">
+    <main id="main-content" class="lg:ml-64 pt-32 min-h-screen transition-all duration-300 ease-in-out">
 
         <!-- FEATURED VIDEO CARDS GRID -->
         <div class="px-6 py-6 pb-2 relative z-10 text-center">

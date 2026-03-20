@@ -1,4 +1,29 @@
-<!DOCTYPE html>
+import os
+import re
+
+base_dir = r"c:\Users\Admin\Documents\cubbycove\kid"
+chat_path = os.path.join(base_dir, 'chat.html')
+
+with open(chat_path, 'r', encoding='utf-8') as f:
+    old_chat = f.read()
+
+# Extract MODALS and SCRIPTS from old_chat
+# Everything from <div id="report-modal" to </html>
+modals = ""
+modals_match = re.search(r'(<!-- ═+.*?Report Modal.*?)(<!-- Appwrite)', old_chat, re.IGNORECASE | re.DOTALL)
+if modals_match:
+    modals = modals_match.group(1)
+else:
+    alt_match = re.search(r'(<div id="report-modal".*?)(<!-- Appwrite)', old_chat, re.DOTALL)
+    if alt_match:
+        modals = alt_match.group(1)
+
+scripts = ""
+scripts_match = re.search(r'(<!-- Appwrite & Data -->.*?</html>)', old_chat, re.DOTALL)
+if scripts_match:
+    scripts = scripts_match.group(1)
+
+new_head = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -194,138 +219,22 @@
         </main>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════
-         REPORT MODAL — Violation type picker
-    ══════════════════════════════════════════════════════════ -->
-    <div id="report-modal"
-        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-7 relative">
-            <button onclick="closeReportModal()"
-                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">
-                <i class="fa-solid fa-times"></i>
-            </button>
-            <div class="text-center mb-5">
-                <div
-                    class="w-14 h-14 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
-                    <i class="fa-solid fa-flag"></i>
-                </div>
-                <h3 class="text-xl font-extrabold text-gray-800">Report Message</h3>
-                <p class="text-sm text-gray-500 mt-1">What type of issue are you reporting?</p>
-            </div>
+    {modals}
+    {scripts}
 
-            <!-- Message preview -->
-            <div id="report-message-preview"
-                class="bg-red-50 border border-red-100 rounded-xl px-4 py-2 text-sm text-red-700 font-semibold mb-4 break-words">
-            </div>
-
-            <!-- Violation type picker -->
-            <div class="space-y-2 mb-5" id="violation-options">
-                <label
-                    class="flex items-center gap-3 p-3 rounded-xl border-2 border-gray-100 hover:border-cubby-purple/50 cursor-pointer transition-all has-[:checked]:border-cubby-purple has-[:checked]:bg-cubby-purple/5">
-                    <input type="radio" name="violation" value="Profanity" class="accent-cubby-purple">
-                    <span class="font-semibold text-gray-700 text-sm">Profanity / Bad Words</span>
-                </label>
-                <label
-                    class="flex items-center gap-3 p-3 rounded-xl border-2 border-gray-100 hover:border-cubby-purple/50 cursor-pointer transition-all has-[:checked]:border-cubby-purple has-[:checked]:bg-cubby-purple/5">
-                    <input type="radio" name="violation" value="Cyberbullying" class="accent-cubby-purple">
-                    <span class="font-semibold text-gray-700 text-sm">Cyberbullying</span>
-                </label>
-                <label
-                    class="flex items-center gap-3 p-3 rounded-xl border-2 border-gray-100 hover:border-cubby-purple/50 cursor-pointer transition-all has-[:checked]:border-cubby-purple has-[:checked]:bg-cubby-purple/5">
-                    <input type="radio" name="violation" value="Sexual Harassment" class="accent-cubby-purple">
-                    <span class="font-semibold text-gray-700 text-sm">Sexual Harassment</span>
-                </label>
-                <label
-                    class="flex items-center gap-3 p-3 rounded-xl border-2 border-gray-100 hover:border-cubby-purple/50 cursor-pointer transition-all has-[:checked]:border-cubby-purple has-[:checked]:bg-cubby-purple/5">
-                    <input type="radio" name="violation" value="Threats" class="accent-cubby-purple">
-                    <span class="font-semibold text-gray-700 text-sm">Threats / Violence</span>
-                </label>
-                <label
-                    class="flex items-center gap-3 p-3 rounded-xl border-2 border-gray-100 hover:border-cubby-purple/50 cursor-pointer transition-all has-[:checked]:border-cubby-purple has-[:checked]:bg-cubby-purple/5">
-                    <input type="radio" name="violation" value="Inappropriate Content" class="accent-cubby-purple">
-                    <span class="font-semibold text-gray-700 text-sm">Inappropriate Content</span>
-                </label>
-                <label
-                    class="flex items-center gap-3 p-3 rounded-xl border-2 border-gray-100 hover:border-cubby-purple/50 cursor-pointer transition-all has-[:checked]:border-cubby-purple has-[:checked]:bg-cubby-purple/5">
-                    <input type="radio" name="violation" value="Other" class="accent-cubby-purple">
-                    <span class="font-semibold text-gray-700 text-sm">Other</span>
-                </label>
-            </div>
-
-            <button onclick="submitReportViolationType()"
-                class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors shadow-sm">
-                <i class="fa-solid fa-flag mr-2"></i> Submit Report
-            </button>
-        </div>
-    </div>
-
-    <!-- ══════════════════════════════════════════════════════════
-         CONFIRM REPORT MODAL
-    ══════════════════════════════════════════════════════════ -->
-    <div id="confirm-report-modal"
-        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xs p-7 text-center">
-            <div
-                class="w-14 h-14 bg-cubby-purple/10 text-cubby-purple rounded-full flex items-center justify-center text-2xl mx-auto mb-3">
-                <i class="fa-solid fa-shield-halved"></i>
-            </div>
-            <h3 class="text-lg font-extrabold text-gray-800 mb-1">Confirm Report</h3>
-            <p class="text-sm text-gray-500 mb-4">Are you sure you want to send this report to the safety team? This
-                cannot be undone.</p>
-            <p id="confirm-violation-text"
-                class="text-xs font-bold text-cubby-purple bg-cubby-purple/10 rounded-full px-3 py-1 inline-block mb-5">
-            </p>
-            <div class="flex gap-3">
-                <button onclick="closeConfirmReportModal()"
-                    class="flex-1 py-2 border-2 border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 transition-colors text-sm">Cancel</button>
-                <button onclick="finalizeReport()" id="finalize-report-btn"
-                    class="flex-1 py-2 bg-cubby-purple hover:bg-purple-600 text-white font-bold rounded-xl transition-colors shadow-sm text-sm">
-                    Yes, Report!
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ══════════════════════════════════════════════════════════
-         MUTE MODAL — Shown when a muted child tries to send
-    ══════════════════════════════════════════════════════════ -->
-    <div id="mute-modal"
-        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xs p-7 text-center">
-            <div
-                class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">
-                <i class="fa-solid fa-microphone-slash"></i>
-            </div>
-            <h3 class="text-xl font-extrabold text-gray-800 mb-2">You've Been Muted</h3>
-            <p class="text-sm text-gray-500 mb-2">You have been reported and muted for:</p>
-            <p id="mute-duration-text" class="text-2xl font-black text-red-500 mb-3"></p>
-            <p class="text-sm text-gray-600 mb-5">Please be nice next time! 💛</p>
-            <button onclick="document.getElementById('mute-modal').classList.add('hidden')"
-                class="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">
-                OK, I understand
-            </button>
-        </div>
-    </div>
-
-    
-    <!-- Appwrite & Data -->
-    <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
-    <script src="../js/appwrite_config.js"></script>
-    <script src="../js/data_service.js"></script>
-
-    <!-- Import Logic -->
-    <script src="../js/sidebar-logic.js"></script>
-    <script src="../js/kid_logic.js"></script>
-    <script src="../js/chat_logic.js"></script>
-    <style>
-        /* Wood theme overrides for injected buddy elements */
-        .buddy-item-override {
-            background-color: #f0d8b5 !important;
-            border: 3px solid #b07c4b !important;
-            border-radius: 1rem !important;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            /* matching wood look */
-        }
-    </style>
+    <script>
+        // Override chat_logic's render code for buddy items if needed:
+        // By default, chat_logic.js generates the HTML for buddies.
+        // We will inject a style definition here that matches the classes created by chat_logic.js 
+        // OR we can just style it directly in chat_logic later, but for now CSS overrides work.
+    </script>
 </body>
 </html>
+"""
+
+new_html = new_head.replace('{modals}', modals).replace('{scripts}', scripts)
+
+with open(chat_path, 'w', encoding='utf-8') as f:
+    f.write(new_html)
+
+print("Successfully replaced chat.html")

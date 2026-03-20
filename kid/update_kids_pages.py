@@ -66,29 +66,29 @@ def apply_template(filename, active_page_name):
     # Make target active
     if active_page_name == 'Games':
         # Remove active class from home
-        contents = contents.replace('class="flex items-center gap-4 px-4 py-3 bg-cubby-blue/10 text-cubby-blue rounded-xl font-bold text-lg sidebar-link transition-all duration-300"',
-                                    'class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors sidebar-link transition-all duration-300"')
-        contents = contents.replace('<i class="fa-solid fa-house text-xl w-6 text-center"></i>', '<i class="fa-solid fa-house text-xl w-6 text-center text-cubby-blue"></i>')
+        contents = contents.replace('class="flex items-center gap-4 px-4 py-3 bg-cubby-blue/20 border-[3px] border-cubby-blue text-cubby-blue rounded-2xl shadow-[0_4px_0_#3b82f6] font-black text-lg sidebar-link transition-all duration-300 active:translate-y-1 active:shadow-none"',
+                                    'class="flex items-center gap-4 px-4 py-3 bg-white/60 border-[3px] border-transparent hover:border-cubby-blue hover:bg-cubby-blue/10 text-gray-600 hover:text-cubby-blue rounded-2xl shadow-sm hover:shadow-[0_4px_0_#3b82f6] font-black text-lg transition-all duration-300 sidebar-link active:translate-y-1 active:shadow-none group"')
+        contents = contents.replace('<i class="fa-solid fa-house text-xl w-6 text-center"></i>', '<i class="fa-solid fa-house text-xl w-6 text-center text-cubby-blue group-hover:scale-110 transition-transform"></i>')
         
         # Add active class to games
         contents = re.sub(r'<a href="games.html".*?</a>', 
-                          r'<a href="games.html"\n                class="flex items-center gap-4 px-4 py-3 bg-cubby-orange/10 text-cubby-orange rounded-xl font-bold text-lg sidebar-link transition-all duration-300">\n                <i class="fa-solid fa-gamepad text-xl w-6 text-center"></i>\n                <span\n                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Games</span>\n            </a>', 
+                          r'<a href="games.html"\n                class="flex items-center gap-4 px-4 py-3 bg-cubby-orange/20 border-[3px] border-cubby-orange text-cubby-orange rounded-2xl shadow-[0_4px_0_#f97316] font-black text-lg sidebar-link transition-all duration-300 active:translate-y-1 active:shadow-none">\n                <i class="fa-solid fa-gamepad text-xl w-6 text-center"></i>\n                <span\n                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Games</span>\n            </a>', 
                           contents, flags=re.DOTALL)
                           
     elif active_page_name == 'Favorites':
-        contents = contents.replace('class="flex items-center gap-4 px-4 py-3 bg-cubby-blue/10 text-cubby-blue rounded-xl font-bold text-lg sidebar-link transition-all duration-300"',
-                                    'class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors sidebar-link transition-all duration-300"')
-        contents = contents.replace('<i class="fa-solid fa-house text-xl w-6 text-center"></i>', '<i class="fa-solid fa-house text-xl w-6 text-center text-cubby-blue"></i>')
+        contents = contents.replace('class="flex items-center gap-4 px-4 py-3 bg-cubby-blue/20 border-[3px] border-cubby-blue text-cubby-blue rounded-2xl shadow-[0_4px_0_#3b82f6] font-black text-lg sidebar-link transition-all duration-300 active:translate-y-1 active:shadow-none"',
+                                    'class="flex items-center gap-4 px-4 py-3 bg-white/60 border-[3px] border-transparent hover:border-cubby-blue hover:bg-cubby-blue/10 text-gray-600 hover:text-cubby-blue rounded-2xl shadow-sm hover:shadow-[0_4px_0_#3b82f6] font-black text-lg transition-all duration-300 sidebar-link active:translate-y-1 active:shadow-none group"')
+        contents = contents.replace('<i class="fa-solid fa-house text-xl w-6 text-center"></i>', '<i class="fa-solid fa-house text-xl w-6 text-center text-cubby-blue group-hover:scale-110 transition-transform"></i>')
         contents = re.sub(r'<a href="favorites.html".*?</a>', 
-                          r'<a href="favorites.html"\n                class="flex items-center gap-4 px-4 py-3 bg-cubby-pink/10 text-cubby-pink rounded-xl font-bold text-lg sidebar-link transition-all duration-300">\n                <i class="fa-solid fa-heart text-xl w-6 text-center"></i>\n                <span\n                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Favorites</span>\n            </a>', 
+                          r'<a href="favorites.html"\n                class="flex items-center gap-4 px-4 py-3 bg-cubby-pink/20 border-[3px] border-cubby-pink text-cubby-pink rounded-2xl shadow-[0_4px_0_#ec4899] font-black text-lg sidebar-link transition-all duration-300 active:translate-y-1 active:shadow-none">\n                <i class="fa-solid fa-heart text-xl w-6 text-center"></i>\n                <span\n                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Favorites</span>\n            </a>', 
                           contents, flags=re.DOTALL)
                           
     elif active_page_name == 'History':
-        contents = contents.replace('class="flex items-center gap-4 px-4 py-3 bg-cubby-blue/10 text-cubby-blue rounded-xl font-bold text-lg sidebar-link transition-all duration-300"',
-                                    'class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors sidebar-link transition-all duration-300"')
-        contents = contents.replace('<i class="fa-solid fa-house text-xl w-6 text-center"></i>', '<i class="fa-solid fa-house text-xl w-6 text-center text-cubby-blue"></i>')
+        contents = contents.replace('class="flex items-center gap-4 px-4 py-3 bg-cubby-blue/20 border-[3px] border-cubby-blue text-cubby-blue rounded-2xl shadow-[0_4px_0_#3b82f6] font-black text-lg sidebar-link transition-all duration-300 active:translate-y-1 active:shadow-none"',
+                                    'class="flex items-center gap-4 px-4 py-3 bg-white/60 border-[3px] border-transparent hover:border-cubby-blue hover:bg-cubby-blue/10 text-gray-600 hover:text-cubby-blue rounded-2xl shadow-sm hover:shadow-[0_4px_0_#3b82f6] font-black text-lg transition-all duration-300 sidebar-link active:translate-y-1 active:shadow-none group"')
+        contents = contents.replace('<i class="fa-solid fa-house text-xl w-6 text-center"></i>', '<i class="fa-solid fa-house text-xl w-6 text-center text-cubby-blue group-hover:scale-110 transition-transform"></i>')
         contents = re.sub(r'<a href="history.html".*?</a>', 
-                          r'<a href="history.html"\n                class="flex items-center gap-4 px-4 py-3 bg-cubby-purple/10 text-cubby-purple rounded-xl font-bold text-lg sidebar-link transition-all duration-300">\n                <i class="fa-solid fa-clock-rotate-left text-xl w-6 text-center"></i>\n                <span\n                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">History</span>\n            </a>', 
+                          r'<a href="history.html"\n                class="flex items-center gap-4 px-4 py-3 bg-cubby-purple/20 border-[3px] border-cubby-purple text-cubby-purple rounded-2xl shadow-[0_4px_0_#a855f7] font-black text-lg sidebar-link transition-all duration-300 active:translate-y-1 active:shadow-none">\n                <i class="fa-solid fa-clock-rotate-left text-xl w-6 text-center"></i>\n                <span\n                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">History</span>\n            </a>', 
                           contents, flags=re.DOTALL)
 
     write_file_contents(filepath, contents)

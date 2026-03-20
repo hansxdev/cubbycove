@@ -19,9 +19,28 @@
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/kid_theme.css">
+
+    <style>
+        body {
+            background-image: url('../images/bg_sky.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-blend-mode: overlay;
+            background-color: rgba(255, 255, 255, 0.85); /* Opacity overlay */
+        }
+        #sidebar {
+            background-image: url('../images/bg_sky.png');
+            background-size: cover;
+            background-position: left;
+            background-blend-mode: overlay;
+            background-color: rgba(255, 255, 255, 0.95); /* Sidebar is lighter */
+        }
+    </style>
+
 </head>
 
-<body class="bg-gray-50 text-gray-800 antialiased overflow-x-hidden">
+<body class="text-gray-800 antialiased overflow-x-hidden">
 
     <!-- TOP NAVIGATION BAR -->
     <nav class="fixed top-0 left-0 w-full bg-white shadow-md z-50 h-16 flex items-center justify-between px-4 lg:px-6">
@@ -94,7 +113,7 @@
 
     <!-- SIDEBAR -->
     <aside id="sidebar"
-        class="fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white overflow-y-auto transform lg:translate-x-0 -translate-x-full transition-all duration-300 ease-in-out z-40 pb-10 border-r border-gray-100 overflow-x-hidden">
+        class="fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 overflow-y-auto transform lg:translate-x-0 -translate-x-full transition-all duration-300 ease-in-out z-40 pb-10 border-r border-gray-100 overflow-x-hidden">
 
         <!-- Main Links -->
         <div class="p-3 space-y-1">
@@ -196,127 +215,91 @@
 
         <!-- Hero Banner (Featured Game) -->
         <div class="p-6 pb-2">
-            <div class="relative w-full h-64 md:h-80 rounded-3xl overflow-hidden shadow-lg group cursor-pointer">
-                <img src="https://img.freepik.com/free-vector/space-game-background-neon-landscape-alien-planet_107791-1634.jpg"
-                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                <div class="absolute bottom-0 left-0 p-6 md:p-8 text-white">
-                    <span
-                        class="bg-cubby-yellow text-gray-900 text-xs font-extrabold px-3 py-1 rounded-full mb-3 inline-block">FEATURED</span>
-                    <h2 class="text-3xl md:text-4xl font-extrabold mb-2">Space Explorer 3000</h2>
-                    <p class="text-gray-300 text-sm md:text-base max-w-lg mb-4">Blast off into a galaxy of fun! Learn
-                        about planets while dodging asteroids.</p>
-                    <button onclick="playMemoryGame()"
-                        class="bg-cubby-purple hover:bg-cubby-purple/80 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition-transform transform hover:scale-105 flex items-center gap-2">
-                        <i class="fa-solid fa-play"></i> Play Now
-                    </button>
+            <div class="relative w-full rounded-[2rem] overflow-hidden shadow-xl group cursor-pointer border-[6px] border-[#4ade80] bg-[#86efac] p-2 aspect-auto md:aspect-[21/9]">
+                <div class="w-full h-full relative rounded-[1.5rem] overflow-hidden">
+                    <img src="../images/space_explorer_banner.png"
+                        class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                    
+                    <!-- Gradient overlay to ensure text is readable if it overlaps -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-blue-900/40 to-transparent"></div>
+                    
+                    <div class="absolute top-0 left-0 p-8 md:p-12 text-white flex flex-col justify-center h-full max-w-xl">
+                        <span class="bg-cubby-yellow text-gray-900 text-xs font-black px-4 py-1.5 rounded-full mb-4 w-fit uppercase tracking-widest shadow-sm">FEATURED</span>
+                        <h2 class="text-4xl md:text-5xl font-black mb-3 drop-shadow-lg text-white">Space Explorer 3000</h2>
+                        <p class="text-white/90 text-sm md:text-lg mb-6 font-bold drop-shadow-md">Blast off into a galaxy of fun! Learn about planets while dodging asteroids.</p>
+                        
+                        <button onclick="playMemoryGame()" class="bg-[#9333ea] hover:bg-[#7e22ce] border-4 border-[#6b21a8] text-white font-black text-lg px-8 py-3 rounded-2xl shadow-[0_6px_0_#581c87] active:translate-y-2 active:shadow-none transition-all flex items-center gap-3 w-fit">
+                            <i class="fa-solid fa-play"></i> Play Now
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Game Grid -->
-        <div class="px-6 py-2">
-            <h2 class="flex items-center gap-3 text-2xl font-black text-gray-800 mb-4">
-                <i class="fa-solid fa-shapes text-cubby-purple"></i> All Games
+        <div class="px-6 py-6 pb-20">
+            <h2 class="flex items-center gap-3 text-2xl font-black text-gray-800 mb-6 drop-shadow-sm">
+                <i class="fa-solid fa-shapes text-cubby-purple text-3xl"></i> All Games
             </h2>
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
 
                 <!-- Game Card 1 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
-                    <div class="aspect-square bg-cubby-sky relative overflow-hidden">
-                        <img src="https://img.freepik.com/free-vector/math-background-design_1306-79.jpg"
-                            class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
-                        <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center">
-                            <div
-                                class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg text-cubby-blue">
-                                <i class="fa-solid fa-play text-xl"></i>
-                            </div>
+                <div class="bg-[#bbf7d0] rounded-3xl border-[5px] border-[#4ade80] p-[5px] shadow-[0_6px_0_#22c55e] hover:shadow-[0_2px_0_#22c55e] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer group flex flex-col">
+                    <div class="bg-white rounded-[20px] pb-4 flex flex-col items-center justify-center relative overflow-hidden h-full pt-8">
+                        <div class="w-16 h-16 bg-[#bbf7d0] text-[#166534] border-4 border-[#4ade80] rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-magnifying-glass"></i>
                         </div>
-                    </div>
-                    <div class="p-3">
-                        <h3 class="font-bold text-gray-800 text-sm truncate">Math Whiz</h3>
-                        <p class="text-xs text-gray-500">Educational</p>
+                        <h3 class="font-extrabold text-gray-800 text-base text-center px-2 leading-tight">Math Whiz</h3>
+                        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Educational</p>
                     </div>
                 </div>
 
                 <!-- Game Card 2 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
-                    <div class="aspect-square bg-cubby-green/10 relative overflow-hidden">
-                        <div class="w-full h-full flex items-center justify-center text-4xl text-cubby-green"><i
-                                class="fa-solid fa-chess-knight"></i></div>
-                        <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center">
-                            <div
-                                class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg text-cubby-green">
-                                <i class="fa-solid fa-play text-xl"></i>
-                            </div>
+                <div class="bg-[#fef08a] rounded-3xl border-[5px] border-[#fde047] p-[5px] shadow-[0_6px_0_#eab308] hover:shadow-[0_2px_0_#eab308] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer group flex flex-col">
+                    <div class="bg-white rounded-[20px] pb-4 flex flex-col items-center justify-center relative overflow-hidden h-full pt-8">
+                        <div class="w-16 h-16 bg-[#fef08a] text-[#854d0e] border-4 border-[#fde047] rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-chess-knight"></i>
                         </div>
-                    </div>
-                    <div class="p-3">
-                        <h3 class="font-bold text-gray-800 text-sm truncate">Knight's Quest</h3>
-                        <p class="text-xs text-gray-500">Puzzle</p>
+                        <h3 class="font-extrabold text-gray-800 text-base text-center px-2 leading-tight">Knight's Quest</h3>
+                        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Puzzle</p>
                     </div>
                 </div>
 
                 <!-- Game Card 3 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
-                    <div class="aspect-square bg-red-100 relative overflow-hidden">
-                        <div class="w-full h-full flex items-center justify-center text-4xl text-red-400"><i
-                                class="fa-solid fa-car-side"></i></div>
-                        <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center">
-                            <div
-                                class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg text-cubby-pink">
-                                <i class="fa-solid fa-play text-xl"></i>
-                            </div>
+                <div class="bg-[#bfdbfe] rounded-3xl border-[5px] border-[#60a5fa] p-[5px] shadow-[0_6px_0_#3b82f6] hover:shadow-[0_2px_0_#3b82f6] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer group flex flex-col">
+                    <div class="bg-white rounded-[20px] pb-4 flex flex-col items-center justify-center relative overflow-hidden h-full pt-8">
+                        <div class="w-16 h-16 bg-[#bfdbfe] text-[#1e40af] border-4 border-[#60a5fa] rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-car-side"></i>
                         </div>
-                    </div>
-                    <div class="p-3">
-                        <h3 class="font-bold text-gray-800 text-sm truncate">Tiny Racers</h3>
-                        <p class="text-xs text-gray-500">Racing</p>
+                        <h3 class="font-extrabold text-gray-800 text-base text-center px-2 leading-tight">Tiny Racers</h3>
+                        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Racing</p>
                     </div>
                 </div>
 
                 <!-- Game Card 4 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
-                    <div class="aspect-square bg-cubby-yellow/10 relative overflow-hidden">
-                        <div class="w-full h-full flex items-center justify-center text-4xl text-cubby-yellow"><i
-                                class="fa-solid fa-cookie-bite"></i></div>
-                        <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center">
-                            <div
-                                class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg text-cubby-yellow">
-                                <i class="fa-solid fa-play text-xl"></i>
-                            </div>
+                <div class="bg-[#fed7aa] rounded-3xl border-[5px] border-[#fb923c] p-[5px] shadow-[0_6px_0_#f97316] hover:shadow-[0_2px_0_#f97316] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer group flex flex-col">
+                    <div class="bg-white rounded-[20px] pb-4 flex flex-col items-center justify-center relative overflow-hidden h-full pt-8">
+                        <div class="w-16 h-16 bg-[#fed7aa] text-[#c2410c] border-4 border-[#fb923c] rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-cookie-bite"></i>
                         </div>
-                    </div>
-                    <div class="p-3">
-                        <h3 class="font-bold text-gray-800 text-sm truncate">Cookie Clicker</h3>
-                        <p class="text-xs text-gray-500">Casual</p>
+                        <h3 class="font-extrabold text-gray-800 text-base text-center px-2 leading-tight">Cookie Clicker</h3>
+                        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Casual</p>
                     </div>
                 </div>
 
                 <!-- Game Card 5 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
-                    <div class="aspect-square bg-cubby-purple/10 relative overflow-hidden">
-                        <div class="w-full h-full flex items-center justify-center text-4xl text-cubby-purple"><i
-                                class="fa-solid fa-paintbrush"></i></div>
-                        <div class="absolute inset-0 bg-black/20 hidden group-hover:flex items-center justify-center">
-                            <div
-                                class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg text-cubby-purple">
-                                <i class="fa-solid fa-play text-xl"></i>
-                            </div>
+                <div class="bg-[#fbcfe8] rounded-3xl border-[5px] border-[#f472b6] p-[5px] shadow-[0_6px_0_#ec4899] hover:shadow-[0_2px_0_#ec4899] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer group flex flex-col">
+                    <div class="bg-white rounded-[20px] pb-4 flex flex-col items-center justify-center relative overflow-hidden h-full pt-8">
+                        <div class="w-16 h-16 bg-[#fbcfe8] text-[#be185d] border-4 border-[#f472b6] rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-paintbrush"></i>
                         </div>
-                    </div>
-                    <div class="p-3">
-                        <h3 class="font-bold text-gray-800 text-sm truncate">Coloring Book</h3>
-                        <p class="text-xs text-gray-500">Creative</p>
+                        <h3 class="font-extrabold text-gray-800 text-base text-center px-2 leading-tight">Coloring Book</h3>
+                        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Creative</p>
                     </div>
                 </div>
 
             </div>
+        </div>
     </main>
 
     <!-- KID SETTINGS MODAL -->

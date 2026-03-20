@@ -144,8 +144,8 @@ async function checkAuth() {
 // HEADER — Dynamic Profile Picture
 // ─────────────────────────────────────────────────────────────────────────────
 function updateHeader(user) {
-    const headerProfile = document.querySelector('.group .font-bold.text-gray-700');
-    const headerAvatarImgs = document.querySelectorAll('.group img');
+    const headerProfile = document.querySelector('nav .group .font-bold.text-gray-700');
+    const headerAvatarImgs = document.querySelectorAll('nav .group img');
 
     if (headerProfile) {
         headerProfile.textContent = `Hi, ${user.username || user.firstName || 'Explorer'}!`;

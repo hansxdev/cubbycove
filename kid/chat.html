@@ -159,27 +159,26 @@
                 <!-- Ground Grass Background -->
                 <div class="absolute bottom-0 inset-x-0 h-16 bg-[#93db61] border-t-[5px] border-[#74b34b]"></div>
                 
-                <div class="relative max-w-4xl mx-auto flex items-end gap-2 sm:gap-4 lg:ml-0">
+                <div class="relative w-full mx-auto flex items-end gap-2 sm:gap-4 flex-1">
                     <!-- Acorn mascot -->
                     <div class="w-12 h-12 sm:w-14 sm:h-14 bg-[#c48d5b] text-[#5c3a21] rounded-full flex items-center justify-center text-2xl sm:text-3xl border-[4px] border-[#8a5b2f] shadow-lg shrink-0 z-10 self-center hidden sm:flex">
                         <i class="fa-solid fa-face-smile"></i>
                     </div>
                     
-                    <button id="emoji-btn" class="sm:hidden w-12 h-12 bg-[#c48d5b] text-[#5c3a21] rounded-full flex items-center justify-center text-xl border-[4px] border-[#8a5b2f] shadow-lg shrink-0 z-10 self-center">
+                    <button id="emoji-btn" class="sm:hidden w-12 h-12 bg-[#c48d5b] text-[#5c3a21] rounded-full flex items-center justify-center text-xl border-[4px] border-[#8a5b2f] shadow-lg shrink-0 z-10 self-center active:translate-y-1 active:shadow-none transition-all">
                         <i class="fa-solid fa-face-smile"></i>
                     </button>
                     
                     <!-- Log input container -->
                     <div class="flex-1 bg-[#d09e6c] border-[5px] border-[#9c6a38] rounded-full p-1.5 flex items-center gap-2 shadow-xl relative min-h-[56px] sm:min-h-[64px]">
                         <div class="absolute inset-x-2 inset-y-1.5 bg-[#fcf1db] rounded-full shadow-inner flex items-center px-4 overflow-hidden border border-[#d6ad85]">
-                            <textarea id="message-input" rows="1" placeholder="Pick a buddy first..." disabled
+                            <textarea id="message-input" rows="1" placeholder="Pick a buddy first..."
                                 class="w-full h-full bg-transparent border-none outline-none resize-none py-2 sm:py-2.5 text-[#5c3a21] font-bold text-sm sm:text-lg placeholder-[#bda389] leading-relaxed my-auto align-middle" 
                                 style="scrollbar-width: none;"></textarea>
                         </div>
                     </div>
                     
-                    <!-- Paper Airplane Button -->
-                    <button disabled id="send-btn" class="w-12 h-12 sm:w-16 sm:h-16 bg-[#e09a5b] hover:bg-[#d08b4e] disabled:opacity-50 disabled:grayscale border-[4px] border-[#9c6a38] rounded-tr-3xl rounded-tl-xl rounded-br-xl rounded-bl-3xl flex items-center justify-center text-white text-xl sm:text-2xl shadow-[0_5px_0_#9c6a38] shrink-0 active:translate-y-[5px] active:shadow-none transition-all rotate-[-10deg] self-center">
+                    <button id="send-btn" class="w-12 h-12 sm:w-16 sm:h-16 bg-[#e09a5b] hover:bg-[#d08b4e] disabled:opacity-50 disabled:grayscale border-[4px] border-[#9c6a38] rounded-tr-3xl rounded-tl-xl rounded-br-xl rounded-bl-3xl flex items-center justify-center text-white text-xl sm:text-2xl shadow-[0_5px_0_#9c6a38] shrink-0 active:translate-y-[5px] active:shadow-none transition-all rotate-[-10deg] self-center">
                         <i class="fa-solid fa-paper-plane"></i>
                     </button>
                 </div>

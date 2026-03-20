@@ -109,6 +109,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     updateChatHeader(_buddyId, _buddyName);
     _conversationId = DataService._buildConversationId(_currentChild.$id, _buddyId);
+    
+    // UI toggle logic applied via TDD:
+    const nbs = $('no-buddy-state');
+    if (nbs) { nbs.classList.add('hidden'); nbs.classList.remove('flex'); }
+    const msgs = $('chat-messages');
+    if (msgs) { msgs.classList.remove('hidden'); msgs.classList.add('flex'); }
+    
+    // Explicitly enable typing
+    const sendBtn = $('send-btn');
+    if (sendBtn) sendBtn.disabled = false;
+    const msgInput = $('message-input');
+    if (msgInput) { msgInput.disabled = false; msgInput.placeholder = 'Write a message...'; }
+
     await loadMessageHistory();
     startRealtimeChat();
 
@@ -122,6 +135,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     $('message-input').focus();
     $('buddy-search')?.addEventListener('input', filterBuddySidebar);
+    
+    $('emoji-btn')?.addEventListener('click', () => {
+        alert("Emoji picker feature coming soon! 🍄");
+    });
 });
 
 // Updates the chat header with the current buddy's avatar and name.
@@ -186,12 +203,12 @@ async function loadChatBuddySidebar() {
 
             return `
             <a href="chat.html?buddyId=${encodeURIComponent(buddy.childId)}&buddyName=${encodeURIComponent(buddy.username)}&buddyDocId=${encodeURIComponent(buddy.buddyDocId)}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all buddy-item ${isActive ? 'bg-cubby-green/10' : 'hover:bg-gray-50'}"
+               class="flex items-center gap-3 px-4 py-3 cursor-pointer transition-all buddy-item rounded-2xl ${isActive ? 'bg-[#e3ae7d] border-[3px] border-[#9c6a38] shadow-[0_4px_0_#9c6a38] translate-y-[-2px]' : 'hover:bg-[#d2a373] border-[3px] border-transparent'}"
                data-name="${buddy.username.toLowerCase()}">
                 ${avatarHtml}
-                <div class="flex-1 min-w-0 info">
-                    <h4 class="font-bold ${isActive ? 'text-cubby-green' : 'text-gray-800'} truncate text-sm">${buddy.username}</h4>
-                    <p class="text-xs text-gray-400 truncate">${isActive ? 'Chatting now' : 'Tap to chat'}</p>
+                <div class="flex-1 min-w-0 info mt-1">
+                    <h4 class="${isActive ? 'text-[#3b2414] font-black' : 'text-[#5c3a21] font-bold'} truncate text-sm leading-tight">${escapeHtml(buddy.username)}</h4>
+                    <p class="text-xs ${isActive ? 'text-[#3b2414] font-bold opacity-80' : 'text-[#8c5a2c]'} truncate drop-shadow-sm">${isActive ? 'Chatting now' : 'Tap to chat'}</p>
                 </div>
             </a>`;
         }).join('');

@@ -549,9 +549,9 @@
         });
         
         function handleProtectedLink(event, url) {
-            // Check if logged in in real scenario
-            // For now, allow navigation since it's just a demo UI
-            window.location.href = url;
+            event.preventDefault();
+            document.getElementById('join_modal').classList.remove('hidden');
+            document.getElementById('join_modal').classList.add('flex');
         }
     </script>
 </body>

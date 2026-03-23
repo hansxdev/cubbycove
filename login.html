@@ -114,7 +114,7 @@
                     <div class="pt-2">
                         <button type="button" id="kidLoginBtn" onclick="handleKidLogin()"
                             class="w-full bg-[#fde047] text-amber-900 font-black text-xl py-4 rounded-full btn-play border-2 border-[#d97706] flex items-center justify-center gap-2 cursor-pointer">
-                            LET'S PLAY! <span class="text-2xl ml-1">🚀</span>
+                            LET'S PLAY! <span class="text-2xl ml-1"></span>
                         </button>
                     </div>
                 </form>
@@ -195,7 +195,7 @@
                 kidForm.classList.add('hidden');
                 parentHelperText.classList.remove('hidden');
                 kidHelperText.classList.add('hidden');
-                heading.textContent = 'Parent Sign In 🛡️';
+                heading.textContent = 'Parent Sign In';
             }
         }
 
@@ -234,7 +234,7 @@
                 return;
             }
 
-            setLoading('kidLoginBtn', true, 'LET\'S PLAY! 🚀');
+            setLoading('kidLoginBtn', true, 'LET\'S PLAY!');
             try {
                 const req = await DataService.createLoginRequest(username, parentEmail, password);
 
@@ -247,7 +247,7 @@
             } catch (err) {
                 alert(err.message || 'Login failed. Please try again.');
             } finally {
-                setLoading('kidLoginBtn', false, 'LET\'S PLAY! 🚀');
+                setLoading('kidLoginBtn', false, 'LET\'S PLAY!');
             }
         }
 

@@ -416,49 +416,35 @@ const DataService = {
         }
 
         // ── 2. Verify the parent email matches this child's parent ───────────────
-        // Strategy: look up the parent by the email the kid entered and verify that
-        // the parent's document $id matches the child's parentId field.
-        // (Using listDocuments avoids 404s from $id vs Auth-ID mismatches.)
+        // IMPORTANT: Kids are unauthenticated, so we CANNOT use listDocuments() with
+        // query filters on the `users` collection — Appwrite returns 401 for that.
+        // Instead, we fetch the parent document by its known ID (child.parentId) using
+        // getDocument(), which works with read("any") permissions even for guests.
         if (!child.parentId) throw new Error(GENERIC_ERROR);
 
         let parent;
         try {
-            // Look up the parent user by the email entered — case-insensitive
-            const parentList = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
-                Query.equal('email', parentEmail.toLowerCase().trim()),
-                Query.equal('role', 'parent'),
-                Query.limit(1)
-            ]);
-
-            if (parentList.documents.length === 0) throw new Error(GENERIC_ERROR);
-            parent = parentList.documents[0];
+            // Fetch parent doc directly by ID — no auth required if doc has read("any")
+            parent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, child.parentId);
         } catch (e) {
-            if (e.message === GENERIC_ERROR) throw e;
-            throw new Error(GENERIC_ERROR);
-        }
-
-        // Make sure this parent actually owns the child
-        // child.parentId should equal parent.$id (or in some setups the Auth user $id)
-        if (child.parentId !== parent.$id) {
-            // Fallback: try matching by parentId directly in case child stores Auth ID
-            // which might differ from the users doc $id
-            // Re-query users by document that HAS this $id or try email match
-            // The parent email check above already confirms the email is correct.
-            // Just check: does the parent doc's $id appear somewhere in the child's hierarchy?
-            // We rely on: the found child (by username) must belong to the parent (by email).
-            // Since we can't do a direct $id match reliably, we verify via a secondary query.
-            const childCheck = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
-                Query.equal('username', username),
-                Query.equal('parentId', parent.$id),
-                Query.limit(1)
-            ]).catch(() => ({ documents: [] }));
-
-            if (childCheck.documents.length === 0) {
-                // The username exists under a different parent — wrong parent email
+            // If getDocument also fails (e.g. collection only allows authenticated reads),
+            // fall back to checking the parentEmail field stored on the child doc itself.
+            if (child.parentEmail) {
+                // Validate email inline without touching the users collection
+                if (child.parentEmail.toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
+                    throw new Error(GENERIC_ERROR);
+                }
+                // Create a minimal parent stub so the rest of the flow still works
+                parent = { $id: child.parentId, email: child.parentEmail, role: 'parent' };
+            } else {
+                // Cannot verify — deny for safety
                 throw new Error(GENERIC_ERROR);
             }
-            // Use the verified child doc
-            child = childCheck.documents[0];
+        }
+
+        // Verify the email the kid entered matches the parent's actual email
+        if (!parent.email || parent.email.toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
+            throw new Error(GENERIC_ERROR);
         }
 
         // ── 3. Verify password ───────────────────────────────────────────────────

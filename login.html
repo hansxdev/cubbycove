@@ -86,75 +86,79 @@
             </div>
 
             <div class="w-full max-w-sm mx-auto flex-1 flex flex-col justify-center">
-                <h2 id="welcomeHeading" class="text-3xl lg:text-4xl font-black text-[#1e293b] mb-6">Welcome Back! 👋</h2>
+                <h2 id="welcomeHeading" class="text-3xl lg:text-4xl font-black text-[#1e293b] mb-6 transition-all duration-300 ease-in-out">Welcome Back! 👋</h2>
 
-                <!-- KID FORM -->
-                <form id="kidForm" class="space-y-5">
-                    <div>
-                        <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR USERNAME</label>
-                        <input id="kidUsername" type="text" placeholder="e.g. SuperMario123"
-                            class="w-full input-soft border-[3px] border-[#d97706] rounded-2xl px-5 py-4 focus:outline-none focus:ring-4 focus:ring-amber-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="username">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">PARENT'S EMAIL</label>
-                        <input id="kidParentEmail" type="email" placeholder="e.g. parent@email.com"
-                            class="w-full input-soft border-[3px] border-[#d97706] rounded-2xl px-5 py-4 focus:outline-none focus:ring-4 focus:ring-amber-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="email">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR PASSWORD</label>
-                        <div class="relative">
-                            <input id="kidPassword" type="password" placeholder="Your secret password"
-                                class="w-full input-soft border-[3px] border-[#d97706] rounded-2xl px-5 py-4 pr-14 focus:outline-none focus:ring-4 focus:ring-amber-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="current-password">
-                            <button type="button" onclick="togglePassword('kidPassword','kidPassIcon')"
-                                class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
-                                <i id="kidPassIcon" class="fa-regular fa-eye-slash text-xl"></i>
-                            </button>
+                <div class="grid relative w-full pt-2">
+                    <!-- KID SECTION -->
+                    <div id="kidSection" class="col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform translate-x-0 opacity-100 z-10 w-full pointer-events-auto">
+                        <form id="kidForm" class="space-y-5">
+                            <div>
+                                <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR USERNAME</label>
+                                <input id="kidUsername" type="text" placeholder="e.g. SuperMario123"
+                                    class="w-full input-soft border-[3px] border-[#d97706] rounded-2xl px-5 py-4 focus:outline-none focus:ring-4 focus:ring-amber-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="username">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">PARENT'S EMAIL</label>
+                                <input id="kidParentEmail" type="email" placeholder="e.g. parent@email.com"
+                                    class="w-full input-soft border-[3px] border-[#d97706] rounded-2xl px-5 py-4 focus:outline-none focus:ring-4 focus:ring-amber-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="email">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR PASSWORD</label>
+                                <div class="relative">
+                                    <input id="kidPassword" type="password" placeholder="Your secret password"
+                                        class="w-full input-soft border-[3px] border-[#d97706] rounded-2xl px-5 py-4 pr-14 focus:outline-none focus:ring-4 focus:ring-amber-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="current-password">
+                                    <button type="button" onclick="togglePassword('kidPassword','kidPassIcon')"
+                                        class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
+                                        <i id="kidPassIcon" class="fa-regular fa-eye-slash text-xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="pt-2">
+                                <button type="button" id="kidLoginBtn" onclick="handleKidLogin()"
+                                    class="w-full bg-[#fde047] text-amber-900 font-black text-xl py-4 rounded-full btn-play border-2 border-[#d97706] flex items-center justify-center gap-2 cursor-pointer hover:bg-[#fef08a] transition-colors">
+                                    LET'S PLAY! <span class="text-2xl ml-1"></span>
+                                </button>
+                            </div>
+                        </form>
+                        <div id="kidHelperText" class="mt-6 text-center">
+                            <p class="text-slate-500 font-semibold text-sm">
+                                Don't have an account? <a href="parent/register_parent.html" class="text-sky-500 font-black hover:underline transition-colors">Ask a parent to create one!</a>
+                            </p>
                         </div>
                     </div>
-                    <div class="pt-2">
-                        <button type="button" id="kidLoginBtn" onclick="handleKidLogin()"
-                            class="w-full bg-[#fde047] text-amber-900 font-black text-xl py-4 rounded-full btn-play border-2 border-[#d97706] flex items-center justify-center gap-2 cursor-pointer">
-                            LET'S PLAY! <span class="text-2xl ml-1"></span>
-                        </button>
-                    </div>
-                </form>
 
-                <!-- PARENT FORM -->
-                <form id="parentForm" class="space-y-5 hidden">
-                    <div>
-                        <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR EMAIL</label>
-                        <input id="parentEmail" type="email" placeholder="e.g. parent@email.com"
-                            class="w-full input-soft border-[3px] border-[#7c3aed] rounded-2xl px-5 py-4 focus:outline-none focus:ring-4 focus:ring-purple-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="email">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR PASSWORD</label>
-                        <div class="relative">
-                            <input id="parentPassword" type="password" placeholder="Your password"
-                                class="w-full input-soft border-[3px] border-[#7c3aed] rounded-2xl px-5 py-4 pr-14 focus:outline-none focus:ring-4 focus:ring-purple-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="current-password">
-                            <button type="button" onclick="togglePassword('parentPassword','parentPassIcon')"
-                                class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
-                                <i id="parentPassIcon" class="fa-regular fa-eye-slash text-xl"></i>
-                            </button>
+                    <!-- PARENT SECTION -->
+                    <div id="parentSection" class="col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform translate-x-8 opacity-0 z-0 w-full pointer-events-none">
+                        <form id="parentForm" class="space-y-5">
+                            <div>
+                                <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR EMAIL</label>
+                                <input id="parentEmail" type="email" placeholder="e.g. parent@email.com"
+                                    class="w-full input-soft border-[3px] border-[#7c3aed] rounded-2xl px-5 py-4 focus:outline-none focus:ring-4 focus:ring-purple-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="email">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR PASSWORD</label>
+                                <div class="relative">
+                                    <input id="parentPassword" type="password" placeholder="Your password"
+                                        class="w-full input-soft border-[3px] border-[#7c3aed] rounded-2xl px-5 py-4 pr-14 focus:outline-none focus:ring-4 focus:ring-purple-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="current-password">
+                                    <button type="button" onclick="togglePassword('parentPassword','parentPassIcon')"
+                                        class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
+                                        <i id="parentPassIcon" class="fa-regular fa-eye-slash text-xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="pt-2">
+                                <button type="button" id="parentLoginBtn" onclick="handleParentLogin()"
+                                    class="w-full bg-purple-500 text-white font-black text-xl py-4 rounded-full btn-parent border-2 border-purple-700 flex items-center justify-center gap-2 cursor-pointer hover:bg-purple-600 transition-colors">
+                                    Sign In <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </form>
+                        <div id="parentHelperText" class="mt-6 text-center">
+                            <p class="text-slate-500 font-semibold text-sm">
+                                No parent account yet? <a href="parent/register_parent.html" class="text-purple-500 font-black hover:underline transition-colors">Register here!</a>
+                            </p>
                         </div>
                     </div>
-                    <div class="pt-2">
-                        <button type="button" id="parentLoginBtn" onclick="handleParentLogin()"
-                            class="w-full bg-purple-500 text-white font-black text-xl py-4 rounded-full btn-parent border-2 border-purple-700 flex items-center justify-center gap-2 cursor-pointer">
-                            Sign In <i class="fa-solid fa-arrow-right"></i>
-                        </button>
-                    </div>
-                </form>
-
-                <!-- Helper texts -->
-                <div id="kidHelperText" class="mt-6 text-center">
-                    <p class="text-slate-500 font-semibold text-sm">
-                        Don't have an account? <a href="parent/register_parent.html" class="text-sky-500 font-black hover:underline">Ask a parent to create one!</a>
-                    </p>
-                </div>
-                <div id="parentHelperText" class="mt-6 text-center hidden">
-                    <p class="text-slate-500 font-semibold text-sm">
-                        No parent account yet? <a href="parent/register_parent.html" class="text-purple-500 font-black hover:underline">Register here!</a>
-                    </p>
                 </div>
             </div>
 
@@ -171,10 +175,8 @@
         function switchRole(role) {
             const kidTab = document.getElementById('kidTab');
             const parentTab = document.getElementById('parentTab');
-            const kidForm = document.getElementById('kidForm');
-            const parentForm = document.getElementById('parentForm');
-            const kidHelperText = document.getElementById('kidHelperText');
-            const parentHelperText = document.getElementById('parentHelperText');
+            const kidSection = document.getElementById('kidSection');
+            const parentSection = document.getElementById('parentSection');
             const heading = document.getElementById('welcomeHeading');
 
             const activeClass = 'flex-1 py-2.5 rounded-full tab-active font-black text-sm flex items-center justify-center gap-2 transition-all cursor-pointer';
@@ -183,19 +185,29 @@
             if (role === 'kid') {
                 kidTab.className = activeClass;
                 parentTab.className = inactiveClass;
-                kidForm.classList.remove('hidden');
-                parentForm.classList.add('hidden');
-                kidHelperText.classList.remove('hidden');
-                parentHelperText.classList.add('hidden');
-                heading.textContent = 'Welcome Back! 👋';
+                
+                // Kid slides in from left, Parent slides out to right
+                kidSection.className = "col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform translate-x-0 opacity-100 z-10 w-full pointer-events-auto";
+                parentSection.className = "col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform translate-x-8 opacity-0 z-0 w-full pointer-events-none";
+                
+                heading.style.opacity = '0';
+                setTimeout(() => {
+                    heading.textContent = 'Welcome Back! 👋';
+                    heading.style.opacity = '1';
+                }, 100);
             } else {
                 parentTab.className = activeClass;
                 kidTab.className = inactiveClass;
-                parentForm.classList.remove('hidden');
-                kidForm.classList.add('hidden');
-                parentHelperText.classList.remove('hidden');
-                kidHelperText.classList.add('hidden');
-                heading.textContent = 'Parent Sign In';
+                
+                // Parent slides in from right, Kid slides out to left
+                kidSection.className = "col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform -translate-x-8 opacity-0 z-0 w-full pointer-events-none";
+                parentSection.className = "col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform translate-x-0 opacity-100 z-10 w-full pointer-events-auto";
+                
+                heading.style.opacity = '0';
+                setTimeout(() => {
+                    heading.textContent = 'Parent Sign In';
+                    heading.style.opacity = '1';
+                }, 150);
             }
         }
 

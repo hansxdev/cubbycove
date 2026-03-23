@@ -456,55 +456,71 @@ window.openKidVideoModal = async function (videoDocId, pathId = null) {
 
     const modal = document.createElement('div');
     modal.id = 'kid-video-modal';
-    modal.className = 'fixed inset-0 bg-black/95 z-[100] flex flex-col lg:flex-row overflow-auto';
+    modal.className = 'fixed inset-0 z-[100] flex flex-col lg:flex-row overflow-auto bg-gradient-to-br from-[#2b1055] via-[#4c2273] to-[#12072b]';
 
     modal.innerHTML = `
+        <!-- Floating Stars Background -->
+        <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+            <div class="absolute top-[10%] left-[20%] w-2 h-2 bg-yellow-200 rounded-full shadow-[0_0_10px_#fef08a] animate-pulse"></div>
+            <div class="absolute top-[30%] right-[15%] w-3 h-3 bg-blue-200 rounded-full shadow-[0_0_15px_#bfdbfe] animate-[pulse_3s_infinite]"></div>
+            <div class="absolute bottom-[20%] left-[10%] w-2.5 h-2.5 bg-pink-200 rounded-full shadow-[0_0_12px_#fbcfe8] animate-[pulse_2.5s_infinite]"></div>
+            <div class="absolute top-[50%] right-[40%] w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_8px_white] animate-[pulse_4s_infinite]"></div>
+            
+            <!-- Glowing Orbs -->
+            <div class="absolute -top-20 -left-20 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
+        </div>
+
         <!-- Close Button -->
-        <button id="kid-modal-close-btn" class="absolute top-4 right-4 z-50 text-white text-2xl hover:text-red-400 transition-colors bg-black/50 rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
+        <button id="kid-modal-close-btn" class="absolute top-4 right-4 z-50 text-white/80 hover:text-white text-2xl hover:scale-110 transition-all bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-full w-12 h-12 flex items-center justify-center shadow-[0_4px_0_rgba(255,255,255,0.1)] active:translate-y-1 active:shadow-none">
             <i class="fa-solid fa-times"></i>
         </button>
 
         <!-- LEFT: Video Player (70%) -->
-        <div class="w-full lg:w-[70%] flex flex-col p-4 lg:p-6">
-            <div class="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
+        <div class="w-full lg:w-[70%] flex flex-col p-4 lg:p-8 relative z-10 pt-20 lg:pt-8 min-h-[min-content]">
+            <div class="w-full aspect-video bg-black rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] border-[4px] border-white/10 relative z-10">
                 ${playerHtml}
             </div>
 
-            <!-- Video Info -->
-            <div class="mt-4 px-1">
-                <h2 class="text-white text-xl font-extrabold leading-tight mb-2">${video.title}</h2>
-                <div class="flex items-center gap-3 mb-4">
-                    <img src="https://api.dicebear.com/7.x/identicon/svg?seed=${video.category || 'creator'}" class="w-10 h-10 rounded-full bg-gray-700">
+            <!-- Video Info Glassmorphism Container -->
+            <div class="mt-6 p-6 rounded-3xl bg-white/5 backdrop-blur-md border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] w-full">
+                <h2 class="text-white text-2xl lg:text-3xl font-black leading-tight mb-3 drop-shadow-md tracking-wide">${video.title}</h2>
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-purple-400 to-blue-400 p-[2px] shadow-lg">
+                        <img src="https://api.dicebear.com/7.x/identicon/svg?seed=${video.category || 'creator'}" class="w-full h-full rounded-full bg-gray-900 border-2 border-transparent">
+                    </div>
                     <div>
-                        <p class="text-white font-bold text-sm">${video.creatorEmail ? video.creatorEmail.split('@')[0] : 'Creator'}</p>
-                        <p class="text-gray-400 text-xs font-semibold">${video.category || 'Video'} • ${(video.views || 0).toLocaleString()} views</p>
+                        <p class="text-blue-100 font-extrabold text-base drop-shadow-sm">${video.creatorEmail ? video.creatorEmail.split('@')[0] : 'Creator'}</p>
+                        <p class="text-white/60 text-sm font-bold">${video.category || 'Video'} • ${(video.views || 0).toLocaleString()} views</p>
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="flex flex-wrap gap-3">
-                    <button onclick="window._kidLikeVideo('${video.$id}')" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-bold transition-colors">
-                        <i class="fa-solid fa-thumbs-up"></i> <span id="kid-like-count">${video.likes || 0}</span>
+                <!-- Action Buttons (3D Pills) -->
+                <div class="flex flex-wrap gap-4">
+                    <button onclick="window._kidLikeVideo('${video.$id}')" class="flex items-center gap-2 bg-[#86efac] text-green-950 px-6 py-2.5 rounded-full text-base font-black shadow-[0_4px_0_#22c55e] hover:translate-y-[2px] hover:shadow-[0_2px_0_#22c55e] active:translate-y-1 active:shadow-none transition-all group border-[3px] border-green-200">
+                        <i class="fa-solid fa-thumbs-up group-hover:scale-110 transition-transform"></i> <span id="kid-like-count">${video.likes || 0}</span>
                     </button>
-                    <button onclick="window._kidDislikeVideo('${video.$id}')" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-bold transition-colors">
-                        <i class="fa-solid fa-thumbs-down"></i> <span id="kid-dislike-count">${video.dislikes || 0}</span>
+                    <button onclick="window._kidDislikeVideo('${video.$id}')" class="flex items-center gap-2 bg-[#fca5a5] text-red-950 px-6 py-2.5 rounded-full text-base font-black shadow-[0_4px_0_#ef4444] hover:translate-y-[2px] hover:shadow-[0_2px_0_#ef4444] active:translate-y-1 active:shadow-none transition-all group border-[3px] border-red-200">
+                        <i class="fa-solid fa-thumbs-down group-hover:scale-110 transition-transform"></i> <span id="kid-dislike-count">${video.dislikes || 0}</span>
                     </button>
                     <button id="kid-fav-btn" onclick="window._kidToggleFavorite('${video.$id}', '${video.title.replace(/'/g, "\\'")}', '${video.category}', '${safeUrl}', '${thumbUrl}')"
-                        class="flex items-center gap-2 ${isFav ? 'bg-cubby-pink text-white' : 'bg-gray-800 text-white'} hover:bg-cubby-pink/80 px-4 py-2 rounded-full text-sm font-bold transition-colors">
-                        <i class="fa-solid fa-heart"></i> ${isFav ? 'Favorited' : 'Favorite'}
+                        class="flex items-center gap-2 ${isFav ? 'bg-[#fbcfe8] text-pink-950 border-[3px] border-pink-300 shadow-[0_4px_0_#f472b6] hover:shadow-[0_2px_0_#f472b6]' : 'bg-white/10 text-white backdrop-blur-sm border-[3px] border-white/20 shadow-[0_4px_0_rgba(255,255,255,0.1)] hover:shadow-[0_2px_0_rgba(255,255,255,0.1)]'} px-6 py-2.5 rounded-full text-base font-black hover:translate-y-[2px] active:translate-y-1 active:shadow-none transition-all group">
+                        <i class="fa-solid fa-heart ${isFav ? 'animate-pulse text-pink-500' : ''} group-hover:scale-110 transition-transform"></i> ${isFav ? 'Favorited' : 'Favorite'}
                     </button>
-                    <button onclick="window._kidShareVideo('${video.url}')" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-bold transition-colors">
-                        <i class="fa-solid fa-share"></i> Share
+                    <button onclick="window._kidShareVideo('${video.url}')" class="flex items-center gap-2 bg-[#93c5fd] text-blue-950 px-6 py-2.5 rounded-full text-base font-black shadow-[0_4px_0_#3b82f6] hover:translate-y-[2px] hover:shadow-[0_2px_0_#3b82f6] active:translate-y-1 active:shadow-none transition-all border-[3px] border-blue-200 group">
+                        <i class="fa-solid fa-share group-hover:scale-110 transition-transform"></i> Share
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- RIGHT: Recommendations (30%) -->
-        <div class="w-full lg:w-[30%] p-4 lg:p-6 lg:pl-0 overflow-y-auto">
-            <h3 class="text-white font-extrabold text-lg mb-4"><i class="fa-solid fa-wand-magic-sparkles text-cubby-yellow mr-2"></i>Up Next</h3>
-            <div id="kid-modal-recs" class="space-y-3">
-                ${recsHtml}
+        <div class="w-full lg:w-[30%] p-4 lg:p-8 lg:pl-0 relative z-10 pt-4 lg:pt-8 min-h-[min-content]">
+            <div class="bg-white/5 backdrop-blur-md rounded-3xl p-5 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] h-full overflow-y-auto no-scrollbar">
+                <h3 class="text-white font-black text-xl mb-5 flex items-center gap-2 drop-shadow-md"><i class="fa-solid fa-wand-magic-sparkles text-yellow-300 animate-pulse"></i> Up Next</h3>
+                <div id="kid-modal-recs" class="space-y-4">
+                    ${recsHtml}
+                </div>
             </div>
         </div>
     `;

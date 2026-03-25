@@ -144,7 +144,7 @@ async function handleKidLogin() {
 
         if (updated.status === 'approved') {
             clearInterval(timerInterval);
-            DataService.kidLoginFromApproved(updated);
+            await DataService.kidLoginFromApproved(updated);
             window.location.href = 'kid/home_logged_in.html';
             return;
         }

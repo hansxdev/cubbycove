@@ -294,7 +294,7 @@
 
                     if (req.status === 'approved') {
                         clearInterval(window._kidPollInterval);
-                        DataService.kidLoginFromApproved(req);
+                        await DataService.kidLoginFromApproved(req);
                         window.location.href = 'kid/home_logged_in.html';
                     } else if (req.status === 'denied') {
                         clearInterval(window._kidPollInterval);

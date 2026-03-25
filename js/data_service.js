@@ -1427,8 +1427,10 @@ const DataService = {
             // The parentId passed in is the Appwrite Auth user.$id which may differ
             // from the database document $id if the 1:1 mapping was not used.
             let resolvedParentId = parentId;
+            let parentEmail = "";
             try {
-                await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
+                const parentDoc = await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
+                parentEmail = parentDoc.email;
                 // If we get here, IDs match 1:1
             } catch (e) {
                 if (e.code === 404) {
@@ -1439,6 +1441,7 @@ const DataService = {
                     ]);
                     if (list.documents.length === 0) throw new Error("Parent profile not found in database.");
                     resolvedParentId = list.documents[0].$id;
+                    parentEmail = list.documents[0].email;
                 } else {
                     throw e;
                 }
@@ -1449,6 +1452,7 @@ const DataService = {
             const childId = ID.unique();
             const newChild = {
                 parentId: resolvedParentId,
+                parentEmail: parentEmail,
                 name: childData.name,
                 username: childData.username,
                 password: childData.password,

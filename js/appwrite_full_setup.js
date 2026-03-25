@@ -86,7 +86,8 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { type: 'string', key: 'bio', required: false, size: 1000 },
                 { type: 'string', key: 'coverColor', required: false, size: 50 },
                 { type: 'string', key: 'theme', required: false, size: 50 },
-                { type: 'string', key: 'avatarIcon', required: false, size: 50 }
+                { type: 'string', key: 'avatarIcon', required: false, size: 50 },
+                { type: 'string', key: 'parentEmail', required: false, size: 255 }
             ],
             indexes: [
                 { key: 'parentId_idx', type: 'key', attributes: ['parentId'] },

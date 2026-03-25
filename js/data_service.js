@@ -585,20 +585,45 @@ const DataService = {
     /**
      * Step 4 (Kid side): Build and store child session from an approved request.
      * Called once polling detects status === 'approved'.
+     * NOW ASYNC — fetches child prefs from DB so profile persists across logins.
      */
-    kidLoginFromApproved: function (approvedRequest) {
+    kidLoginFromApproved: async function (approvedRequest) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+
+        // Fetch the full child document to hydrate prefs (avatarImage, bio, etc.)
+        let childDoc = null;
+        try {
+            childDoc = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, approvedRequest.childId);
+        } catch (e) {
+            console.warn('[Kid Login] Could not fetch child prefs from DB (non-fatal):', e.message);
+        }
+
         const childSession = {
             $id: approvedRequest.childId,
             role: 'kid',
-            firstName: approvedRequest.childName,
-            name: approvedRequest.childName,
-            username: approvedRequest.childUsername,
-            parentId: approvedRequest.parentId
+            firstName: childDoc?.name || approvedRequest.childName,
+            name: childDoc?.name || approvedRequest.childName,
+            username: childDoc?.username || approvedRequest.childUsername,
+            parentId: approvedRequest.parentId,
+            totalPoints: childDoc?.totalPoints || 0,
+            avatar: childDoc?.avatar || null,
+            avatarImage: childDoc?.avatarImage || null,
+            avatarBgColor: childDoc?.avatarBgColor || null,
+            // prefs object mirrors what saveKidSettings writes
+            prefs: {
+                displayName: childDoc?.displayName || childDoc?.name || approvedRequest.childName,
+                bio: childDoc?.bio || '',
+                avatarImage: childDoc?.avatarImage || null,
+                avatarBgColor: childDoc?.avatarBgColor || '#60a5fa',
+                coverColor: childDoc?.coverColor || '#3b82f6',
+                theme: childDoc?.theme || 'default',
+                avatarIcon: childDoc?.avatarIcon || '🐻',
+            }
         };
         sessionStorage.setItem('cubby_child_session', JSON.stringify(childSession));
         // Clean up the cached password
         sessionStorage.removeItem('cubby_login_req_pass_' + approvedRequest.$id);
-        console.log('✅ [Kid] Session stored for:', approvedRequest.childUsername);
+        console.log('✅ [Kid] Session stored with prefs for:', childSession.username);
         return childSession;
     },
 
@@ -1550,6 +1575,106 @@ const DataService = {
             throw error;
         }
     },
+
+    /**
+     * Fetch a single child document (used to read current prefs before editing).
+     * Safe to call without an Appwrite Auth session (uses 'any' read permission).
+     */
+    getChildWithPrefs: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            return await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+        } catch (e) {
+            console.warn('[getChildWithPrefs] Could not fetch child doc:', e.message);
+            return null;
+        }
+    },
+
+    /**
+     * Persist a kid's profile prefs to the Children collection.
+     * Updates: name/displayName, bio, avatarImage, avatarBgColor, coverColor, theme, avatarIcon.
+     *
+     * PERMISSION NOTE: Children collection must have 'Any' update permission enabled
+     * in Appwrite Console so unauthenticated kids can update their own profile.
+     * If you see a 401 error, add that permission in:
+     *   Appwrite Console → Database → Children → Permissions → Role: any → update ✓
+     */
+    updateChildPrefs: async function (childId, prefs) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        if (!childId) throw new Error('[updateChildPrefs] childId is required');
+
+        // Build the update payload — only include defined fields
+        const payload = {};
+        if (prefs.displayName !== undefined && prefs.displayName !== null) {
+            payload.name = prefs.displayName;       // top-level name field
+            payload.displayName = prefs.displayName; // convenience field
+        }
+        if (prefs.bio !== undefined)         payload.bio = prefs.bio;
+        if (prefs.avatarImage !== undefined)  payload.avatarImage = prefs.avatarImage;
+        if (prefs.avatarBgColor !== undefined) payload.avatarBgColor = prefs.avatarBgColor;
+        if (prefs.coverColor !== undefined)  payload.coverColor = prefs.coverColor;
+        if (prefs.theme !== undefined)       payload.theme = prefs.theme;
+        if (prefs.avatarIcon !== undefined)  payload.avatarIcon = prefs.avatarIcon;
+
+        try {
+            const doc = await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, payload);
+            console.log('✅ [updateChildPrefs] Profile saved for child:', childId, payload);
+            return doc;
+        } catch (error) {
+            // Classify the error for easier debugging
+            if (error.code === 401) {
+                console.error('[Profile] ❌ Permission Denied (401): The Children collection does not have \'Any\' update permission. Enable it in Appwrite Console.');
+                throw new Error('Permission Denied: Profile cannot be saved. Please contact support.');
+            } else if (error.code === 0 || error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('timeout')) {
+                console.error('[Profile] ❌ Network Timeout / Offline:', error.message);
+                throw new Error('Network error: Could not reach the server. Please check your connection and try again.');
+            } else {
+                console.error('[Profile] ❌ Unexpected DB error:', error);
+                throw error;
+            }
+        }
+    },
+
+    /**
+     * Persist a parent/staff user profile update to the Users collection.
+     * Supports: firstName, lastName (DB fields) + arbitrary prefs (Appwrite Account prefs).
+     */
+    updateUserProfile: async function (userId, profileData) {
+        const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
+
+        const dbPayload = {};
+        if (profileData.firstName) dbPayload.firstName = profileData.firstName;
+        if (profileData.lastName)  dbPayload.lastName = profileData.lastName;
+
+        try {
+            // 1. Update the Users collection document
+            if (Object.keys(dbPayload).length > 0) {
+                await databases.updateDocument(DB_ID, COLLECTIONS.USERS, userId, dbPayload);
+                console.log('✅ [updateUserProfile] DB fields updated:', dbPayload);
+            }
+
+            // 2. Update Appwrite Account Preferences (for bio, tags, profilePictureUrl etc.)
+            if (profileData.prefs && Object.keys(profileData.prefs).length > 0) {
+                let currentPrefs = {};
+                try { currentPrefs = await account.getPrefs(); } catch (e) { /* no existing prefs */ }
+                await account.updatePrefs({ ...currentPrefs, ...profileData.prefs });
+                console.log('✅ [updateUserProfile] Account prefs updated:', profileData.prefs);
+            }
+
+            return true;
+        } catch (error) {
+            if (error.code === 401) {
+                console.error('[Profile] ❌ Permission Denied (401):', error.message);
+                throw new Error('Permission Denied: Could not update profile.');
+            } else if (error.message?.includes('fetch') || error.message?.includes('network')) {
+                console.error('[Profile] ❌ Network error:', error.message);
+                throw new Error('Network error: Could not reach the server. Check your connection.');
+            }
+            console.error('[updateUserProfile] Error:', error);
+            throw error;
+        }
+    },
+
     updateThreatLog: async function (logId, status, resolution) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         await databases.updateDocument(DB_ID, COLLECTIONS.THREAT_LOGS, logId, {

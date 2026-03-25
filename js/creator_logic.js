@@ -936,3 +936,62 @@ window.saveLearningPath = async function() {
         saveBtn.textContent = 'Create Learning Path';
     }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CREATOR PROFILE PERSISTENCE
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Saves creator profile (bio, tags) to Appwrite Account Preferences.
+ * Tags are stored as a comma-separated string.
+ *
+ * Call from a "Save Profile" button: onclick="saveCreatorProfile()"
+ * Reads values from: #creator-bio, #creator-tags
+ */
+window.saveCreatorProfile = async function () {
+    // Creator uses a real Appwrite Auth session via DataService.account
+    let session = null;
+    try {
+        const { account } = DataService._getServices();
+        session = await account.get();
+    } catch (e) {
+        alert('Session not found. Please log in again.');
+        return;
+    }
+
+    const bioEl  = document.getElementById('creator-bio');
+    const tagsEl = document.getElementById('creator-tags');
+
+    const bio  = bioEl  ? bioEl.value.trim()  : '';
+    const tags = tagsEl ? tagsEl.value.trim() : '';
+
+    const saveBtn = document.getElementById('creator-save-profile-btn');
+    const originalHtml = saveBtn ? saveBtn.innerHTML : null;
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...';
+    }
+
+    try {
+        await DataService.updateUserProfile(session.$id, {
+            prefs: { bio, tags }
+        });
+
+        // Refresh in-page state
+        if (currentUser) {
+            if (!currentUser.prefs) currentUser.prefs = {};
+            currentUser.prefs.bio  = bio;
+            currentUser.prefs.tags = tags;
+        }
+
+        console.log('✅ [saveCreatorProfile] Bio and tags saved.');
+        alert('Profile saved! ✅');
+    } catch (e) {
+        console.error('[saveCreatorProfile] Error:', e);
+        alert('❌ Could not save profile: ' + e.message + '\n\nYour changes were NOT saved.');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalHtml;
+        }
+    }
+};

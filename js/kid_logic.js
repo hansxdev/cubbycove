@@ -936,38 +936,56 @@ let _kidAvatarIcon = '🐻';
 let _kidCoverColor = '#3b82f6';
 let _kidTheme = 'default';
 
-window.openKidSettingsModal = function () {
+window.openKidSettingsModal = async function () {
     const modal = document.getElementById('kid-settings-modal');
     if (!modal) return;
 
     const session = _getChildSession();
-    if (session) {
-        const prefs = session.prefs || {};
-        _kidAvatarColor = prefs.avatarBgColor || '#60a5fa';
-        _kidAvatarIcon = prefs.avatarImage || prefs.avatarIcon || '🐻';
-        _kidCoverColor = prefs.coverColor || '#3b82f6';
-        _kidTheme = prefs.theme || 'default';
+    if (!session) return;
 
-        document.getElementById('kid-display-name').value = prefs.displayName || session.name || '';
-        document.getElementById('kid-bio').value = prefs.bio || '';
-
-        const preview = document.getElementById('kid-avatar-preview');
-        if (preview) {
-            preview.style.background = _kidAvatarColor;
-            if (_kidAvatarIcon.startsWith('../')) {
-                preview.innerHTML = `<img src="${_kidAvatarIcon}" class="w-full h-full object-contain p-1">`;
-            } else {
-                preview.textContent = _kidAvatarIcon;
-            }
-        }
-        const coverPreview = document.getElementById('cover-color-preview');
-        if (coverPreview) coverPreview.style.background = _kidCoverColor;
+    // Always fetch latest prefs from DB so we don't show stale cached data.
+    // Falls back to sessionStorage prefs if the DB fetch fails.
+    let freshDoc = null;
+    try {
+        freshDoc = await DataService.getChildWithPrefs(session.$id);
+    } catch (e) {
+        console.warn('[openKidSettingsModal] Could not fetch fresh child doc:', e.message);
     }
 
-    const bioEl = document.getElementById('kid-bio');
+    // Merge: DB doc first (freshest), then session prefs as fallback
+    const sessionPrefs = session.prefs || {};
+    _kidAvatarColor  = freshDoc?.avatarBgColor  || sessionPrefs.avatarBgColor  || '#60a5fa';
+    _kidAvatarIcon   = freshDoc?.avatarIcon     || freshDoc?.avatarImage     || sessionPrefs.avatarIcon || '🐻';
+    _kidCoverColor   = freshDoc?.coverColor     || sessionPrefs.coverColor   || '#3b82f6';
+    _kidTheme        = freshDoc?.theme          || sessionPrefs.theme        || 'default';
+
+    const displayName = freshDoc?.displayName || freshDoc?.name || sessionPrefs.displayName || session.name || '';
+    const bio         = freshDoc?.bio          || sessionPrefs.bio          || '';
+
+    const nameEl = document.getElementById('kid-display-name');
+    const bioEl  = document.getElementById('kid-bio');
+    if (nameEl) nameEl.value = displayName;
+    if (bioEl)  bioEl.value  = bio;
+
+    const preview = document.getElementById('kid-avatar-preview');
+    if (preview) {
+        preview.style.background = _kidAvatarColor;
+        if (_kidAvatarIcon.startsWith('../')) {
+            preview.innerHTML = `<img src="${_kidAvatarIcon}" class="w-full h-full object-contain p-1">`;
+        } else {
+            preview.textContent = _kidAvatarIcon;
+        }
+    }
+    const coverPreview = document.getElementById('cover-color-preview');
+    if (coverPreview) coverPreview.style.background = _kidCoverColor;
+
     if (bioEl) {
-        document.getElementById('kid-bio-count').textContent = bioEl.value.length;
-        bioEl.oninput = () => { document.getElementById('kid-bio-count').textContent = bioEl.value.length; };
+        const countEl = document.getElementById('kid-bio-count');
+        if (countEl) countEl.textContent = bioEl.value.length;
+        bioEl.oninput = () => {
+            const c = document.getElementById('kid-bio-count');
+            if (c) c.textContent = bioEl.value.length;
+        };
     }
 
     modal.classList.remove('hidden');
@@ -1009,8 +1027,9 @@ window.saveKidSettings = async function () {
     if (!session) { alert('Session not found. Please log in again.'); return; }
 
     const displayName = document.getElementById('kid-display-name').value.trim();
-    const bio = document.getElementById('kid-bio').value.trim();
+    const bio         = document.getElementById('kid-bio').value.trim();
 
+    // Content filter (non-blocking if unavailable)
     if (bio && typeof DataService.filterBioGemini === 'function') {
         try {
             const filtered = await DataService.filterBioGemini(bio);
@@ -1021,34 +1040,62 @@ window.saveKidSettings = async function () {
         } catch (e) { console.warn('Gemini filter unavailable:', e.message); }
     }
 
+    // --- Show saving state ---
+    const saveBtn = document.getElementById('kid-save-btn');
+    const originalBtnHtml = saveBtn ? saveBtn.innerHTML : null;
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...';
+    }
+
     const prefs = {
         avatarBgColor: _kidAvatarColor,
-        avatarImage: _kidAvatarIcon.startsWith('../') ? _kidAvatarIcon : null,
-        avatarIcon: _kidAvatarIcon.startsWith('../') ? '🐻' : _kidAvatarIcon,
-        coverColor: _kidCoverColor,
-        theme: _kidTheme,
-        displayName: displayName,
-        bio: bio
+        avatarImage:   _kidAvatarIcon.startsWith('../') ? _kidAvatarIcon : null,
+        avatarIcon:    _kidAvatarIcon.startsWith('../') ? '🐻' : _kidAvatarIcon,
+        coverColor:    _kidCoverColor,
+        theme:         _kidTheme,
+        displayName:   displayName,
+        bio:           bio
     };
 
+    // ─── STEP 1: Persist to server FIRST — throw on error so user sees failure ───
+    try {
+        await DataService.updateChildPrefs(session.$id, prefs);
+    } catch (e) {
+        // Restore button on failure
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalBtnHtml;
+        }
+        // Show visible error to the user (not just a console.warn)
+        const errMsg = e.message || 'Unknown error';
+        console.error('[saveKidSettings] DB save failed:', errMsg);
+        alert(`❌ Couldn't save profile: ${errMsg}\n\nYour changes were NOT saved. Please try again.`);
+        return; // <-- stop here; don't update local state with data that didn't persist
+    }
+
+    // ─── STEP 2: Server confirmed success — now update local session ───────────
+    session.name        = displayName || session.name;
+    session.firstName   = displayName || session.firstName;
+    session.avatarImage = prefs.avatarImage;
+    session.avatarBgColor = prefs.avatarBgColor;
     session.prefs = { ...session.prefs, ...prefs };
     sessionStorage.setItem('cubby_child_session', JSON.stringify(session));
+    console.log('✅ [saveKidSettings] Session updated after confirmed server save.');
 
-    try {
-        if (typeof DataService.updateChildPrefs === 'function') {
-            await DataService.updateChildPrefs(session.$id, prefs);
-        }
-        if (typeof DataService.updateChild === 'function') {
-            await DataService.updateChild(session.$id, {
-                avatarImage: prefs.avatarImage,
-                avatarBgColor: prefs.avatarBgColor
-            });
-        }
-    } catch (e) { console.warn('Could not save prefs to server:', e.message); }
-
+    // ─── STEP 3: Apply theme immediately ─────────────────────────────────────
     document.body.className = document.body.className.replace(/\btheme-\S+/g, '');
     if (_kidTheme !== 'default') document.body.classList.add('theme-' + _kidTheme);
 
+    // ─── STEP 4: Refresh header avatar if function available ──────────────────
+    if (typeof updateHeader === 'function') { try { updateHeader(session); } catch (e) {} }
+    else if (typeof renderKidHeader === 'function') { try { renderKidHeader(session); } catch (e) {} }
+
+    // Restore button and close modal
+    if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalBtnHtml;
+    }
     closeKidSettingsModal();
     alert('Profile saved! ✨');
 };

@@ -1247,3 +1247,73 @@ window.saveSettings = async function () {
         alert('Error saving settings: ' + e.message);
     }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PARENT PROFILE PERSISTENCE
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Saves parent profile fields (firstName, lastName, bio, profilePicture) to
+ * the Users collection AND Appwrite Account Preferences.
+ *
+ * Call from a "Save Profile" button: onclick="saveParentProfile()"
+ * Reads values from: #parent-first-name, #parent-last-name, #parent-bio,
+ *                    #parent-profile-pic (optional URL field)
+ */
+window.saveParentProfile = async function () {
+    const session = JSON.parse(sessionStorage.getItem('cubby_session') || '{}');
+    if (!session || !session.$id) {
+        alert('Session not found. Please log in again.');
+        return;
+    }
+
+    const firstNameEl = document.getElementById('parent-first-name');
+    const lastNameEl  = document.getElementById('parent-last-name');
+    const bioEl       = document.getElementById('parent-bio');
+    const picEl       = document.getElementById('parent-profile-pic');
+
+    const profileData = {
+        firstName: firstNameEl ? firstNameEl.value.trim() : undefined,
+        lastName:  lastNameEl  ? lastNameEl.value.trim()  : undefined,
+        prefs: {
+            bio:               bioEl ? bioEl.value.trim() : undefined,
+            profilePictureUrl: picEl ? picEl.value.trim() : undefined,
+        }
+    };
+
+    // Remove undefined fields from prefs
+    Object.keys(profileData.prefs).forEach(k => {
+        if (profileData.prefs[k] === undefined) delete profileData.prefs[k];
+    });
+
+    const saveBtn = document.getElementById('parent-save-profile-btn');
+    const originalHtml = saveBtn ? saveBtn.innerHTML : null;
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...';
+    }
+
+    try {
+        await DataService.updateUserProfile(session.$id, profileData);
+
+        // Sync local session
+        if (profileData.firstName) session.firstName = profileData.firstName;
+        if (profileData.lastName)  session.lastName  = profileData.lastName;
+        sessionStorage.setItem('cubby_session', JSON.stringify(session));
+
+        // Refresh sidebar name if present
+        const nameEl = document.getElementById('sidebar-parent-name');
+        if (nameEl && profileData.firstName) {
+            nameEl.textContent = `${profileData.firstName} ${profileData.lastName || ''}`.trim();
+        }
+
+        alert('Profile saved! ✅');
+    } catch (e) {
+        console.error('[saveParentProfile] Error:', e);
+        alert('❌ Could not save profile: ' + e.message + '\n\nYour changes were NOT saved.');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalHtml;
+        }
+    }
+};

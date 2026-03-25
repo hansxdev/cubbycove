@@ -4,7 +4,7 @@ const PROJECT_ID = '69b554060007d12c46ee';
 const DB_ID = '69b5543d0007695488c5';
 // ⚠️  ROTATE THIS KEY: Go to Appwrite Console → Settings → API Keys, delete the old key,
 //     create a new one, paste it below ONLY when running this script, then clear it again.
-const API_KEY = 'standard_72d19ea13e40ea4ea169dafb068240da352214d39595e5e97c1fbb41a46d8377c19f7282850a3fe3b3f391da91233b3f26a6c889ad59fdf11451240fd323caf87a9a5a2d36dc375f231f6661d9b36267e0c61d6a968b32223e62c6600a15c21e7c8d3621a6a98b601655c248f1fac37fab22f3ddd45fa0bf0680dc69230fd546';
+const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f77e0f4f6f3ce00c62ba74ed4505883be263c42a35717bcf7a2a13edddd94e650ad41482f7f34bb86972d28c5adeaf51987733a61fd3a6da7a79d83c74f441e88599dd19a908239d6db092f562cb5a97e7710dedccc40bd9a4e70fc0d7a9e4a8027e0fa6164a';
 
 (async () => {
     console.log("🚀 Starting Appwrite Migration Initialization via Node.js CLI...");
@@ -82,7 +82,11 @@ const API_KEY = 'standard_72d19ea13e40ea4ea169dafb068240da352214d39595e5e97c1fbb
                 { type: 'integer', key: 'totalPoints', required: false, xdefault: 0 },
                 { type: 'string', key: 'kidId', required: false, size: 10 },
                 { type: 'string', key: 'avatarImage', required: false, size: 1000000 },
-                { type: 'string', key: 'avatarBgColor', required: false, size: 50 }
+                { type: 'string', key: 'avatarBgColor', required: false, size: 50 },
+                { type: 'string', key: 'bio', required: false, size: 1000 },
+                { type: 'string', key: 'coverColor', required: false, size: 50 },
+                { type: 'string', key: 'theme', required: false, size: 50 },
+                { type: 'string', key: 'avatarIcon', required: false, size: 50 }
             ],
             indexes: [
                 { key: 'parentId_idx', type: 'key', attributes: ['parentId'] },

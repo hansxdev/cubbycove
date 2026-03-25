@@ -1607,7 +1607,6 @@ const DataService = {
         const payload = {};
         if (prefs.displayName !== undefined && prefs.displayName !== null) {
             payload.name = prefs.displayName;       // top-level name field
-            payload.displayName = prefs.displayName; // convenience field
         }
         if (prefs.bio !== undefined)         payload.bio = prefs.bio;
         if (prefs.avatarImage !== undefined)  payload.avatarImage = prefs.avatarImage;

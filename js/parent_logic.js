@@ -288,6 +288,32 @@ function toggleSidebar() {
     }
 }
 
+// ── Notification Bell Panel Toggle ────────────────────────────────────────────
+function toggleNotifPanel() {
+    const panel = document.getElementById('notif-panel');
+    if (!panel) return;
+    const isHidden = panel.classList.toggle('hidden');
+    if (!isHidden) {
+        // Panel just opened — refresh notifications immediately
+        checkLoginRequests();
+        // Close panel when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', _closeNotifOnOutsideClick, { once: true, capture: true });
+        }, 0);
+    }
+}
+
+function _closeNotifOnOutsideClick(e) {
+    const panel = document.getElementById('notif-panel');
+    const bell  = document.getElementById('notif-bell-btn');
+    if (panel && !panel.contains(e.target) && !bell?.contains(e.target)) {
+        panel.classList.add('hidden');
+    } else if (panel && !panel.classList.contains('hidden')) {
+        // Click was inside panel — re-add listener
+        document.addEventListener('click', _closeNotifOnOutsideClick, { once: true, capture: true });
+    }
+}
+
 // ── Notification Panel & Approval Modal ──────────────────────────────────────
 // All declared at top level so onclick attrs work before DOMContentLoaded fires.
 
@@ -508,8 +534,60 @@ async function renderKidsAndStats(user) {
 window.selectChild = function (childId) {
     if (_selectedChildId === childId) return; // already selected
     _selectedChildId = childId;
-    const user = { $id: window._currentChildren[0]?.parentId }; // Stub to prevent crash and re-render sidebar safely
-    renderKidsAndStats(user);
+
+    // Re-render the sidebar child cards from cached data (no DB re-fetch)
+    const kidsListEl = document.getElementById('sidebar-kids-list');
+    if (kidsListEl) {
+        kidsListEl.innerHTML = '';
+        const children = window._currentChildren || [];
+        children.forEach(child => {
+            const isActive = child.$id === _selectedChildId;
+            const activeBg = isActive ? 'border-[#28C7AE] bg-white ring-2 ring-[#28C7AE]/30' : 'border-white/60 bg-white/60 hover:border-sky-300 hover:bg-white';
+            const activeText = isActive ? 'text-gray-800' : 'text-gray-600 group-hover:text-cubby-purple';
+
+            let avatarHtml = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(child.username || child.name)}"
+                        class="w-10 h-10 rounded-full bg-gray-50 border-2 border-white shadow-sm object-cover transition-transform group-hover:scale-105">`;
+            if (child.avatarImage) {
+                const bgStr = child.avatarBgColor ? `style="background-color: ${child.avatarBgColor}"` : 'bg-white';
+                avatarHtml = `<img src="${child.avatarImage}" ${bgStr} class="w-10 h-10 rounded-full border-2 border-white shadow-sm object-contain p-0.5 group-hover:scale-105 transition-transform">`;
+            }
+
+            const statusDot = child.isOnline
+                ? `<div class="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] bg-green-400 border-[3px] border-white rounded-full z-10"></div>`
+                : `<div class="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] bg-gray-300 border-[3px] border-white rounded-full z-10"></div>`;
+
+            const html = `
+                <div onclick="selectChild('${child.$id}')" class="flex-shrink-0 cursor-pointer group transition-all duration-200 ${isActive ? 'scale-105' : 'hover:-translate-y-1'}" style="width: 220px;">
+                    <div class="glass-card shadow-sm pl-3 pr-4 py-3 flex items-center gap-3 transition-all border-2 ${activeBg}">
+                        <div class="relative w-10 h-10 shrink-0">
+                            ${avatarHtml}
+                            ${statusDot}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-extrabold text-[14px] truncate ${activeText} leading-snug">${child.name}</p>
+                            <p class="text-[10px] font-bold ${child.isOnline ? 'text-green-500' : 'text-gray-400'} uppercase tracking-wider truncate mt-0.5">${child.isOnline ? 'Online' : 'Offline'}</p>
+                        </div>
+                        <button onclick="openEditChildModal('${child.$id}', event)" title="Edit child"
+                            class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-cubby-purple hover:bg-purple-50 transition-colors focus:outline-none shrink-0 border border-transparent hover:border-purple-100">
+                            <i class="fa-solid fa-pen text-[11px]"></i>
+                        </button>
+                    </div>
+                </div>`;
+            kidsListEl.insertAdjacentHTML('beforeend', html);
+        });
+
+        // Re-add the add-child button
+        kidsListEl.insertAdjacentHTML('beforeend', `
+            <a href="register_child.html" class="flex-shrink-0 w-12 h-12 rounded-[1rem] bg-white/40 border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:text-[#28C7AE] hover:border-[#28C7AE] hover:bg-white transition-all cursor-pointer shadow-sm group mx-2 my-auto">
+                <i class="fa-solid fa-plus text-lg group-hover:scale-110 transition-transform"></i>
+            </a>`);
+    }
+
+    // Refresh data panels for the newly selected child (uses cached data — no DB re-fetch)
+    renderActivityLogs();
+    renderSafetyAlerts();
+    renderRewardsAndPaths();
+    changeTimeMode(currentScreenTimeMode);
 };
 
 function renderActivityLogs() {
@@ -936,7 +1014,7 @@ function changeTimeMode(mode) {
         datasets = [
             {
                 label: 'Games',
-                data: gameMinsData.map(v => v || null), // Nulls help curves if empty, but 0 is okay too
+                data: gameMinsData.map(v => v || 0), // Use 0 (not null) so zero-minute days render as flat points, not gaps
                 borderColor: '#B689F5',
                 backgroundColor: 'rgba(182, 137, 245, 0.3)',
                 borderWidth: 3,
@@ -950,7 +1028,7 @@ function changeTimeMode(mode) {
             },
             {
                 label: 'Entertainment',
-                data: entMinsData.map(v => v || null),
+                data: entMinsData.map(v => v || 0),
                 borderColor: '#FFAF7A',
                 backgroundColor: 'rgba(255, 175, 122, 0.3)',
                 borderWidth: 3,
@@ -964,7 +1042,7 @@ function changeTimeMode(mode) {
             },
             {
                 label: 'Communication',
-                data: comMinsData.map(v => v || null),
+                data: comMinsData.map(v => v || 0),
                 borderColor: '#5EC74D',
                 backgroundColor: 'rgba(94, 199, 77, 0.3)',
                 borderWidth: 3,

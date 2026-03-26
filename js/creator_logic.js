@@ -188,6 +188,8 @@ window.clearThumbnailPreview = function () {
     document.getElementById('clear-thumbnail-btn').classList.add('hidden');
 };
 
+let pendingUploadData = null;
+
 async function handleUpload(e) {
     e.preventDefault();
 
@@ -199,8 +201,36 @@ async function handleUpload(e) {
     if (!title) return showUploadError('Please enter a title for your video.');
 
     const errorBox = document.getElementById('upload-error');
-    const successBox = document.getElementById('upload-success');
     errorBox.classList.add('hidden');
+
+    // Store data temporarily and open rules modal
+    pendingUploadData = { url, title, category };
+    
+    const agreeCheckbox = document.getElementById('rules-agree-checkbox');
+    const confirmBtn = document.getElementById('confirm-upload-btn');
+    if (agreeCheckbox && confirmBtn) {
+        agreeCheckbox.checked = false;
+        confirmBtn.disabled = true;
+        agreeCheckbox.onchange = (ev) => {
+            confirmBtn.disabled = !ev.target.checked;
+        };
+    }
+    
+    document.getElementById('creator-rules-modal').classList.remove('hidden');
+}
+
+window.closeCreatorRules = function() {
+    document.getElementById('creator-rules-modal').classList.add('hidden');
+    pendingUploadData = null;
+};
+
+window.confirmAndUpload = async function() {
+    if (!pendingUploadData) return;
+    
+    const { url, title, category } = pendingUploadData;
+    closeCreatorRules();
+    
+    const successBox = document.getElementById('upload-success');
     successBox.classList.add('hidden');
 
     try {
@@ -253,6 +283,7 @@ async function handleUpload(e) {
         showUploadError('Failed to submit video. Please try again.');
     }
 }
+
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  LOAD MY UPLOADS — Displays creator's videos with sort/filter

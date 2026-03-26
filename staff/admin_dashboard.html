@@ -81,7 +81,7 @@
     </style>
 </head>
 
-<body class="bg-gray-100 text-gray-800 font-sans antialiased">
+<body class="bg-[#F7F9FC] text-gray-800 font-sans antialiased">
 
     <div class="flex h-screen overflow-hidden">
 
@@ -91,13 +91,13 @@
 
         <!-- SIDEBAR -->
         <aside
-            class="fixed inset-y-0 left-0 w-64 bg-cubby-dark text-white flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:relative lg:transform-none z-50"
+            class="fixed inset-y-0 left-0 w-64 bg-[#0A2540] text-white flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:relative lg:transform-none z-50"
             id="sidebar">
             <div class="h-16 flex items-center justify-between px-4 border-b border-gray-700">
                 <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-shield-cat text-cubby-blue text-2xl"></i>
+                    <i class="fa-solid fa-shield-cat text-[#635BFF] text-2xl"></i>
                     <span class="text-xl font-bold tracking-wider">Cubby<span
-                            class="text-cubby-blue">Admin</span></span>
+                            class="text-[#635BFF]">Admin</span></span>
                 </div>
                 <button class="lg:hidden text-gray-400 hover:text-white p-1" onclick="toggleAdminSidebar()">
                     <i class="fa-solid fa-xmark text-lg"></i>
@@ -106,7 +106,7 @@
 
             <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
                 <a href="#" onclick="switchView('dashboard')" id="nav-dashboard"
-                    class="nav-item flex items-center gap-3 px-4 py-3 bg-cubby-blue/20 text-cubby-blue rounded-lg font-bold border-l-4 border-cubby-blue transition-colors">
+                    class="nav-item flex items-center gap-3 px-4 py-3 bg-[#635BFF]/20 text-[#635BFF] rounded-lg font-bold border-l-4 border-[#635BFF] transition-colors">
                     <i class="fa-solid fa-gauge-high w-5 text-center"></i> Dashboard
                 </a>
 
@@ -131,7 +131,7 @@
                         <i class="fa-solid fa-id-card w-5 text-center"></i> Verification
                     </div>
                     <span id="badge-verification"
-                        class="bg-cubby-blue text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                        class="bg-[#635BFF] text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
                 </a>
 
                 <a href="#" onclick="switchView('moderation')" id="nav-moderation"
@@ -149,7 +149,7 @@
                         <i class="fa-solid fa-film w-5 text-center"></i> Video Review
                     </div>
                     <span id="badge-video-review"
-                        class="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                        class="bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
                 </a>
 
                 <!-- Super Admin Only -->
@@ -190,7 +190,7 @@
         <div class="flex-1 flex flex-col overflow-hidden">
 
             <!-- TOP BAR -->
-            <header class="h-16 bg-white shadow-sm flex items-center justify-between px-4 sm:px-6 z-10">
+            <header class="h-16 bg-white shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 flex items-center justify-between px-4 sm:px-6 z-10">
                 <button class="text-gray-500 hover:text-gray-700 focus:outline-none lg:hidden"
                     onclick="toggleAdminSidebar()">
                     <i class="fa-solid fa-bars text-xl"></i>
@@ -203,14 +203,14 @@
                         <div class="flex flex-col text-right">
                             <span id="header-name" class="text-sm font-bold text-gray-600">Loading...</span>
                             <span id="header-role"
-                                class="text-xs text-cubby-blue font-semibold uppercase">Checking...</span>
+                                class="text-xs text-[#635BFF] font-semibold uppercase">Checking...</span>
                         </div>
                     </div>
                 </div>
             </header>
 
             <!-- DASHBOARD CONTENT -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 relative">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-[#F7F9FC] p-6 relative">
 
                 <!-- ══════════════════════════════════════════════
                      TAB: DASHBOARD (stats + charts)
@@ -219,27 +219,27 @@
 
                     <!-- Stat Cards -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-cubby-blue">
+                        <div class="bg-white p-6 rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 border-l-4 border-[#635BFF]">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-bold text-gray-400 uppercase">Total Parents</p>
                                     <h3 id="stat-parents" class="text-2xl font-extrabold text-gray-800">...</h3>
                                 </div>
-                                <div class="bg-blue-50 text-cubby-blue p-3 rounded-lg"><i
+                                <div class="bg-indigo-50 text-[#635BFF] p-3 rounded-lg"><i
                                         class="fa-solid fa-user-shield text-xl"></i></div>
                             </div>
                         </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-cubby-purple">
+                        <div class="bg-white p-6 rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 border-l-4 border-[#0A2540]">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-bold text-gray-400 uppercase">Total Kids</p>
                                     <h3 id="stat-kids" class="text-2xl font-extrabold text-gray-800">...</h3>
                                 </div>
-                                <div class="bg-purple-50 text-cubby-purple p-3 rounded-lg"><i
+                                <div class="bg-slate-50 text-[#0A2540] p-3 rounded-lg"><i
                                         class="fa-solid fa-child text-xl"></i></div>
                             </div>
                         </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                        <div class="bg-white p-6 rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 border-l-4 border-green-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-bold text-gray-400 uppercase">Approved Content</p>
@@ -249,7 +249,7 @@
                                         class="fa-solid fa-play text-xl"></i></div>
                             </div>
                         </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+                        <div class="bg-white p-6 rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 border-l-4 border-red-500">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-bold text-gray-400 uppercase">Reports</p>
@@ -262,7 +262,7 @@
                     </div>
 
                     <!-- Analytics Header + Controls -->
-                    <div class="bg-white rounded-xl shadow-sm p-5">
+                    <div class="bg-white rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 p-5">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                             <div>
                                 <h3 class="font-extrabold text-gray-800 text-lg">Analytics</h3>
@@ -270,9 +270,9 @@
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
                                 <!-- Period selector -->
-                                <div class="flex bg-gray-100 rounded-lg p-0.5 text-xs font-bold">
+                                <div class="flex bg-[#F7F9FC] rounded-lg p-0.5 text-xs font-bold">
                                     <button id="period-day" onclick="setChartPeriod('day')"
-                                        class="px-3 py-1.5 rounded-md bg-cubby-blue text-white transition-colors">Day</button>
+                                        class="px-3 py-1.5 rounded-md bg-[#635BFF] text-white transition-colors">Day</button>
                                     <button id="period-week" onclick="setChartPeriod('week')"
                                         class="px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors">Week</button>
                                     <button id="period-month" onclick="setChartPeriod('month')"
@@ -298,10 +298,10 @@
                                     <div>
                                         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Account
                                             Registrations</p>
-                                        <p id="chart-reg-total" class="text-2xl font-extrabold text-cubby-blue">—</p>
+                                        <p id="chart-reg-total" class="text-2xl font-extrabold text-[#635BFF]">—</p>
                                     </div>
                                     <div
-                                        class="w-10 h-10 bg-blue-50 text-cubby-blue rounded-xl flex items-center justify-center">
+                                        class="w-10 h-10 bg-indigo-50 text-[#635BFF] rounded-lg flex items-center justify-center">
                                         <i class="fa-solid fa-user-plus"></i>
                                     </div>
                                 </div>
@@ -314,11 +314,11 @@
                                     <div>
                                         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Login
                                             Activity</p>
-                                        <p id="chart-login-total" class="text-2xl font-extrabold text-cubby-purple">—
+                                        <p id="chart-login-total" class="text-2xl font-extrabold text-[#0A2540]">—
                                         </p>
                                     </div>
                                     <div
-                                        class="w-10 h-10 bg-purple-50 text-cubby-purple rounded-xl flex items-center justify-center">
+                                        class="w-10 h-10 bg-slate-50 text-[#0A2540] rounded-lg flex items-center justify-center">
                                         <i class="fa-solid fa-right-to-bracket"></i>
                                     </div>
                                 </div>
@@ -334,7 +334,7 @@
                                         <p id="chart-reports-total" class="text-2xl font-extrabold text-red-500">—</p>
                                     </div>
                                     <div
-                                        class="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
+                                        class="w-10 h-10 bg-red-50 text-red-500 rounded-lg flex items-center justify-center">
                                         <i class="fa-solid fa-triangle-exclamation"></i>
                                     </div>
                                 </div>
@@ -351,7 +351,7 @@
                                         </p>
                                     </div>
                                     <div
-                                        class="w-10 h-10 bg-yellow-50 text-yellow-500 rounded-xl flex items-center justify-center">
+                                        class="w-10 h-10 bg-yellow-50 text-yellow-500 rounded-lg flex items-center justify-center">
                                         <i class="fa-solid fa-crown"></i>
                                     </div>
                                 </div>
@@ -365,29 +365,29 @@
                      TAB: USERS
                 ══════════════════════════════════════════════ -->
                 <div id="tab-users" class="hidden space-y-8 max-w-6xl mx-auto">
-                    <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="bg-white rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 p-6">
                         <div class="flex justify-between items-center mb-4 border-b pb-2">
                             <h3 class="font-bold text-lg text-gray-800">User Management</h3>
                             <div class="flex gap-2 items-center flex-wrap">
                                 <div class="hidden sm:flex gap-2 mr-2" id="user-filters">
                                     <button
-                                        class="filter-btn user-btn bg-cubby-blue text-white text-xs px-3 py-1 rounded-full font-bold transition-colors"
+                                        class="filter-btn user-btn bg-[#635BFF] text-white text-xs px-3 py-1 rounded-full font-bold transition-colors"
                                         data-filter="All">All</button>
                                     <button
-                                        class="filter-btn user-btn bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full font-bold hover:bg-gray-200 transition-colors"
+                                        class="filter-btn user-btn bg-[#F7F9FC] text-gray-600 text-xs px-3 py-1 rounded-full font-bold hover:bg-gray-200 transition-colors"
                                         data-filter="Parent">Parent</button>
                                     <button
-                                        class="filter-btn user-btn bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full font-bold hover:bg-gray-200 transition-colors"
+                                        class="filter-btn user-btn bg-[#F7F9FC] text-gray-600 text-xs px-3 py-1 rounded-full font-bold hover:bg-gray-200 transition-colors"
                                         data-filter="Child">Child</button>
                                     <button
-                                        class="filter-btn user-btn bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full font-bold hover:bg-gray-200 transition-colors"
+                                        class="filter-btn user-btn bg-[#F7F9FC] text-gray-600 text-xs px-3 py-1 rounded-full font-bold hover:bg-gray-200 transition-colors"
                                         data-filter="accepted">Accepted</button>
                                     <button
-                                        class="filter-btn user-btn bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full font-bold hover:bg-gray-200 transition-colors"
+                                        class="filter-btn user-btn bg-[#F7F9FC] text-gray-600 text-xs px-3 py-1 rounded-full font-bold hover:bg-gray-200 transition-colors"
                                         data-filter="rejected">Rejected</button>
                                 </div>
                                 <input type="text" id="user-search-input" placeholder="Search user..."
-                                    class="text-xs bg-gray-50 border border-gray-300 rounded-full px-3 py-1 focus:outline-none focus:ring-1 focus:ring-cubby-blue">
+                                    class="text-xs bg-gray-50 border border-gray-300 rounded-full px-3 py-1 focus:outline-none focus:ring-1 focus:ring-[#635BFF]">
                             </div>
                         </div>
                         <div class="overflow-x-auto">
@@ -407,9 +407,9 @@
                             <span class="text-xs font-bold text-gray-500" id="user-page-info">Showing 0 of 0</span>
                             <div class="flex gap-2">
                                 <button id="btn-prev-users"
-                                    class="px-3 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50">Prev</button>
+                                    class="px-3 py-1 bg-[#F7F9FC] text-gray-600 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50">Prev</button>
                                 <button id="btn-next-users"
-                                    class="px-3 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50">Next</button>
+                                    class="px-3 py-1 bg-[#F7F9FC] text-gray-600 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50">Next</button>
                             </div>
                         </div>
                     </div>
@@ -419,7 +419,7 @@
                      TAB: ADD CONTENT (Video Upload)
                 ══════════════════════════════════════════════ -->
                 <div id="tab-content" class="hidden space-y-8 max-w-4xl mx-auto">
-                    <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="bg-white rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 p-6">
                         <h3 class="font-bold text-lg text-gray-800 mb-4 border-b pb-2">Add Safe Video</h3>
                         <form id="addVideoForm" class="space-y-4">
                             <div>
@@ -428,12 +428,12 @@
                                 <div class="flex gap-2 items-center relative">
                                     <input type="text" id="videoId"
                                         placeholder="e.g. YouTube ID/Link OR select a local file"
-                                        class="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+                                        class="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#635BFF]">
                                     <div class="relative flex-shrink-0 cursor-pointer">
                                         <input type="file" id="localVideoUpload" accept="video/mp4,video/x-m4v,video/*"
                                             class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                                         <button type="button"
-                                            class="bg-cubby-blue hover:bg-blue-400 text-white px-4 py-2 rounded-lg font-bold text-xs"><i
+                                            class="bg-[#635BFF] hover:bg-blue-400 text-white px-4 py-2 rounded-lg font-bold text-xs"><i
                                                 class="fa-solid fa-upload"></i> Device</button>
                                     </div>
                                 </div>
@@ -443,12 +443,12 @@
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Video Title</label>
                                 <input type="text" id="videoTitle" placeholder="e.g. Learn Colors"
-                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#635BFF]">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Category</label>
                                 <select
-                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#635BFF]">
                                     <option>Learning</option>
                                     <option>Cartoons</option>
                                     <option>Music</option>
@@ -457,7 +457,7 @@
                                 </select>
                             </div>
                             <button type="submit"
-                                class="w-full bg-cubby-blue hover:bg-blue-500 text-white font-bold py-3 rounded-lg shadow-md transition-all">
+                                class="w-full bg-[#635BFF] hover:bg-indigo-500 text-white font-bold py-3 rounded-lg shadow-md transition-all">
                                 <i class="fa-solid fa-plus mr-2"></i> Add to Library
                             </button>
                         </form>
@@ -468,7 +468,7 @@
                      TAB: VERIFICATION (Pending Parents)
                 ══════════════════════════════════════════════ -->
                 <div id="tab-verification" class="hidden space-y-4 max-w-4xl mx-auto">
-                    <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cubby-blue text-4xl"></i>
+                    <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-[#635BFF] text-4xl"></i>
                     </div>
                 </div>
 
@@ -476,7 +476,7 @@
                      TAB: CHAT MODERATION
                 ══════════════════════════════════════════════ -->
                 <div id="tab-moderation" class="hidden space-y-4 max-w-4xl mx-auto">
-                    <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cubby-blue text-4xl"></i>
+                    <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-[#635BFF] text-4xl"></i>
                     </div>
                 </div>
 
@@ -484,13 +484,13 @@
                      TAB: VIDEO REVIEW
                 ══════════════════════════════════════════════ -->
                 <div id="tab-video-review" class="hidden space-y-4 max-w-4xl mx-auto">
-                    <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cubby-blue text-4xl"></i>
+                    <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-[#635BFF] text-4xl"></i>
                     </div>
                 </div>
 
                 <!-- STAFF MANAGEMENT SECTION -->
                 <div id="tab-staff" class="hidden space-y-6 max-w-6xl mx-auto">
-                    <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="bg-white rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 p-6">
                         <h3 class="font-bold text-lg text-gray-800 mb-4 border-b pb-2">Create New Staff Account</h3>
                         <form id="createStaffForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input type="text" id="staffFname" placeholder="First Name" required
@@ -507,13 +507,13 @@
                                 <option value="creator">Creator</option>
                             </select>
                             <button type="submit"
-                                class="bg-cubby-purple text-white font-bold py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                                class="bg-[#0A2540] text-white font-bold py-2 rounded-lg hover:bg-purple-700 transition-colors">
                                 <i class="fa-solid fa-plus mr-2"></i> Create Staff
                             </button>
                         </form>
                     </div>
 
-                    <div class="bg-white rounded-xl shadow-sm p-6 overflow-hidden">
+                    <div class="bg-white rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 p-6 overflow-hidden">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="font-bold text-lg text-gray-800">Existing Staff</h3>
                             <input type="text" id="staff-search-input" placeholder="Search staff..."
@@ -536,9 +536,9 @@
                             <span class="text-xs font-bold text-gray-500" id="staff-page-info">Showing 0 of 0</span>
                             <div class="flex gap-2">
                                 <button id="btn-prev-staff"
-                                    class="px-3 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50">Prev</button>
+                                    class="px-3 py-1 bg-[#F7F9FC] text-gray-600 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50">Prev</button>
                                 <button id="btn-next-staff"
-                                    class="px-3 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50">Next</button>
+                                    class="px-3 py-1 bg-[#F7F9FC] text-gray-600 rounded text-xs font-bold hover:bg-gray-200 disabled:opacity-50">Next</button>
                             </div>
                         </div>
                     </div>
@@ -553,7 +553,7 @@
     ══════════════════════════════════════════════════════════ -->
     <div id="manage-staff-modal"
         class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative">
             <button onclick="closeManageStaffModal()"
                 class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i
                     class="fa-solid fa-times text-xl"></i></button>
@@ -571,7 +571,7 @@
                     </select>
                 </div>
                 <button onclick="submitStaffRoleChange()"
-                    class="w-full bg-cubby-purple text-white font-bold py-2 rounded-lg hover:bg-purple-700 transition-colors">Update
+                    class="w-full bg-[#0A2540] text-white font-bold py-2 rounded-lg hover:bg-purple-700 transition-colors">Update
                     Role</button>
                 <div class="pt-2">
                     <button id="archive-staff-btn" onclick="archiveStaffAccount()"
@@ -598,7 +598,7 @@
                     class="fa-solid fa-times"></i></button>
             <div class="text-center mb-6">
                 <div
-                    class="w-14 h-14 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
+                    class="w-14 h-14 bg-red-100 text-red-500 rounded-lg flex items-center justify-center text-2xl mx-auto mb-3">
                     <i class="fa-solid fa-gavel"></i>
                 </div>
                 <h3 class="text-xl font-extrabold text-gray-800">Confirm Violation</h3>
@@ -606,7 +606,7 @@
             </div>
             <div class="space-y-3 mb-6" id="mute-options">
                 <!-- Option 1: 1-24 Hours -->
-                <div class="rounded-xl border-2 border-gray-100 overflow-hidden transition-all duration-200"
+                <div class="rounded-lg border-2 border-gray-100 overflow-hidden transition-all duration-200"
                     id="opt-hourly-wrap">
                     <label class="flex items-center gap-4 p-4 cursor-pointer hover:border-red-300 transition-all"
                         onclick="toggleHourPicker()" id="opt-hourly-label">
@@ -628,7 +628,7 @@
                 </div>
                 <!-- Option 2: 3 Days -->
                 <label
-                    class="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-red-300 cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                    class="flex items-center gap-4 p-4 rounded-lg border-2 border-gray-100 hover:border-red-300 cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
                     <input type="radio" name="mute-duration" value="259200000" data-label="3 days"
                         class="accent-red-500" onchange="onFixedDurationChange()">
                     <div>
@@ -638,7 +638,7 @@
                 </label>
                 <!-- Option 3: 1 Week -->
                 <label
-                    class="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-red-300 cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                    class="flex items-center gap-4 p-4 rounded-lg border-2 border-gray-100 hover:border-red-300 cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
                     <input type="radio" name="mute-duration" value="604800000" data-label="1 week"
                         class="accent-red-500" onchange="onFixedDurationChange()">
                     <div>
@@ -649,9 +649,9 @@
             </div>
             <div class="flex gap-3">
                 <button onclick="document.getElementById('violation-picker-modal').classList.add('hidden')"
-                    class="flex-1 py-3 border-2 border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 transition-colors text-sm">Cancel</button>
+                    class="flex-1 py-3 border-2 border-gray-200 text-gray-500 font-bold rounded-lg hover:bg-gray-50 transition-colors text-sm">Cancel</button>
                 <button onclick="submitViolationPicker()"
-                    class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors shadow-sm text-sm"><i
+                    class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg transition-colors shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 text-sm"><i
                         class="fa-solid fa-gavel mr-1"></i> Confirm Mute</button>
             </div>
         </div>
@@ -669,17 +669,17 @@
             </button>
             <div class="text-center mb-6">
                 <div
-                    class="w-14 h-14 bg-cubby-blue/10 text-cubby-blue rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
+                    class="w-14 h-14 bg-[#635BFF]/10 text-[#635BFF] rounded-lg flex items-center justify-center text-2xl mx-auto mb-3">
                     <i class="fa-solid fa-user-shield"></i>
                 </div>
                 <h3 class="text-xl font-extrabold text-gray-800">Confirm Staff Account</h3>
                 <p class="text-sm text-gray-400 mt-1">Please review before proceeding.</p>
             </div>
             <!-- Summary card -->
-            <div class="bg-gray-50 rounded-2xl p-5 space-y-3 mb-6 border border-gray-100">
+            <div class="bg-gray-50 rounded-lg p-5 space-y-3 mb-6 border border-gray-100">
                 <div class="flex items-center gap-3">
                     <div
-                        class="w-8 h-8 bg-purple-100 text-cubby-purple rounded-lg flex items-center justify-center flex-shrink-0">
+                        class="w-8 h-8 bg-purple-100 text-[#0A2540] rounded-lg flex items-center justify-center flex-shrink-0">
                         <i class="fa-solid fa-user text-sm"></i>
                     </div>
                     <div>
@@ -689,7 +689,7 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <div
-                        class="w-8 h-8 bg-blue-100 text-cubby-blue rounded-lg flex items-center justify-center flex-shrink-0">
+                        class="w-8 h-8 bg-blue-100 text-[#635BFF] rounded-lg flex items-center justify-center flex-shrink-0">
                         <i class="fa-solid fa-envelope text-sm"></i>
                     </div>
                     <div>
@@ -710,9 +710,9 @@
             </div>
             <div class="flex gap-3">
                 <button onclick="cancelCreateStaff()"
-                    class="flex-1 py-3 border-2 border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 text-sm">Cancel</button>
+                    class="flex-1 py-3 border-2 border-gray-200 text-gray-500 font-bold rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
                 <button onclick="confirmCreateStaff()"
-                    class="flex-1 py-3 bg-cubby-blue hover:bg-cyan-400 text-cubby-dark font-bold rounded-xl text-sm">
+                    class="flex-1 py-3 bg-[#635BFF] hover:bg-cyan-400 text-cubby-dark font-bold rounded-lg text-sm">
                     <i class="fa-solid fa-check mr-1"></i> Proceed
                 </button>
             </div>
@@ -798,7 +798,7 @@
                         <i class="fa-solid fa-camera text-white text-xl"></i>
                     </div>
                     <div
-                        class="absolute bottom-0 right-0 bg-cubby-blue text-white text-xs w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                        class="absolute bottom-0 right-0 bg-[#635BFF] text-white text-xs w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200">
                         <i class="fa-solid fa-pencil"></i>
                     </div>
                 </div>
@@ -811,7 +811,7 @@
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Bio</label>
                     <textarea id="settings-bio" rows="3" maxlength="200"
-                        class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cubby-blue resize-none"
+                        class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#635BFF] resize-none"
                         placeholder="Write a short bio..."></textarea>
                     <p class="text-xs text-gray-400 text-right mt-0.5"><span id="bio-char-count">0</span>/200</p>
                 </div>
@@ -819,23 +819,23 @@
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Username</label>
                     <input id="settings-username" type="text"
-                        class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cubby-blue"
+                        class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#635BFF]"
                         placeholder="Your username">
                     <p id="username-cooldown" class="text-xs text-gray-400 mt-0.5"></p>
                 </div>
                 <!-- Password Change -->
-                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2"><i
                             class="fa-solid fa-lock mr-1"></i>Change Password</label>
                     <input id="settings-current-pass" type="password" placeholder="Current password"
-                        class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+                        class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-[#635BFF]">
                     <input id="settings-new-pass" type="password" placeholder="New password"
-                        class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cubby-blue">
+                        class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#635BFF]">
                 </div>
                 <!-- Dark Mode -->
-                <div class="flex items-center justify-between bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div class="flex items-center justify-between bg-gray-50 rounded-lg p-4 border border-gray-100">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center text-yellow-400">
+                        <div class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center text-yellow-400">
                             <i class="fa-solid fa-moon"></i>
                         </div>
                         <div>
@@ -846,17 +846,17 @@
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="settings-darkmode" class="sr-only peer">
                         <div
-                            class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-cubby-blue after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all">
+                            class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-[#635BFF] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all">
                         </div>
                     </label>
                 </div>
                 <!-- Actions -->
                 <button onclick="saveSettings()"
-                    class="w-full py-3 bg-cubby-blue hover:bg-blue-400 text-white font-bold rounded-xl transition-colors shadow-md text-sm">
+                    class="w-full py-3 bg-[#635BFF] hover:bg-blue-400 text-white font-bold rounded-lg transition-colors shadow-md text-sm">
                     <i class="fa-solid fa-check mr-1"></i> Save Changes
                 </button>
                 <button onclick="handleLogout()"
-                    class="w-full py-2.5 border-2 border-red-200 text-red-500 font-bold rounded-xl hover:bg-red-50 transition-colors text-sm">
+                    class="w-full py-2.5 border-2 border-red-200 text-red-500 font-bold rounded-lg hover:bg-red-50 transition-colors text-sm">
                     <i class="fa-solid fa-right-from-bracket mr-1"></i> Log Out
                 </button>
             </div>

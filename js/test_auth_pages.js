@@ -28,7 +28,7 @@ function runTestAuthPages() {
 
     // Expected strings for Parent Registration Page
     const registerExpectedElements = [
-        "Join the Cubby Cove Adventure!",
+        "Join the CubbyCove Adventure!",
         "Basic Info",
         "Upload ID",
         "Face Setup",

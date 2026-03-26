@@ -451,31 +451,52 @@ async function renderKidsAndStats(user) {
 
     children.forEach(child => {
         const isActive = child.$id === _selectedChildId;
-        const activeBg = isActive ? 'bg-purple-50' : 'hover:bg-purple-50/50';
-        const activeText = isActive ? 'text-cubby-purple font-bold' : 'text-gray-600 font-semibold group-hover:text-cubby-purple';
-        const activeIndicator = isActive ? `<div class="w-1.5 h-1.5 rounded-full bg-green-400 absolute left-2 top-1/2 transform -translate-y-1/2 shadow-sm"></div>` : '';
-        const borderClass = isActive ? 'border-purple-200' : 'border-transparent hover:border-purple-100';
+        const activeBg = isActive ? 'border-[#28C7AE] bg-white ring-2 ring-[#28C7AE]/30' : 'border-white/60 bg-white/60 hover:border-sky-300 hover:bg-white';
+        const activeText = isActive ? 'text-gray-800' : 'text-gray-600 group-hover:text-cubby-purple';
 
         let avatarHtml = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(child.username || child.name)}"
-                    class="w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm ml-2 object-cover group-hover:border-purple-200 transition-colors">`;
+                    class="w-10 h-10 rounded-full bg-gray-50 border-2 border-white shadow-sm object-cover transition-transform group-hover:scale-105">`;
 
         if (child.avatarImage) {
             const bgStr = child.avatarBgColor ? `style="background-color: ${child.avatarBgColor}"` : 'bg-white';
-            avatarHtml = `<img src="${child.avatarImage}" ${bgStr} class="w-8 h-8 rounded-full border border-gray-200 shadow-sm ml-2 object-contain p-0.5 group-hover:border-purple-200 transition-colors">`;
+            avatarHtml = `<img src="${child.avatarImage}" ${bgStr} class="w-10 h-10 rounded-full border-2 border-white shadow-sm object-contain p-0.5 group-hover:scale-105 transition-transform">`;
         }
 
+        // Online Status Indicator (Green dot)
+        // Note: For now, if child.isOnline isn't explicitly false, assume offline unless we implement real presence
+        const statusDot = child.isOnline ? 
+            `<div class="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] bg-green-400 border-[3px] border-white rounded-full z-10"></div>` : 
+            `<div class="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] bg-gray-300 border-[3px] border-white rounded-full z-10"></div>`;
+
         const html = `
-            <div onclick="selectChild('${child.$id}')" class="relative flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-all group ${activeBg} border ${borderClass}">
-                ${activeIndicator}
-                ${avatarHtml}
-                <div class="flex-1 min-w-0">
-                    <h4 class="text-[13px] truncate transition-colors ${activeText}">${child.name}</h4>
-                    <p class="text-[10px] text-gray-400 truncate">${child.isOnline ? 'Active Now' : 'Offline'}</p>
+            <div onclick="selectChild('${child.$id}')" class="flex-shrink-0 cursor-pointer group transition-all duration-200 ${isActive ? 'scale-105' : 'hover:-translate-y-1'}" style="width: 220px;">
+                <div class="glass-card shadow-sm pl-3 pr-4 py-3 flex items-center gap-3 transition-all border-2 ${activeBg}">
+                    <div class="relative w-10 h-10 shrink-0">
+                        ${avatarHtml}
+                        ${statusDot}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-extrabold text-[14px] truncate ${activeText} leading-snug">${child.name}</p>
+                        <p class="text-[10px] font-bold ${child.isOnline ? 'text-green-500' : 'text-gray-400'} uppercase tracking-wider truncate mt-0.5">${child.isOnline ? 'Online' : 'Offline'}</p>
+                    </div>
+                    
+                    <button onclick="openEditChildModal('${child.$id}', event)" title="Edit child" 
+                        class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-cubby-purple hover:bg-purple-50 transition-colors focus:outline-none shrink-0 border border-transparent hover:border-purple-100">
+                        <i class="fa-solid fa-pen text-[11px]"></i>
+                    </button>
                 </div>
             </div>
         `;
         if (kidsListEl) kidsListEl.insertAdjacentHTML('beforeend', html);
     });
+
+    // Add child button (Horizontal)
+    const addBtn = `
+        <a href="register_child.html" class="flex-shrink-0 w-12 h-12 rounded-[1rem] bg-white/40 border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:text-[#28C7AE] hover:border-[#28C7AE] hover:bg-white transition-all cursor-pointer shadow-sm group mx-2 my-auto">
+            <i class="fa-solid fa-plus text-lg group-hover:scale-110 transition-transform"></i>
+        </a>
+    `;
+    if (kidsListEl) kidsListEl.insertAdjacentHTML('beforeend', addBtn);
 
     // Render child-specific modules
     renderActivityLogs();
@@ -887,48 +908,73 @@ function changeTimeMode(mode) {
     const statEl = document.getElementById('stat-screen-time');
     if (statEl) statEl.innerText = timeText;
 
-    // Define standard Chart.js datasets
+    // Define standard Chart.js datasets for Playful Glass aesthetic
     let datasets = [];
-    let chartType = 'bar';
+    let chartType = 'line'; // Always use line chart for smooth area graph
 
+    // Note: Creating gradients requires a canvas context, but Chart.js 3+ supports scriptable options nicely.
+    // For simplicity, we define the background colors as soft rgba.
+    
     if (mode === 'overall') {
-        chartType = 'line';
         datasets = [
             {
                 label: 'Total Screen Time (mins)',
                 data: overallData,
                 borderColor: '#8A51FC',
-                backgroundColor: 'rgba(138, 81, 252, 0.1)',
+                backgroundColor: 'rgba(182, 137, 245, 0.4)',
+                borderWidth: 3,
                 fill: true,
                 tension: 0.4,
                 pointBackgroundColor: '#fff',
                 pointBorderColor: '#8A51FC',
                 pointBorderWidth: 2,
                 pointRadius: 4,
+                pointHoverRadius: 6
             }
         ];
     } else {
         datasets = [
             {
                 label: 'Games',
-                data: gameMinsData,
-                backgroundColor: '#5C45FD',
-                borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 4, bottomRight: 4 },
-                barThickness: mode === 'daily' ? 30 : 20
+                data: gameMinsData.map(v => v || null), // Nulls help curves if empty, but 0 is okay too
+                borderColor: '#B689F5',
+                backgroundColor: 'rgba(182, 137, 245, 0.3)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#B689F5',
+                pointBorderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 6
             },
             {
                 label: 'Entertainment',
-                data: entMinsData,
-                backgroundColor: '#A2DE4E',
-                borderRadius: 0,
-                barThickness: mode === 'daily' ? 30 : 20
+                data: entMinsData.map(v => v || null),
+                borderColor: '#FFAF7A',
+                backgroundColor: 'rgba(255, 175, 122, 0.3)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#FFAF7A',
+                pointBorderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 6
             },
             {
                 label: 'Communication',
-                data: comMinsData,
-                backgroundColor: '#FF456A',
-                borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
-                barThickness: mode === 'daily' ? 30 : 20
+                data: comMinsData.map(v => v || null),
+                borderColor: '#5EC74D',
+                backgroundColor: 'rgba(94, 199, 77, 0.3)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#5EC74D',
+                pointBorderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 6
             }
         ];
     }

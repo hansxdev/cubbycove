@@ -91,7 +91,7 @@
 
         <!-- SIDEBAR -->
         <aside
-            class="fixed inset-y-0 left-0 w-64 bg-[#0A2540] text-white flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:relative lg:transform-none z-50"
+            class="fixed inset-y-0 left-0 w-64 bg-[#1C2434] text-white flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:relative lg:transform-none z-50"
             id="sidebar">
             <div class="h-16 flex items-center justify-between px-4 border-b border-gray-700">
                 <div class="flex items-center gap-2">
@@ -104,77 +104,88 @@
                 </button>
             </div>
 
-            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-                <a href="#" onclick="switchView('dashboard')" id="nav-dashboard"
-                    class="nav-item flex items-center gap-3 px-4 py-3 bg-[#635BFF]/20 text-[#635BFF] rounded-lg font-bold border-l-4 border-[#635BFF] transition-colors">
-                    <i class="fa-solid fa-gauge-high w-5 text-center"></i> Dashboard
-                </a>
-
-                <!-- Standard Admin Links -->
-                <a href="#" onclick="switchView('users')" id="nav-users"
-                    class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
-                    <i class="fa-solid fa-users w-5 text-center"></i> Users
-                </a>
-                <a href="#" onclick="switchView('content')" id="nav-content"
-                    class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
-                    <i class="fa-solid fa-video w-5 text-center"></i> Add Content
-                </a>
-
-                <!-- Divider: Assistant Functions -->
-                <div class="pt-4 pb-1">
-                    <p class="px-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Moderation</p>
+            <nav class="flex-1 px-4 py-6 space-y-6 overflow-y-auto w-full">
+                <!-- CORE -->
+                <div>
+                    <h3 class="px-4 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Core</h3>
+                    <ul class="space-y-1">
+                        <li>
+                            <a href="#" onclick="switchView('dashboard')" id="nav-dashboard"
+                                class="nav-item flex items-center gap-3 px-4 py-3 bg-[#333A48] text-white rounded-lg font-bold border-l-4 border-[#635BFF] transition-colors relative shadow-inner">
+                                <i class="fa-solid fa-border-all w-5 text-center"></i> Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="switchView('users')" id="nav-users"
+                                class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-[#333A48] hover:text-white rounded-lg transition-colors">
+                                <i class="fa-solid fa-users w-5 text-center"></i> Users
+                            </a>
+                        </li>
+                    </ul>
                 </div>
 
-                <a href="#" onclick="switchView('verification')" id="nav-verification"
-                    class="nav-item flex items-center justify-between px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-id-card w-5 text-center"></i> Verification
-                    </div>
-                    <span id="badge-verification"
-                        class="bg-[#635BFF] text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
-                </a>
+                <!-- CONTENT -->
+                <div>
+                    <h3 class="px-4 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Content</h3>
+                    <ul class="space-y-1">
+                        <li>
+                            <a href="#" onclick="switchView('content')" id="nav-content"
+                                class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-[#333A48] hover:text-white rounded-lg transition-colors">
+                                <i class="fa-solid fa-plus w-5 text-center"></i> Add Content
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="switchView('verification')" id="nav-verification"
+                                class="nav-item flex items-center justify-between px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-[#333A48] hover:text-white rounded-lg transition-colors">
+                                <div class="flex items-center gap-3"><i class="fa-solid fa-shield-halved w-5 text-center"></i> Verification</div>
+                                <span id="badge-verification" class="bg-[#635BFF] text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="switchView('video-review')" id="nav-video-review"
+                                class="nav-item flex items-center justify-between px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-[#333A48] hover:text-white rounded-lg transition-colors">
+                                <div class="flex items-center gap-3"><i class="fa-solid fa-video w-5 text-center"></i> Video Review</div>
+                                <span id="badge-video-review" class="bg-[#635BFF] text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
 
-                <a href="#" onclick="switchView('moderation')" id="nav-moderation"
-                    class="nav-item flex items-center justify-between px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-flag w-5 text-center"></i> Chat Reports
-                    </div>
-                    <span id="badge-moderation"
-                        class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
-                </a>
+                <!-- COMMUNITY -->
+                <div>
+                    <h3 class="px-4 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Community</h3>
+                    <ul class="space-y-1">
+                        <li>
+                            <a href="#" onclick="switchView('moderation')" id="nav-moderation"
+                                class="nav-item flex items-center justify-between px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-[#333A48] hover:text-white rounded-lg transition-colors">
+                                <div class="flex items-center gap-3"><i class="fa-regular fa-comment-dots w-5 text-center"></i> Chat Reports</div>
+                                <span id="badge-moderation" class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
 
-                <a href="#" onclick="switchView('video-review')" id="nav-video-review"
-                    class="nav-item flex items-center justify-between px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-film w-5 text-center"></i> Video Review
-                    </div>
-                    <span id="badge-video-review"
-                        class="bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
-                </a>
+                <!-- MANAGEMENT -->
+                <div id="super-admin-manage" class="hidden">
+                    <h3 class="px-4 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Management</h3>
+                    <ul class="space-y-1">
+                        <li>
+                            <a href="#" id="menu-staff" onclick="switchView('staff')"
+                                class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-[#333A48] border-transparent border-l-4 hover:text-white rounded-lg transition-colors">
+                                <i class="fa-solid fa-user-group w-5 text-center text-yellow-500"></i> Manage Staff
+                            </a>
+                        </li>
+                    </ul>
+                </div>
 
-                <!-- Super Admin Only -->
-                <a href="#" id="menu-staff" onclick="switchView('staff')"
-                    class="nav-item hidden flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 border-transparent border-l-4 hover:text-white rounded-lg transition-colors">
-                    <i class="fa-solid fa-user-shield w-5 text-center text-yellow-500"></i> Manage Staff
-                </a>
-
-                <!-- Super Admin Views -->
+                <!-- VIEWS -->
                 <div id="super-admin-views" class="hidden">
-                    <div class="pt-4 pb-2">
-                        <p class="px-4 text-xs font-bold text-gray-600 uppercase tracking-widest">Views</p>
-                    </div>
-                    <a href="#" onclick="switchDashboardMode('admin')"
-                        class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
-                        <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Admin View
-                    </a>
-                    <a href="#" onclick="switchDashboardMode('assistant')"
-                        class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
-                        <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Assistant View
-                    </a>
-                    <a href="#" onclick="switchDashboardMode('creator')"
-                        class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white text-sm">
-                        <i class="fa-solid fa-keyboard mr-1 opacity-50"></i> Creator View
-                    </a>
+                    <h3 class="px-4 mb-4 mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Views</h3>
+                    <ul class="space-y-1 text-sm">
+                        <li><a href="#" onclick="switchDashboardMode('admin')" class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white"><i class="fa-solid fa-keyboard w-4 text-center opacity-50"></i> Admin View</a></li>
+                        <li><a href="#" onclick="switchDashboardMode('assistant')" class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white"><i class="fa-solid fa-keyboard w-4 text-center opacity-50"></i> Assistant View</a></li>
+                        <li><a href="#" onclick="switchDashboardMode('creator')" class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white"><i class="fa-solid fa-keyboard w-4 text-center opacity-50"></i> Creator View</a></li>
+                    </ul>
                 </div>
             </nav>
 
@@ -217,145 +228,100 @@
                 ══════════════════════════════════════════════ -->
                 <div id="tab-dashboard" class="space-y-6">
 
-                    <!-- Stat Cards -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                        <div class="bg-white p-6 rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 border-l-4 border-[#635BFF]">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-bold text-gray-400 uppercase">Total Parents</p>
-                                    <h3 id="stat-parents" class="text-2xl font-extrabold text-gray-800">...</h3>
-                                </div>
-                                <div class="bg-indigo-50 text-[#635BFF] p-3 rounded-lg"><i
-                                        class="fa-solid fa-user-shield text-xl"></i></div>
-                            </div>
-                        </div>
-                        <div class="bg-white p-6 rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 border-l-4 border-[#0A2540]">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-bold text-gray-400 uppercase">Total Kids</p>
-                                    <h3 id="stat-kids" class="text-2xl font-extrabold text-gray-800">...</h3>
-                                </div>
-                                <div class="bg-slate-50 text-[#0A2540] p-3 rounded-lg"><i
-                                        class="fa-solid fa-child text-xl"></i></div>
-                            </div>
-                        </div>
-                        <div class="bg-white p-6 rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 border-l-4 border-green-500">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-bold text-gray-400 uppercase">Approved Content</p>
-                                    <h3 id="stat-videos" class="text-2xl font-extrabold text-gray-800">...</h3>
-                                </div>
-                                <div class="bg-green-50 text-green-500 p-3 rounded-lg"><i
-                                        class="fa-solid fa-play text-xl"></i></div>
-                            </div>
-                        </div>
-                        <div class="bg-white p-6 rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 border-l-4 border-red-500">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-bold text-gray-400 uppercase">Reports</p>
-                                    <h3 id="stat-reports" class="text-2xl font-extrabold text-gray-800">0</h3>
-                                </div>
-                                <div class="bg-red-50 text-red-500 p-3 rounded-lg"><i
-                                        class="fa-solid fa-flag text-xl"></i></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Analytics Header + Controls -->
-                    <div class="bg-white rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 p-5">
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                            <div>
-                                <h3 class="font-extrabold text-gray-800 text-lg">Analytics</h3>
-                                <p class="text-xs text-gray-400 mt-0.5">Real-time data · auto-refreshes</p>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <!-- Period selector -->
-                                <div class="flex bg-[#F7F9FC] rounded-lg p-0.5 text-xs font-bold">
-                                    <button id="period-day" onclick="setChartPeriod('day')"
-                                        class="px-3 py-1.5 rounded-md bg-[#635BFF] text-white transition-colors">Day</button>
-                                    <button id="period-week" onclick="setChartPeriod('week')"
-                                        class="px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors">Week</button>
-                                    <button id="period-month" onclick="setChartPeriod('month')"
-                                        class="px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors">Month</button>
-                                </div>
-                                <!-- Export buttons -->
-                                <button onclick="exportCSV()"
-                                    class="flex items-center gap-2 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg transition-colors">
-                                    <i class="fa-solid fa-file-csv"></i> CSV
-                                </button>
-                                <button onclick="exportPDF()"
-                                    class="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors">
-                                    <i class="fa-solid fa-file-pdf"></i> PDF
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- 4 Charts Grid -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <!-- Chart 1: Registrations -->
-                            <div class="chart-card border border-gray-100">
-                                <div class="flex items-center justify-between mb-3">
-                                    <div>
-                                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Account
-                                            Registrations</p>
-                                        <p id="chart-reg-total" class="text-2xl font-extrabold text-[#635BFF]">—</p>
+                    <!-- Quick Stat Header -->
+                    <h3 class="font-extrabold text-gray-800 text-xl mb-2 hidden sm:block">Quick Stat</h3>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Left Column: Cards + Chart -->
+                        <div class="lg:col-span-2 space-y-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <!-- Card 1: Total Kids -->
+                                <div class="rounded-2xl p-6 text-white bg-gradient-to-r from-[#f59e0b] to-[#ec4899] shadow-md relative overflow-hidden">
+                                    <div class="relative z-10 flex justify-between items-start">
+                                        <div>
+                                            <p class="text-sm font-medium text-white/80">Total Kids:</p>
+                                            <h3 id="stat-kids" class="text-3xl font-extrabold mt-1">...</h3>
+                                        </div>
+                                        <div class="bg-white/20 p-3 rounded-lg backdrop-blur-sm"><i class="fa-solid fa-user-group text-xl shadow-sm"></i></div>
                                     </div>
-                                    <div
-                                        class="w-10 h-10 bg-indigo-50 text-[#635BFF] rounded-lg flex items-center justify-center">
-                                        <i class="fa-solid fa-user-plus"></i>
+                                    <div class="w-full bg-white/20 rounded-full h-1.5 mt-6 relative z-10 hidden sm:block">
+                                        <div class="bg-white h-1.5 rounded-full" style="width: 70%"></div>
                                     </div>
                                 </div>
-                                <canvas id="chartRegistrations"></canvas>
+                                <!-- Card 2: Active Reports -->
+                                <div class="rounded-2xl p-6 text-white bg-gradient-to-r from-[#3b82f6] to-[#0ea5e9] shadow-md relative overflow-hidden flex flex-col justify-between">
+                                    <div class="relative z-10 flex justify-between items-start">
+                                        <div>
+                                            <p class="text-sm font-medium text-white/80">Active Reports:</p>
+                                            <h3 id="stat-reports" class="text-3xl font-extrabold mt-1">...</h3>
+                                        </div>
+                                        <div class="bg-white/20 p-3 rounded-lg backdrop-blur-sm"><i class="fa-solid fa-file-contract text-xl shadow-sm"></i></div>
+                                    </div>
+                                    <div class="w-full bg-red-500/50 rounded-full h-1.5 mt-6 relative z-10 hidden sm:block">
+                                        <div class="bg-red-500 h-1.5 rounded-full" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- User Growth Chart -->
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="font-bold text-gray-800 text-lg">User Growth</h3>
+                                </div>
+                                <canvas id="chartRegistrations" style="max-height: 250px;"></canvas>
                             </div>
 
-                            <!-- Chart 2: Logins -->
-                            <div class="chart-card border border-gray-100">
-                                <div class="flex items-center justify-between mb-3">
-                                    <div>
-                                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Login
-                                            Activity</p>
-                                        <p id="chart-login-total" class="text-2xl font-extrabold text-[#0A2540]">—
-                                        </p>
-                                    </div>
-                                    <div
-                                        class="w-10 h-10 bg-slate-50 text-[#0A2540] rounded-lg flex items-center justify-center">
-                                        <i class="fa-solid fa-right-to-bracket"></i>
-                                    </div>
+                            <!-- Keep secondary charts but restyled and simplified for minimal look if they need to be kept -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
+                                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hidden">
+                                    <h3 class="font-bold text-gray-600 text-sm mb-2">Login Activity</h3>
+                                    <canvas id="chartLogins" style="max-height: 150px;"></canvas>
                                 </div>
-                                <canvas id="chartLogins"></canvas>
+                                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hidden">
+                                    <h3 class="font-bold text-gray-600 text-sm mb-2">Premium Purchases</h3>
+                                    <canvas id="chartPremium" style="max-height: 150px;"></canvas>
+                                </div>
                             </div>
-
-                            <!-- Chart 3: Reports -->
-                            <div class="chart-card border border-gray-100">
-                                <div class="flex items-center justify-between mb-3">
-                                    <div>
-                                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Chat Reports
-                                        </p>
-                                        <p id="chart-reports-total" class="text-2xl font-extrabold text-red-500">—</p>
+                        </div>
+                        
+                        <!-- Right Column: Recent Activity (Visual mock acting as placeholder) -->
+                        <div class="lg:col-span-1">
+                            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 h-full">
+                                <h3 class="font-bold text-gray-800 text-lg mb-6">Recent Activity</h3>
+                                <div class="space-y-6 relative" id="recent-activity-list">
+                                    <div class="flex gap-4 relative">
+                                        <img src="https://ui-avatars.com/api/?name=Sam&background=random" class="w-10 h-10 rounded-full z-10 relative object-cover border-2 border-white">
+                                        <div class="absolute left-5 top-10 w-px h-10 bg-gray-200"></div>
+                                        <div>
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <span class="bg-green-100 text-green-700 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Status</span>
+                                            </div>
+                                            <p class="text-sm font-bold text-gray-800">Approved Content</p>
+                                            <p class="text-xs text-gray-400 mt-0.5">2 hours ago</p>
+                                        </div>
                                     </div>
-                                    <div
-                                        class="w-10 h-10 bg-red-50 text-red-500 rounded-lg flex items-center justify-center">
-                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                    <div class="flex gap-4 relative">
+                                        <img src="https://ui-avatars.com/api/?name=Sarah&background=random" class="w-10 h-10 rounded-full z-10 relative object-cover border-2 border-white">
+                                        <div class="absolute left-5 top-10 w-px h-10 bg-gray-200"></div>
+                                        <div>
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <span class="bg-green-100 text-green-700 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Status</span>
+                                            </div>
+                                            <p class="text-sm font-bold text-gray-800">Verified Parent</p>
+                                            <p class="text-xs text-gray-400 mt-0.5">2 hours ago</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4 relative">
+                                        <img src="https://ui-avatars.com/api/?name=David&background=random" class="w-10 h-10 rounded-full z-10 relative object-cover border-2 border-white">
+                                        <div>
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <span class="bg-red-100 text-red-700 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Status</span>
+                                            </div>
+                                            <p class="text-sm font-bold text-gray-800">Flagged Activity</p>
+                                            <p class="text-xs text-gray-400 mt-0.5">3 hours ago</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <canvas id="chartReports"></canvas>
-                            </div>
-
-                            <!-- Chart 4: Premium -->
-                            <div class="chart-card border border-gray-100">
-                                <div class="flex items-center justify-between mb-3">
-                                    <div>
-                                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Premium
-                                            Purchases</p>
-                                        <p id="chart-premium-total" class="text-2xl font-extrabold text-yellow-500">—
-                                        </p>
-                                    </div>
-                                    <div
-                                        class="w-10 h-10 bg-yellow-50 text-yellow-500 rounded-lg flex items-center justify-center">
-                                        <i class="fa-solid fa-crown"></i>
-                                    </div>
-                                </div>
-                                <canvas id="chartPremium"></canvas>
                             </div>
                         </div>
                     </div>
@@ -475,8 +441,22 @@
                 <!-- ══════════════════════════════════════════════
                      TAB: CHAT MODERATION
                 ══════════════════════════════════════════════ -->
-                <div id="tab-moderation" class="hidden space-y-4 max-w-4xl mx-auto">
-                    <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-[#635BFF] text-4xl"></i>
+                <div id="tab-moderation" class="hidden space-y-6 max-w-4xl mx-auto">
+                    <!-- Added chart Reports -->
+                    <div class="mb-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="font-bold text-gray-800 text-lg">Chat Reports Trend</h3>
+                                <p class="text-xs text-gray-400">Total reports recorded</p>
+                            </div>
+                            <h2 class="text-3xl font-extrabold text-red-500" id="chart-reports-total">0</h2>
+                        </div>
+                        <canvas id="chartReports" style="max-height: 200px;"></canvas>
+                    </div>
+                    <!-- End Chart -->
+                    
+                    <div id="moderation-list" class="space-y-4">
+                        <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cubby-blue text-4xl"></i></div>
                     </div>
                 </div>
 

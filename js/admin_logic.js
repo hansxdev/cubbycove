@@ -251,7 +251,48 @@ async function loadDashboardCharts(period = 'day') {
             });
         };
 
-        chartReg = chartDef('chartRegistrations', regData, '#4CC9F0', 'Registrations');
+        const chartDefLine = (id, data, label) => {
+            const canvas = document.getElementById(id);
+            if (!canvas) return null;
+            const ctx = canvas.getContext('2d');
+            const existing = Chart.getChart(canvas);
+            if (existing) existing.destroy();
+            
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, '#7209B740'); // purple with opacity
+            gradient.addColorStop(1, '#4CC9F010'); // blue with opacity
+            
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label,
+                        data,
+                        backgroundColor: gradient,
+                        borderColor: '#7209B7',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#4CC9F0',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { beginAtZero: true, grid: { color: '#f3f4f6' }, border: { display: false } }
+                    }
+                }
+            });
+        };
+
+        chartReg = chartDefLine('chartRegistrations', regData, 'User Growth');
         chartLogin = chartDef('chartLogins', loginData, '#7209B7', 'Logins');
         chartReports = chartDef('chartReports', reportData, '#ef4444', 'Reports');
         chartPremium = chartDef('chartPremium', premiumData, '#f59e0b', 'Premium');
@@ -570,7 +611,7 @@ async function updateParentStatus(userId, status) {
 // ─────────────────────────────────────────────────────────────────────────
 
 async function loadChatReports() {
-    const container = document.getElementById('tab-moderation');
+    const container = document.getElementById('moderation-list');
     if (!container) return;
     container.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cubby-blue text-4xl"></i></div>';
     try {

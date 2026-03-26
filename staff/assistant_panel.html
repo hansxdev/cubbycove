@@ -42,52 +42,67 @@
 
         <!-- SIDEBAR -->
         <aside
-            class="fixed inset-y-0 left-0 w-64 bg-cubby-dark text-white border-r border-gray-700 flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:relative lg:transform-none z-50"
+            class="fixed inset-y-0 left-0 w-64 bg-[#1C2434] text-white flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:relative lg:transform-none z-50"
             id="sidebar">
             <div class="h-16 flex items-center justify-between px-4 border-b border-gray-700">
                 <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-user-shield text-cubby-blue text-2xl"></i>
+                    <i class="fa-solid fa-user-shield text-[#635BFF] text-2xl"></i>
                     <span class="text-xl font-bold tracking-wider">Cubby<span
-                            class="text-cubby-blue">Assistant</span></span>
+                            class="text-[#635BFF]">Assistant</span></span>
                 </div>
                 <button class="lg:hidden text-gray-400 hover:text-white p-1" onclick="toggleAssistantSidebar()">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
-            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-                <!-- Overview -->
-                <a href="#" onclick="showTab('overview')" id="nav-overview"
-                    class="flex items-center gap-3 px-4 py-3 bg-cubby-blue/20 text-cubby-blue rounded-lg font-bold border-l-4 border-cubby-blue transition-colors nav-item">
-                    <i class="fa-solid fa-gauge-high w-5 text-center"></i> Overview
-                </a>
+            <nav class="flex-1 px-4 py-6 space-y-6 overflow-y-auto w-full">
+                <!-- CORE -->
+                <div>
+                    <h3 class="px-4 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Core</h3>
+                    <ul class="space-y-1">
+                        <li>
+                            <a href="#" onclick="showTab('overview')" id="nav-overview"
+                                class="nav-item flex items-center gap-3 px-4 py-3 bg-[#333A48] text-white rounded-lg font-bold border-l-4 border-[#635BFF] transition-colors relative shadow-inner">
+                                <i class="fa-solid fa-gauge-high w-5 text-center"></i> Overview
+                            </a>
+                        </li>
+                    </ul>
+                </div>
 
-                <!-- Verification -->
-                <a href="#" onclick="showTab('verification')" id="nav-verification"
-                    class="flex items-center justify-between px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg font-semibold border-l-4 border-transparent transition-colors nav-item">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-id-card w-5 text-center"></i> Verification
-                    </div>
-                    <span class="bg-cubby-blue text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
-                </a>
+                <!-- CONTENT -->
+                <div>
+                    <h3 class="px-4 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Content</h3>
+                    <ul class="space-y-1">
+                        <li>
+                            <a href="#" onclick="showTab('verification')" id="nav-verification"
+                                class="nav-item flex items-center justify-between px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-[#333A48] hover:text-white rounded-lg transition-colors">
+                                <div class="flex items-center gap-3"><i class="fa-solid fa-shield-halved w-5 text-center"></i> Verification</div>
+                                <span id="badge-verification" class="bg-[#635BFF] text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="showTab('content')" id="nav-content"
+                                class="nav-item flex items-center justify-between px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-[#333A48] hover:text-white rounded-lg transition-colors">
+                                <div class="flex items-center gap-3"><i class="fa-solid fa-video w-5 text-center"></i> Video Review</div>
+                                <span id="badge-video-review" class="bg-[#635BFF] text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
 
-                <!-- Chat Reports -->
-                <a href="#" onclick="showTab('moderation')" id="nav-moderation"
-                    class="flex items-center justify-between px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg font-semibold border-l-4 border-transparent transition-colors nav-item">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-flag w-5 text-center"></i> Chat Reports
-                    </div>
-                    <span class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
-                </a>
-
-                <!-- NEW: Content Review -->
-                <a href="#" onclick="showTab('content')" id="nav-content"
-                    class="flex items-center justify-between px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg font-semibold border-l-4 border-transparent transition-colors nav-item">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-video w-5 text-center"></i> Video Review
-                    </div>
-                    <span class="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
-                </a>
+                <!-- COMMUNITY -->
+                <div>
+                    <h3 class="px-4 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Community</h3>
+                    <ul class="space-y-1">
+                        <li>
+                            <a href="#" onclick="showTab('moderation')" id="nav-moderation"
+                                class="nav-item flex items-center justify-between px-4 py-3 text-gray-400 border-transparent border-l-4 hover:bg-[#333A48] hover:text-white rounded-lg transition-colors">
+                                <div class="flex items-center gap-3"><i class="fa-regular fa-comment-dots w-5 text-center"></i> Chat Reports</div>
+                                <span id="badge-moderation" class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </nav>
 
             <div class="p-4 border-t border-gray-700">
@@ -129,79 +144,68 @@
                 <div id="tab-overview" class="space-y-6 max-w-5xl mx-auto">
                     <!-- Welcome Banner -->
                     <div
-                        class="bg-gradient-to-r from-cubby-purple to-purple-600 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
+                        class="bg-gradient-to-r from-gray-800 to-gray-700 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
                         <div class="relative z-10">
-                            <h2 class="text-3xl font-extrabold mb-2">Hello, Staff Member! 👋</h2>
-                            <p class="text-purple-100 font-semibold max-w-xl">You have <span id="overview-total-tasks"
-                                    class="text-white font-bold underline">loading...</span> pending your review
+                            <h2 class="text-3xl font-extrabold mb-2 text-white">Hello, Staff Member! 👋</h2>
+                            <p class="text-gray-200 font-semibold max-w-xl">You have <span id="overview-total-tasks"
+                                    class="text-[#4CC9F0] font-bold underline">loading...</span> pending your review
                                 today. Let's keep CubbyCove safe!</p>
                         </div>
-                        <i
-                            class="fa-solid fa-shield-cat absolute -right-6 -bottom-6 text-9xl text-white opacity-10 transform rotate-12"></i>
+                        <i class="fa-solid fa-shield-cat absolute -right-6 -bottom-6 text-9xl text-white opacity-10 transform rotate-12"></i>
                     </div>
 
-                    <!-- Quick Stats -->
+                    <!-- Quick Stat Header -->
+                    <h3 class="font-extrabold text-gray-800 text-xl mt-8 mb-4 hidden sm:block">Quick Stat</h3>
+                    
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <!-- Stat 1 -->
-                        <div onclick="showTab('verification')"
-                            class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-cubby-purple cursor-pointer hover:shadow-md transition-all group">
-                            <div class="flex items-center justify-between">
+                        <!-- Stat 1: Pending Parents -->
+                        <div onclick="showTab('verification')" class="rounded-2xl p-6 text-white bg-gradient-to-r from-[#f59e0b] to-[#ec4899] shadow-md relative overflow-hidden cursor-pointer group">
+                            <div class="relative z-10 flex justify-between items-start mb-6">
                                 <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pending Parents
-                                    </p>
-                                    <h3 id="stat-pending-parents"
-                                        class="text-3xl font-black text-gray-800 mt-1 group-hover:text-cubby-purple transition-colors">
-                                        —</h3>
+                                    <p class="text-sm font-medium text-white/80">Pending Parents:</p>
+                                    <h3 id="stat-pending-parents" class="text-3xl font-extrabold mt-1">—</h3>
                                 </div>
-                                <div
-                                    class="w-12 h-12 bg-purple-50 text-cubby-purple rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-                                    <i class="fa-solid fa-user-clock"></i>
-                                </div>
+                                <div class="bg-white/20 p-3 rounded-lg backdrop-blur-sm transition-transform group-hover:scale-110"><i class="fa-solid fa-user-clock text-xl shadow-sm"></i></div>
                             </div>
-                            <div class="mt-4 text-xs font-bold text-gray-400 flex items-center gap-1">
-                                <i class="fa-solid fa-circle-exclamation text-yellow-500"></i> Needs Review
+                            <div class="mt-4 text-xs font-bold text-white/80 flex items-center gap-1 relative z-10">
+                                <i class="fa-solid fa-circle-exclamation text-yellow-300"></i> Needs Review
+                            </div>
+                            <div class="w-full bg-white/20 rounded-full h-1.5 mt-2 relative z-10 hidden sm:block">
+                                <div class="bg-white h-1.5 rounded-full" style="width: 50%"></div>
                             </div>
                         </div>
 
-                        <!-- Stat 2 -->
-                        <div onclick="showTab('moderation')"
-                            class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500 cursor-pointer hover:shadow-md transition-all group">
-                            <div class="flex items-center justify-between">
+                        <!-- Stat 2: Chat Reports -->
+                        <div onclick="showTab('moderation')" class="rounded-2xl p-6 text-white bg-gradient-to-r from-[#3b82f6] to-[#0ea5e9] shadow-md relative overflow-hidden flex flex-col justify-between cursor-pointer group">
+                            <div class="relative z-10 flex justify-between items-start mb-6">
                                 <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Chat Reports
-                                    </p>
-                                    <h3 id="stat-chat-reports"
-                                        class="text-3xl font-black text-gray-800 mt-1 group-hover:text-red-500 transition-colors">
-                                        —</h3>
+                                    <p class="text-sm font-medium text-white/80">Chat Reports:</p>
+                                    <h3 id="stat-chat-reports" class="text-3xl font-extrabold mt-1">—</h3>
                                 </div>
-                                <div
-                                    class="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-                                    <i class="fa-solid fa-flag"></i>
-                                </div>
+                                <div class="bg-white/20 p-3 rounded-lg backdrop-blur-sm transition-transform group-hover:scale-110"><i class="fa-solid fa-flag text-xl shadow-sm"></i></div>
                             </div>
-                            <div class="mt-4 text-xs font-bold text-gray-400 flex items-center gap-1">
-                                <i class="fa-solid fa-fire text-red-500"></i> High Priority
+                            <div class="mt-4 text-xs font-bold text-white/80 flex items-center gap-1 relative z-10">
+                                <i class="fa-solid fa-fire text-red-300"></i> High Priority
+                            </div>
+                            <div class="w-full bg-white/20 rounded-full h-1.5 mt-2 relative z-10 hidden sm:block">
+                                <div class="bg-white h-1.5 rounded-full" style="width: 80%"></div>
                             </div>
                         </div>
 
-                        <!-- Stat 3 -->
-                        <div onclick="showTab('content')"
-                            class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500 cursor-pointer hover:shadow-md transition-all group">
-                            <div class="flex items-center justify-between">
+                        <!-- Stat 3: Video Review -->
+                        <div onclick="showTab('content')" class="rounded-2xl p-6 text-white bg-gradient-to-r from-[#8b5cf6] to-[#d946ef] shadow-md relative overflow-hidden flex flex-col justify-between cursor-pointer group">
+                            <div class="relative z-10 flex justify-between items-start mb-6">
                                 <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Video Review
-                                    </p>
-                                    <h3 id="stat-video-review"
-                                        class="text-3xl font-black text-gray-800 mt-1 group-hover:text-blue-500 transition-colors">
-                                        —</h3>
+                                    <p class="text-sm font-medium text-white/80">Video Review:</p>
+                                    <h3 id="stat-video-review" class="text-3xl font-extrabold mt-1">—</h3>
                                 </div>
-                                <div
-                                    class="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-                                    <i class="fa-solid fa-video"></i>
-                                </div>
+                                <div class="bg-white/20 p-3 rounded-lg backdrop-blur-sm transition-transform group-hover:scale-110"><i class="fa-solid fa-video text-xl shadow-sm"></i></div>
                             </div>
-                            <div class="mt-4 text-xs font-bold text-gray-400 flex items-center gap-1">
-                                <i class="fa-solid fa-clock text-blue-400"></i> Just Added
+                            <div class="mt-4 text-xs font-bold text-white/80 flex items-center gap-1 relative z-10">
+                                <i class="fa-solid fa-clock text-blue-200"></i> Just Added
+                            </div>
+                            <div class="w-full bg-white/20 rounded-full h-1.5 mt-2 relative z-10 hidden sm:block">
+                                <div class="bg-white h-1.5 rounded-full" style="width: 30%"></div>
                             </div>
                         </div>
                     </div>

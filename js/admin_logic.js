@@ -87,8 +87,10 @@ async function initAdminDashboard() {
 
         if (currentUser.role === 'super_admin') {
             const staffMenu = document.getElementById('menu-staff');
+            const manageMenu = document.getElementById('super-admin-manage');
             const viewsMenu = document.getElementById('super-admin-views');
             if (staffMenu) staffMenu.classList.remove('hidden');
+            if (manageMenu) manageMenu.classList.remove('hidden');
             if (viewsMenu) viewsMenu.classList.remove('hidden');
         }
 

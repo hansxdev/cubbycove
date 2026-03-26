@@ -54,13 +54,28 @@ function _getChildSession() {
     }
 }
 
-window.addEventListener('beforeunload', () => { flushScreenTime(); });
+window.addEventListener('beforeunload', () => { 
+    flushScreenTime(); 
+    const session = _getChildSession();
+    if (session && session.$id) {
+        // Fire and forget to indicate offline
+        DataService.updateChildPrefs(session.$id, { isOnline: false }).catch(()=>{});
+    }
+});
+
 document.addEventListener('visibilitychange', () => {
+    const session = _getChildSession();
     if (document.visibilityState === 'hidden') {
         flushScreenTime();
+        if (session && session.$id) {
+            DataService.updateChildPrefs(session.$id, { isOnline: false }).catch(()=>{});
+        }
     } else if (document.visibilityState === 'visible') {
         _screenTimeStart = Date.now();
         _screenTimeFlushed = false;
+        if (session && session.$id) {
+            DataService.updateChildPrefs(session.$id, { isOnline: true }).catch(()=>{});
+        }
     }
 });
 
@@ -69,7 +84,11 @@ document.addEventListener('visibilitychange', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
     const user = await checkAuth();
-    if (user) updateHeader(user);
+    if (user) {
+        updateHeader(user);
+        // Mark as online on successful load
+        DataService.updateChildPrefs(user.$id, { isOnline: true }).catch(() => console.warn('[Presence] Could not set online status'));
+    }
 
     const path = window.location.pathname.toLowerCase();
 
@@ -928,6 +947,10 @@ if (typeof DataService === 'undefined') {
 // ─────────────────────────────────────────────────────────────────────────────
 window.handleKidLogout = async function () {
     await flushScreenTime();
+    const session = _getChildSession();
+    if (session && session.$id) {
+        try { await DataService.updateChildPrefs(session.$id, { isOnline: false }); } catch (e) {}
+    }
     try { await DataService.logout(); } catch (e) { console.warn("Logout error:", e); }
     window.location.href = '../index.html';
 };

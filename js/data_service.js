@@ -1618,6 +1618,7 @@ const DataService = {
         if (prefs.coverColor !== undefined)  payload.coverColor = prefs.coverColor;
         if (prefs.theme !== undefined)       payload.theme = prefs.theme;
         if (prefs.avatarIcon !== undefined)  payload.avatarIcon = prefs.avatarIcon;
+        if (prefs.isOnline !== undefined)    payload.isOnline = prefs.isOnline;
 
         try {
             const doc = await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, payload);

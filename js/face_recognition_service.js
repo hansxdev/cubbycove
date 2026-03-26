@@ -49,11 +49,11 @@ const FaceRecognitionService = (() => {
     ];
 
     // Thresholds (tweaked for realism)
-    const EAR_BLINK_THRESHOLD  = 0.22;   // Below this = eyes closed
+    const EAR_BLINK_THRESHOLD  = 0.28;   // Below this = eyes closed
     const YAW_THRESHOLD        = 0.12;   // Nose horizontal offset ratio
     const PITCH_UP_THRESHOLD   = 0.08;   // Nose vertical "look up" offset ratio
     const BLINK_COOLDOWN_MS    = 500;    // Prevent multi-counting
-    const DETECTION_FPS        = 15;     // Target frames-per-second for landmark detection
+    const DETECTION_FPS        = 30;     // Target frames-per-second for landmark detection
 
     let _lastBlinkTime = 0;
     let _eyesWereClosed = false;

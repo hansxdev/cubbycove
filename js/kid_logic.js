@@ -443,6 +443,10 @@ window.openKidVideoModal = async function (videoDocId, pathId = null) {
     if (session?.$id) {
         DataService.logWatchHistory(session.$id, video.$id, video.title, video.category, video.url, thumbUrl);
         DataService.incrementVideoView(video.$id, '').catch(() => { });
+        // Log to Activity Log for parent dashboard
+        DataService.logActivity(session.$id, 'watch', `Started watching: ${video.title}`, { videoId: video.$id, category: video.category });
+        // Log screen time with granular detail for Interest Heatmap
+        DataService.logScreenTime(session.$id, 1, video.category?.toLowerCase() || 'entertainment', video.title);
     }
 
     // Check favorite status

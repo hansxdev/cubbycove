@@ -64,6 +64,11 @@ Stores profiles of children registered by parents.
 | `kidId` | String (Size 10) | No | Public shareable ID like `#XXXXXX`. |
 | `avatarImage` | String (Size 1000000) | No | Custom uploaded avatar image (Base64/URL). |
 | `avatarBgColor` | String (Size 50) | No | Background color for custom avatar. |
+| `bio` | String (Size 1000) | No | Child's bio or short description. |
+| `coverColor` | String (Size 50) | No | Cover background color. |
+| `theme` | String (Size 50) | No | UI theme preference. |
+| `avatarIcon` | String (Size 50) | No | Selected avatar icon name. |
+| `parentEmail` | String (Size 255) | No | Email of the parent. |
 
 #### Collection: `Videos` (Content Library)
 Stores video content metadata, approval status, and creator details.
@@ -288,4 +293,20 @@ Tracks how many minutes a child spends in the app per day/category.
 | `date` | String (Size 20) | No | Format: `YYYY-MM-DD`. |
 | `minutes` | Double | No | Minutes spent. |
 | `category` | String (Size 50) | No | e.g. `general`, `learning`. |
+| `detail` | String (Size 500) | No | Specific game or video title. |
+| `timestamp` | String (Size 50) | No | ISO timestamp of the log. |
+
+#### Collection: `activity_logs` (New)
+Tracks specific content and social interactions for granular history.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `childId` | String (Size 50) | Yes | Child profile ID ($id). |
+| `type` | String (Size 50) | Yes | Enum: `watch`, `play`, `buddy_add`, `message_sent`. |
+| `action` | String (Size 255) | Yes | Human-readable action description. |
+| `timestamp` | String (Size 50) | Yes | ISO timestamp. |
+| `metadata` | String (Size 5000) | No | JSON string containing deep links or specific IDs. |
+
+> **Permissions**: `create`: `any`; `read`: `any`; `update`: `any`; `delete`: `any`.
+
 

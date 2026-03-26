@@ -179,6 +179,8 @@ window.acceptBuddyReq = async function (buddyDocId, btn) {
     if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
     try {
         await DataService.acceptBuddyRequest(buddyDocId, _currentChild);
+        // Log as activity
+        DataService.logActivity(_currentChild.$id, 'buddy_add', `Accepted a new buddy!`, { buddyDocId });
         await refreshBuddyUI();
     } catch (e) {
         alert('Could not accept: ' + e.message);
@@ -291,6 +293,8 @@ window.sendBuddyRequest = async function () {
         await DataService.sendBuddyRequest(fromChild, _foundBuddyTarget);
         sendBtn.innerHTML = '<i class="fa-solid fa-check"></i> Sent!';
         sendBtn.className = 'bg-green-500 text-white font-bold px-4 py-2 rounded-xl text-sm';
+        // Log buddy request as activity
+        DataService.logActivity(_currentChild.$id, 'buddy_add', `Sent a buddy request to ${_foundBuddyTarget.username || _foundBuddyTarget.name}`, { targetId: _foundBuddyTarget.$id });
         setTimeout(closeAddBuddyModal, 1500);
     } catch (e) {
         alert(e.message);

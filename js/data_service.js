@@ -1712,11 +1712,12 @@ const DataService = {
      * Kids don't have an Appwrite Auth session so they cannot call updateDocument.
      * The parent dashboard reads and aggregates these log entries.
      *
-     * @param {string} childId   - The child's Appwrite document $id (from sessionStorage)
-     * @param {number} minutes   - Minutes spent (float, will be rounded)
-     * @param {string} [category] - 'games' | 'entertainment' | 'communication' (optional)
+     * @param {string} childId    - The child's Appwrite document $id (from sessionStorage)
+     * @param {number} minutes    - Minutes spent (float, will be rounded)
+     * @param {string} [category] - 'games' | 'entertainment' | 'learning' | 'communication' (optional)
+     * @param {string} [detail]   - Specific game or video title for the Interest Heatmap (optional)
      */
-    logScreenTime: async function (childId, minutes, category) {
+    logScreenTime: async function (childId, minutes, category, detail) {
         if (!childId) return;
         const mins = Math.round(minutes);
         if (mins < 1) return; // skip sessions under 1 minute
@@ -1727,13 +1728,92 @@ const DataService = {
         const todayStr = new Date().toISOString().split('T')[0]; // "2026-03-04"
 
         try {
-            const data = { childId, date: todayStr, minutes: mins };
+            const data = {
+                childId,
+                date: todayStr,
+                minutes: mins,
+                timestamp: new Date().toISOString()
+            };
             if (category) data.category = category;
+            if (detail)   data.detail   = detail;
 
             await databases.createDocument(DB_ID, 'screen_time_logs', ID.unique(), data);
-            console.log(`⏱️ [ScreenTime] Logged ${mins} min (${category || 'general'}) for child ${childId} on ${todayStr}`);
+            console.log(`⏱️ [ScreenTime] Logged ${mins} min (${category || 'general'}) for child ${childId} on ${todayStr}${detail ? ' | ' + detail : ''}`);
         } catch (err) {
             console.warn('logScreenTime error:', err.message);
+        }
+    },
+
+    /**
+     * Logs a content or social activity event for a child.
+     * Used to populate the Activity Log in the Parent Dashboard.
+     * Writes to the new 'activity_logs' collection (any-write, no auth needed).
+     *
+     * @param {string} childId  - The child's Appwrite document $id
+     * @param {string} type     - Event type: 'watch' | 'play' | 'buddy_add' | 'message_sent'
+     * @param {string} action   - Human-readable description: e.g. "Started watching: Learn Colors"
+     * @param {object} [meta]   - Optional metadata object (will be JSON-stringified)
+     */
+    logActivity: async function (childId, type, action, meta) {
+        if (!childId || !type || !action) return;
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+        try {
+            const data = {
+                childId,
+                type,
+                action,
+                timestamp: new Date().toISOString()
+            };
+            if (meta) data.metadata = JSON.stringify(meta);
+
+            await databases.createDocument(DB_ID, 'activity_logs', ID.unique(), data);
+            console.log(`📋 [Activity] [${type}] ${action} for child ${childId}`);
+        } catch (err) {
+            console.warn('logActivity error:', err.message);
+        }
+    },
+
+    /**
+     * Fetches the activity log for a child (for the Parent Dashboard).
+     * Efficiently queries the 'activity_logs' collection by childId and timestamp.
+     *
+     * @param {string} childId  - The child's Appwrite document $id
+     * @param {number} [limit]  - Number of entries to fetch (default: 50)
+     * @param {string} [filter] - 'today' | 'week' | 'month' | 'all' (default: 'week')
+     * @returns {Array} activity log documents sorted newest-first
+     */
+    getActivityLogs: async function (childId, limit = 50, filter = 'week') {
+        if (!childId) return [];
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+
+        const now = new Date();
+        let startDate = null;
+        if (filter === 'today') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        } else if (filter === 'week') {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 7);
+        } else if (filter === 'month') {
+            startDate = new Date(now);
+            startDate.setMonth(now.getMonth() - 1);
+        }
+
+        try {
+            const queries = [
+                Query.equal('childId', childId),
+                Query.orderDesc('timestamp'),
+                Query.limit(limit)
+            ];
+            if (startDate) {
+                queries.push(Query.greaterThanEqual('timestamp', startDate.toISOString()));
+            }
+            const result = await databases.listDocuments(DB_ID, 'activity_logs', queries);
+            return result.documents;
+        } catch (e) {
+            console.warn('getActivityLogs error:', e.message);
+            return [];
         }
     },
 

@@ -24,6 +24,7 @@
                 extend: {
                     fontFamily: {
                         sans: ['Nunito', 'sans-serif'],
+                        mochi: ['MochiBoom', 'cursive'],
                     },
                     colors: {
                         'cubby-blue': '#4F8AEE',
@@ -42,6 +43,14 @@
     </script>
 
     <style>
+        /* Mochi Boom Custom Font */
+        @font-face {
+            font-family: 'MochiBoom';
+            src: url('../fonts/mochi-boom-demo/Mochi Boom DEMO.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         /* Base styles & Animation */
         body {
             background-color: #f0f8ff;
@@ -152,7 +161,7 @@
             
             <!-- Left Text Content -->
             <div class="lg:w-1/2 text-center lg:text-left z-20">
-                <h1 class="text-6xl md:text-7xl lg:text-8xl font-black text-white mb-6 leading-tight drop-shadow-lg max-w-[12ch] md:max-w-none" style="text-shadow: 0 6px 10px rgba(0,0,0,0.15);">
+                <h1 class="font-mochi text-6xl md:text-7xl lg:text-8xl text-white mb-6 leading-tight drop-shadow-lg max-w-[12ch] md:max-w-none" style="text-shadow: 0 6px 10px rgba(0,0,0,0.15);">
                     Hugs, Fun, and Learning!
                 </h1>
                 <p class="text-white/95 text-xl md:text-2xl font-bold mb-10 max-w-xl mx-auto lg:mx-0 drop-shadow-md leading-relaxed">
@@ -194,7 +203,7 @@
         <section id="games" class="pt-32 pb-24 px-6 max-w-7xl mx-auto scroll-mt-20">
             <div class="text-center mb-16">
                 <span class="inline-block bg-blue-100 text-cubby-blue font-black px-6 py-2 rounded-full uppercase tracking-widest text-sm shadow-sm border border-blue-200 mb-6">Let's Play</span>
-                <h2 class="text-5xl md:text-6xl font-black text-gray-800 mb-4">Magical Games</h2>
+                <h2 class="font-mochi text-5xl md:text-6xl text-gray-800 mb-4">Magical Games</h2>
                 <p class="text-xl text-gray-500 max-w-2xl mx-auto font-bold">Interactive and educational games designed to spark creativity, joy, and learning!</p>
             </div>
             
@@ -261,7 +270,7 @@
             <div class="max-w-7xl mx-auto relative z-10">
                 <div class="text-center mb-16">
                     <span class="inline-block bg-purple-100 text-purple-600 font-black px-6 py-2 rounded-full uppercase tracking-widest text-sm shadow-sm border border-purple-200 mb-6">Watch & Learn</span>
-                    <h2 class="text-5xl md:text-6xl font-black text-gray-800 mb-4">Bedtime & Fun Stories</h2>
+                    <h2 class="font-mochi text-5xl md:text-6xl text-gray-800 mb-4">Bedtime & Fun Stories</h2>
                     <p class="text-xl text-gray-500 max-w-2xl mx-auto font-bold">Watch our curated list of super fun, highly educational videos and adventures.</p>
                 </div>
 
@@ -340,7 +349,7 @@
                 <!-- Text -->
                 <div class="lg:w-1/2">
                     <span class="inline-block bg-teal-100 text-teal-700 font-black px-6 py-2 rounded-full uppercase tracking-widest text-sm shadow-sm border border-teal-200 mb-6">For Parents</span>
-                    <h2 class="text-5xl md:text-6xl font-black text-gray-800 mb-8 leading-tight">You Are In Complete Control.</h2>
+                    <h2 class="font-mochi text-5xl md:text-6xl text-gray-800 mb-8 leading-tight">You Are In Complete Control.</h2>
                     <p class="text-xl text-gray-600 font-bold mb-10 leading-relaxed max-w-lg">
                         The Parent Dashboard is designed strictly to give you peace of mind. Approve videos, set screen-time limits, and securely add friends.
                     </p>
@@ -442,7 +451,7 @@
             
             <div class="max-w-5xl mx-auto text-center relative z-10">
                 <span class="inline-block bg-white/10 text-blue-200 font-black px-6 py-2 rounded-full uppercase tracking-widest text-sm shadow-sm border border-white/20 mb-8 backdrop-blur-sm">Our Mission</span>
-                <h2 class="text-5xl md:text-7xl font-black text-white mb-16 drop-shadow-lg">Why Cubby Cove Exists</h2>
+                <h2 class="font-mochi text-5xl md:text-7xl text-white mb-16 drop-shadow-lg">Why CubbyCove Exists</h2>
                 
                 <div class="bg-white/5 backdrop-blur-xl p-10 md:p-16 rounded-[4rem] shadow-2xl border-4 border-white/10 relative transform hover:scale-[1.01] transition-transform duration-500 text-left">
                     <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 w-24 h-24 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-white text-5xl shadow-[0_0_40px_rgba(250,204,21,0.6)] border-4 border-[#1e3a8a]">

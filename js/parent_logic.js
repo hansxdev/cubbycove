@@ -217,6 +217,38 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dashboardMain) {
         startNotifPolling();
         _checkLoginRequestsRef = checkLoginRequests; // expose for inline buttons
+
+        // ── Smart Polling (Visibility-Based) ────────────────────────────────
+        // Polls every 60s ONLY when the tab is active.
+        // Avoids using Appwrite Realtime (websockets) to stay within Free Tier limits.
+        let _dashboardPollInterval = null;
+
+        function _startDashboardPolling() {
+            if (_dashboardPollInterval) return; // already running
+            _dashboardPollInterval = setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    console.log('[SmartPoll] Tab active — refreshing dashboard data...');
+                    loadDashboardData();
+                }
+            }, 60000); // every 60 seconds
+        }
+
+        function _stopDashboardPolling() {
+            if (_dashboardPollInterval) {
+                clearInterval(_dashboardPollInterval);
+                _dashboardPollInterval = null;
+            }
+        }
+
+        // Start polling and re-fetch immediately when the tab becomes visible again
+        _startDashboardPolling();
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                console.log('[SmartPoll] Tab became visible — refreshing dashboard data...');
+                loadDashboardData();
+            }
+        });
+        window.addEventListener('beforeunload', _stopDashboardPolling);
     }
 
     // (Virtual scroll, polling vars, and checkLoginRequests are now at module scope above)

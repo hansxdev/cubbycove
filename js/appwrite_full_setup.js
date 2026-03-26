@@ -386,12 +386,36 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { type: 'string', key: 'childId', required: false, size: 50 },
                 { type: 'string', key: 'date', required: false, size: 20 },
                 { type: 'double', key: 'minutes', required: false },
-                { type: 'string', key: 'category', required: false, size: 50 }
+                { type: 'string', key: 'category', required: false, size: 50 },
+                { type: 'string', key: 'detail', required: false, size: 500 },
+                { type: 'string', key: 'timestamp', required: false, size: 50 }
             ],
             permissions: [
                 Permission.read(Role.any()),
                 Permission.create(Role.any()),
                 Permission.update(Role.any()),
+            ]
+        },
+        // ── 17. ACTIVITY LOGS ──
+        {
+            id: 'activity_logs',
+            name: 'Activity Logs',
+            attributes: [
+                { type: 'string', key: 'childId', required: true, size: 50 },
+                { type: 'string', key: 'type', required: true, size: 50 },
+                { type: 'string', key: 'action', required: true, size: 255 },
+                { type: 'string', key: 'timestamp', required: true, size: 50 },
+                { type: 'string', key: 'metadata', required: false, size: 5000 }
+            ],
+            indexes: [
+                { key: 'childId_idx', type: 'key', attributes: ['childId'] },
+                { key: 'timestamp_idx', type: 'key', attributes: ['timestamp'] }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
+                Permission.update(Role.any()),
+                Permission.delete(Role.any()),
             ]
         }
     ];

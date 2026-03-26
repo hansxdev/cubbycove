@@ -593,6 +593,14 @@
                 document.getElementById('selfieStatus').classList.remove('hidden');
                 document.getElementById('selfieStatus').classList.add('flex');
                 document.getElementById('submitBtn').disabled = false;
+
+                // Capture selfie frame before stopping camera
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth || 1280;
+                canvas.height = video.videoHeight || 720;
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                _selfieBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+
                 // Stop camera stream
                 if (_cameraStream) { _cameraStream.getTracks().forEach(t => t.stop()); _cameraStream = null; }
 
@@ -613,7 +621,9 @@
         function retakeSelfie() {
             _livenessStarted = false;
             _faceDescriptor = null;
+            _selfieBlob = null;
             document.getElementById('livenessSuccess').classList.add('hidden');
+            document.getElementById('selfieStatus').classList.remove('flex');
             document.getElementById('selfieStatus').classList.add('hidden');
             document.getElementById('cameraStartPrompt').classList.remove('hidden');
             document.getElementById('submitBtn').disabled = true;

@@ -243,42 +243,68 @@
                 </div>
             </div>
 
-            <!-- ═══ STEP 3: Selfie / Face Setup ═══ -->
+            <!-- ═══ STEP 3: Liveness Check ═══ -->
             <div id="step3Panel" class="hidden space-y-5">
                 <div>
-                    <h2 class="text-4xl font-black text-slate-800">Take Your Selfie</h2>
-                    <p class="text-slate-600 font-bold mt-2">Look straight at the camera and click the button when ready. Make sure your face is clearly visible.</p>
+                    <h2 class="text-4xl font-black text-slate-800">Liveness Check</h2>
+                    <p class="text-slate-600 font-bold mt-2">We need to confirm you're a real person. Follow the on-screen prompts — this only takes a few seconds!</p>
                 </div>
 
-                <!-- Camera / Preview -->
+                <!-- Camera + Overlay Container -->
                 <div class="relative w-full aspect-video bg-slate-900 rounded-3xl overflow-hidden shadow-xl flex items-center justify-center" id="cameraContainer">
                     <video id="selfieVideo" class="w-full h-full" autoplay playsinline muted></video>
-                    <canvas id="selfieCanvas" class="hidden w-full h-full"></canvas>
-                    <div id="cameraStartPrompt" class="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6">
+                    <canvas id="selfieCanvas" class="hidden w-full h-full absolute inset-0"></canvas>
+
+                    <!-- Start Prompt -->
+                    <div id="cameraStartPrompt" class="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 bg-slate-900/80">
                         <i class="fa-solid fa-camera text-6xl opacity-60 mb-4"></i>
-                        <p class="font-bold text-lg opacity-80">Camera preview will appear here</p>
-                        <button type="button" onclick="startCamera()" class="mt-4 bg-sky-400 hover:bg-sky-500 text-white font-black px-8 py-3 rounded-full transition-colors cursor-pointer">
-                            <i class="fa-solid fa-camera mr-2"></i> Start Camera
+                        <p class="font-bold text-lg opacity-80">Ready for your liveness check?</p>
+                        <p class="text-sm opacity-60 mb-4">You'll need to blink and move your head slightly.</p>
+                        <button type="button" onclick="startLivenessFlow()" id="startLivenessBtn"
+                            class="mt-2 bg-sky-400 hover:bg-sky-500 text-white font-black px-8 py-3 rounded-full transition-colors cursor-pointer flex items-center gap-2">
+                            <i class="fa-solid fa-eye"></i> Start Check
                         </button>
+                    </div>
+
+                    <!-- Loading models overlay -->
+                    <div id="modelsLoadingOverlay" class="hidden absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 bg-slate-900/85 backdrop-blur-sm">
+                        <div class="w-16 h-16 border-4 border-sky-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <p class="font-black text-lg">Loading AI models...</p>
+                        <p class="text-sm opacity-60 mt-1">This only happens once ⚡</p>
+                    </div>
+
+                    <!-- Liveness Step Overlay -->
+                    <div id="livenessOverlay" class="hidden absolute inset-0 flex flex-col items-center justify-between p-5 bg-gradient-to-t from-slate-900/80 via-transparent to-slate-900/40">
+                        <!-- Top: step counter -->
+                        <div class="flex gap-3" id="livenessStepDots"></div>
+
+                        <!-- Center: instruction -->
+                        <div id="livenessInstruction" class="text-center">
+                            <div class="text-5xl mb-3" id="livenessIcon">👁️</div>
+                            <div class="bg-white/15 backdrop-blur-md rounded-2xl px-6 py-3 border border-white/20">
+                                <p id="livenessLabel" class="text-white font-black text-xl drop-shadow-md"></p>
+                                <p id="livenessHint" class="text-white/70 text-sm font-bold mt-1">Look straight at the camera</p>
+                            </div>
+                        </div>
+
+                        <!-- Bottom: no-face warning -->
+                        <div id="noFaceWarning" class="hidden bg-red-500/80 backdrop-blur-sm text-white font-bold text-sm px-4 py-2 rounded-full flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation"></i> No face detected — center your face!
+                        </div>
+                    </div>
+
+                    <!-- Success Overlay -->
+                    <div id="livenessSuccess" class="hidden absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 bg-emerald-500/80 backdrop-blur-sm">
+                        <div class="text-6xl mb-3">✅</div>
+                        <p class="font-black text-2xl">Liveness Verified!</p>
+                        <p class="text-white/80 font-bold mt-1">You're all set. Click Submit to complete registration.</p>
                     </div>
                 </div>
 
-                <!-- Captured Preview Info -->
+                <!-- Status Banner -->
                 <div id="selfieStatus" class="hidden items-center gap-3 bg-green-50 border-2 border-green-200 rounded-2xl px-5 py-3">
                     <i class="fa-solid fa-circle-check text-green-500 text-xl"></i>
-                    <p class="text-green-700 font-bold">Selfie captured! Click "Submit" to complete your registration.</p>
-                </div>
-
-                <!-- Camera Controls -->
-                <div class="flex gap-3 flex-wrap" id="cameraControls">
-                    <button type="button" id="captureBtn" onclick="captureSelfie()"
-                        class="hidden flex-1 bg-sky-400 text-white font-black text-lg py-4 rounded-full btn-continue border-2 border-sky-500 flex items-center justify-center gap-2 cursor-pointer">
-                        <i class="fa-solid fa-camera"></i> Capture
-                    </button>
-                    <button type="button" id="retakeBtn" onclick="retakeSelfie()"
-                        class="hidden px-6 py-4 border-2 border-sky-300 text-sky-500 font-black text-base rounded-full hover:bg-sky-50 transition-colors cursor-pointer">
-                        <i class="fa-solid fa-rotate-left mr-2"></i> Retake
-                    </button>
+                    <p class="text-green-700 font-bold">Liveness check passed! Click <strong>Submit</strong> to complete your registration.</p>
                 </div>
 
                 <div class="flex gap-4 pt-2">
@@ -311,10 +337,14 @@
         <span id="formToastMsg"></span>
     </div>
 
+    <!-- face-api.js CDN (MIT licensed) -->
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js"></script>
     <!-- Appwrite SDK + DataService -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
     <script src="../js/appwrite_config.js"></script>
     <script src="../js/data_service.js"></script>
+    <!-- Face Recognition Service -->
+    <script src="../js/face_recognition_service.js"></script>
 
     <script>
         // ─────────────────────────────────────────────────────
@@ -464,58 +494,129 @@
         }
 
         // ─────────────────────────────────────────────────────
-        // Step 3: Webcam Selfie
+        // Step 3: Liveness Check
         // ─────────────────────────────────────────────────────
-        async function startCamera() {
-            const prompt = document.getElementById('cameraStartPrompt');
+        let _faceDescriptor = null; // Float32Array[128] — stored after liveness passes
+        let _livenessStarted = false;
+
+        async function startLivenessFlow() {
+            if (_livenessStarted) return;
+            _livenessStarted = true;
+
+            const startBtn     = document.getElementById('startLivenessBtn');
+            const startPrompt  = document.getElementById('cameraStartPrompt');
+            const loadingOverlay = document.getElementById('modelsLoadingOverlay');
+
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+
+            // 1. Start the webcam
             try {
-                _cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 1280, height: 720 }, audio: false });
+                _cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: 1280, height: 720 }, audio: false
+                });
                 const video = document.getElementById('selfieVideo');
                 video.srcObject = _cameraStream;
-                video.classList.remove('hidden');
-                prompt.classList.add('hidden');
-                document.getElementById('captureBtn').classList.remove('hidden');
             } catch (err) {
-                showToast('Could not access camera: ' + err.message + '. Please allow camera access and try again.');
+                showToast('Camera access denied: ' + err.message);
+                _livenessStarted = false;
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<i class="fa-solid fa-eye"></i> Start Check';
+                return;
             }
-        }
 
-        function captureSelfie() {
+            // 2. Show loading overlay while models download
+            startPrompt.classList.add('hidden');
+            loadingOverlay.classList.remove('hidden');
+
+            try {
+                await FaceRecognitionService.loadModels();
+            } catch (err) {
+                loadingOverlay.classList.add('hidden');
+                showToast('Could not load face AI models. Check your internet connection.');
+                _livenessStarted = false;
+                return;
+            }
+
+            loadingOverlay.classList.add('hidden');
+
+            // 3. Build the step dots UI
+            const steps = FaceRecognitionService.LIVENESS_STEPS;
+            const dotsEl = document.getElementById('livenessStepDots');
+            dotsEl.innerHTML = steps.map((s, i) =>
+                `<div id="ldot-${i}" class="w-3 h-3 rounded-full bg-white/30 transition-all" title="${s.label}"></div>`
+            ).join('');
+
+            // 4. Show liveness overlay
+            document.getElementById('livenessOverlay').classList.remove('hidden');
+
+            const noFaceWarn = document.getElementById('noFaceWarning');
+            let noFaceTimer = null;
+
+            // 5. Run detection with UI callbacks
             const video = document.getElementById('selfieVideo');
-            const canvas = document.getElementById('selfieCanvas');
-            canvas.width  = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
+            try {
+                _faceDescriptor = await FaceRecognitionService.startLivenessCheck(video, {
+                    onNoFace() {
+                        if (!noFaceTimer) {
+                            noFaceTimer = setTimeout(() => {
+                                noFaceWarn.classList.remove('hidden');
+                            }, 1200);
+                        }
+                    },
+                    onFaceDetected() {
+                        if (noFaceTimer) { clearTimeout(noFaceTimer); noFaceTimer = null; }
+                        noFaceWarn.classList.add('hidden');
+                    },
+                    onNextStep(stepDef, stepNum, total) {
+                        document.getElementById('livenessIcon').textContent  = stepDef.icon;
+                        document.getElementById('livenessLabel').textContent = stepDef.label;
+                        // Update dots
+                        steps.forEach((_, i) => {
+                            const dot = document.getElementById(`ldot-${i}`);
+                            if (!dot) return;
+                            dot.className = 'w-3 h-3 rounded-full transition-all ' +
+                                (i < stepNum - 1 ? 'bg-emerald-400 scale-110' :
+                                 i === stepNum - 1 ? 'bg-white scale-125 shadow-[0_0_8px_white]' : 'bg-white/30');
+                        });
+                    },
+                    onStepPassed(stepDef, stepNum, total) {
+                        // Flash green dot
+                        const dot = document.getElementById(`ldot-${stepNum - 1}`);
+                        if (dot) dot.className = 'w-3 h-3 rounded-full bg-emerald-400 scale-110 transition-all';
+                    }
+                });
 
-            // Show canvas, hide video
-            video.classList.add('hidden');
-            canvas.classList.remove('hidden');
-
-            // Stop stream
-            if (_cameraStream) {
-                _cameraStream.getTracks().forEach(t => t.stop());
-                _cameraStream = null;
-            }
-
-            canvas.toBlob(blob => {
-                _selfieBlob = blob;
+                // 6. All steps passed!
+                document.getElementById('livenessOverlay').classList.add('hidden');
+                document.getElementById('livenessSuccess').classList.remove('hidden');
                 document.getElementById('selfieStatus').classList.remove('hidden');
                 document.getElementById('selfieStatus').classList.add('flex');
-                document.getElementById('captureBtn').classList.add('hidden');
-                document.getElementById('retakeBtn').classList.remove('hidden');
                 document.getElementById('submitBtn').disabled = false;
-            }, 'image/jpeg', 0.92);
+                // Stop camera stream
+                if (_cameraStream) { _cameraStream.getTracks().forEach(t => t.stop()); _cameraStream = null; }
+
+            } catch (err) {
+                showToast('Liveness check failed: ' + err.message + '. Please try again.');
+                _livenessStarted = false;
+                document.getElementById('livenessOverlay').classList.add('hidden');
+                document.getElementById('cameraStartPrompt').classList.remove('hidden');
+                const sb = document.getElementById('startLivenessBtn');
+                sb.disabled = false;
+                sb.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Try Again';
+            }
         }
 
+        // Override the old startCamera / captureSelfie (kept for safety, but no longer referenced)
+        function startCamera() { startLivenessFlow(); }
+        function captureSelfie() { /* handled by liveness flow */ }
         function retakeSelfie() {
-            _selfieBlob = null;
-            document.getElementById('selfieCanvas').classList.add('hidden');
-            document.getElementById('selfieVideo').classList.remove('hidden');
+            _livenessStarted = false;
+            _faceDescriptor = null;
+            document.getElementById('livenessSuccess').classList.add('hidden');
             document.getElementById('selfieStatus').classList.add('hidden');
-            document.getElementById('retakeBtn').classList.add('hidden');
-            document.getElementById('captureBtn').classList.add('hidden');
-            document.getElementById('submitBtn').disabled = true;
             document.getElementById('cameraStartPrompt').classList.remove('hidden');
+            document.getElementById('submitBtn').disabled = true;
         }
 
         // ─────────────────────────────────────────────────────
@@ -555,7 +656,11 @@
                     email:        document.getElementById('regEmail').value.trim(),
                     password:     document.getElementById('regPassword').value,
                     idDocumentId: idDocumentId,
-                    faceId:       faceId
+                    faceId:       faceId,
+                    // Store the face descriptor (base64) from the liveness check
+                    faceDescriptor: _faceDescriptor
+                        ? FaceRecognitionService.descriptorToBase64(_faceDescriptor)
+                        : null
                 };
 
                 await DataService.registerParent(parentData);

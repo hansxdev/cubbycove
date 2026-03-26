@@ -124,6 +124,18 @@
 
     <!-- Main Content Array -->
     <main class="flex-1 flex flex-col relative bg-[#DDF3FF] overflow-hidden rounded-l-[2.5rem] shadow-[-10px_0_30px_rgba(0,0,0,0.02)]">
+        
+        <!-- Global Login Request Header (Slide-down) -->
+        <div id="global-login-request-header" class="absolute top-0 left-0 right-0 z-50 transition-transform duration-500 transform -translate-y-full">
+            <div class="px-6 lg:px-10 pt-4 pb-2">
+                <div class="max-w-[1400px] mx-auto drop-shadow-md">
+                    <div id="global-unread-list" class="space-y-3">
+                        <!-- Pending requests injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="bg-pattern"></div>
         
         <div class="absolute inset-0 overflow-y-auto overflow-x-hidden custom-scrollbar p-6 lg:p-10 z-10">

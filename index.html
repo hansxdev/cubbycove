@@ -151,7 +151,7 @@
     </nav>
 
     <!-- HERO SECTION -->
-    <section class="relative min-h-screen bg-gradient-to-b from-sky-400 via-sky-300 to-yellow-50 flex items-center pt-24 pb-32 overflow-hidden">
+    <section class="relative min-h-screen bg-gradient-to-b from-sky-400 via-sky-300 to-yellow-50 flex items-center pt-24 pb-32 overflow-x-hidden">
         
         <!-- Decorative Background Cloud Blobs -->
         <div class="absolute top-1/4 left-10 w-64 h-64 bg-white/30 rounded-full blur-3xl pointer-events-none"></div>
@@ -495,7 +495,7 @@
 
     <!-- JOIN MODAL -->
     <div id="join_modal" class="fixed inset-0 z-[100] bg-black/60 hidden flex-col items-center justify-center p-4 backdrop-blur-sm transition-all duration-300">
-        <div class="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-md w-full relative transform scale-100 transition-transform animate-[pop_0.3s_ease-out]">
+        <div class="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-md w-full relative transform scale-100 transition-transform animate-[pop_0.3s_ease-out] max-h-[90vh] overflow-y-auto">
             <button onclick="document.getElementById('join_modal').classList.add('hidden'); document.getElementById('join_modal').classList.remove('flex')" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600 text-2xl transition-colors"><i class="fa-solid fa-xmark"></i></button>
             <div class="text-center">
                 <div class="w-20 h-20 bg-yellow-100 text-yellow-500 rounded-full flex flex-col items-center justify-center text-4xl mx-auto mb-6 shadow-inner">
@@ -512,7 +512,7 @@
 
     <!-- BUDDIES MODAL -->
     <div id="buddies_modal" class="fixed inset-0 z-[100] bg-black/60 hidden flex-col items-center justify-center p-4 backdrop-blur-sm transition-all duration-300">
-        <div class="bg-white rounded-[3rem] shadow-2xl p-8 max-w-lg w-full relative transform scale-100 transition-transform animate-[pop_0.3s_ease-out]">
+        <div class="bg-white rounded-[3rem] shadow-2xl p-8 max-w-lg w-full relative transform scale-100 transition-transform animate-[pop_0.3s_ease-out] max-h-[90vh] overflow-y-auto">
             <button onclick="document.getElementById('buddies_modal').classList.add('hidden'); document.getElementById('buddies_modal').classList.remove('flex')" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600 text-2xl transition-colors"><i class="fa-solid fa-xmark"></i></button>
             <div class="text-center pt-2">
                 <h3 class="text-3xl font-black text-gray-800 mb-2">The Buddy System</h3>

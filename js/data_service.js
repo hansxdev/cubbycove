@@ -2076,6 +2076,10 @@ const DataService = {
 
         } catch (e) {
             console.error('recordVideoReward error:', e.message);
+            if (e.code === 401) {
+                console.error('[Rewards] ❌ Permission Denied (401): Ensure the `kid_rewards` collection has "Create" permission for "Any", and the `children` collection has "Update" permission for "Any" in the Appwrite Console.');
+                throw new Error('Permission Denied: Ensure Appwrite permissions are set correctly for rewards.');
+            }
             throw e;
         }
     },
@@ -2161,6 +2165,9 @@ const DataService = {
             return status;
         } catch (e) {
             console.error('updatePathProgress error:', e.message);
+            if (e.code === 401) {
+                console.error('[PathProgress] ❌ Permission Denied (401): Ensure the `kid_path_status` collection has "Create" and "Update" permissions for "Any" in the Appwrite Console.');
+            }
             throw e;
         }
     },
@@ -2195,6 +2202,9 @@ const DataService = {
             return reward;
         } catch (e) {
             console.error('recordPathBonus error:', e.message);
+             if (e.code === 401) {
+                console.error('[Rewards] ❌ Permission Denied (401): Ensure the `kid_rewards` collection has "Create" permission for "Any", and the `children` collection has "Update" permission for "Any" in the Appwrite Console.');
+            }
             throw e;
         }
     }

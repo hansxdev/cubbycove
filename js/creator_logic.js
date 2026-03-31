@@ -29,51 +29,50 @@ let chartSparkLikes = null;
 let chartSparkDislikes = null;
 
 // ═════════════════════════════════════════════════════════════════════════════
-//  INIT
+//  TAB SWITCHING & INIT
 // ═════════════════════════════════════════════════════════════════════════════
+
+window.showTab = function (tabName) {
+    document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
+    document.querySelectorAll('nav a').forEach(a => {
+        a.classList.remove('bg-white/10', 'text-white', 'shadow-sm', 'border-white/5');
+        a.classList.add('text-gray-400');
+        const icon = a.querySelector('i');
+        if (icon) {
+            icon.classList.remove('text-white');
+            icon.classList.add('group-hover:text-white', 'transition-colors');
+        }
+    });
+
+    const tab = document.getElementById(`tab-${tabName}`);
+    const nav = document.getElementById(`nav-${tabName}`);
+    if (tab) tab.classList.remove('hidden');
+    if (nav) {
+        nav.classList.add('bg-white/10', 'text-white', 'shadow-sm', 'border-white/5');
+        nav.classList.remove('text-gray-400');
+        const icon = nav.querySelector('i');
+        if (icon) {
+            icon.classList.add('text-white');
+            icon.classList.remove('group-hover:text-white', 'transition-colors');
+        }
+    }
+
+    // Close mobile sidebar on tab switch
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (sidebar && window.innerWidth < 1024) {
+        sidebar.classList.add('-translate-x-full');
+        if (overlay) overlay.classList.add('hidden');
+    }
+
+    // Load tab data
+    if (tabName === 'uploads') loadMyUploads();
+    if (tabName === 'statistics') loadStatistics();
+    if (tabName === 'paths') loadLearningPaths();
+    if (tabName === 'overview') loadOverview();
+};
 document.addEventListener('DOMContentLoaded', () => {
     initCreatorStudio();
-
-    // Tab Switching
-    window.showTab = function (tabName) {
-        document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
-        document.querySelectorAll('nav a').forEach(a => {
-            a.classList.remove('bg-white/10', 'text-white', 'shadow-sm', 'border-white/5');
-            a.classList.add('text-gray-400');
-            const icon = a.querySelector('i');
-            if (icon) {
-                icon.classList.remove('text-white');
-                icon.classList.add('group-hover:text-white', 'transition-colors');
-            }
-        });
-
-        const tab = document.getElementById(`tab-${tabName}`);
-        const nav = document.getElementById(`nav-${tabName}`);
-        if (tab) tab.classList.remove('hidden');
-        if (nav) {
-            nav.classList.add('bg-white/10', 'text-white', 'shadow-sm', 'border-white/5');
-            nav.classList.remove('text-gray-400');
-            const icon = nav.querySelector('i');
-            if (icon) {
-                icon.classList.add('text-white');
-                icon.classList.remove('group-hover:text-white', 'transition-colors');
-            }
-        }
-
-        // Close mobile sidebar on tab switch
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebar-overlay');
-        if (sidebar && window.innerWidth < 1024) {
-            sidebar.classList.add('-translate-x-full');
-            if (overlay) overlay.classList.add('hidden');
-        }
-
-        // Load tab data
-        if (tabName === 'uploads') loadMyUploads();
-        if (tabName === 'statistics') loadStatistics();
-        if (tabName === 'paths') loadLearningPaths();
-        if (tabName === 'overview') loadOverview();
-    };
 
     // Upload Form
     const form = document.getElementById('uploadForm');
@@ -101,7 +100,9 @@ async function initCreatorStudio() {
         showTab('overview');
     } catch (e) {
         console.error('Creator init error:', e);
-        window.location.href = '../login.html';
+        // Alert the error so the user and we can debug it instead of redirecting silently
+        alert("Creator init error: " + e.message);
+        // window.location.href = '../login.html';
     }
 }
 

@@ -59,7 +59,6 @@ function setupVirtualScroll(containerId, listId, itemsHtmlArray) {
 
         container.addEventListener('scroll', renderVirtualScrollVisible);
         container.style.overflowY = 'auto';
-        container.style.position = 'absolute';
         _vsState.initialized = true;
     }
 

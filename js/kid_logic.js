@@ -757,23 +757,25 @@ function showRewardCelebration(points) {
     const existing = document.getElementById('cubby-reward-celebration');
     if (existing) existing.remove();
 
-    // Build confetti particles
-    const confettiColors = ['#f97316','#a855f7','#3b82f6','#22c55e','#eab308','#ec4899','#14b8a6'];
-    const confettiPieces = Array.from({ length: 28 }, (_, i) => {
+    // Build confetti particles (Chunky playful colors)
+    const confettiColors = ['#f43f5e', '#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b'];
+    const confettiPieces = Array.from({ length: 40 }, (_, i) => {
         const color = confettiColors[i % confettiColors.length];
         const left = Math.random() * 100;
-        const delay = (Math.random() * 0.8).toFixed(2);
-        const size = (Math.random() * 8 + 6).toFixed(0);
+        const delay = (Math.random() * 0.6).toFixed(2);
+        const size = (Math.random() * 12 + 10).toFixed(0);
         const rotation = Math.round(Math.random() * 360);
+        const isCircle = Math.random() > 0.5;
         return `<div style="
             position:absolute;
             left:${left}%;
-            top:-10px;
+            top:-20px;
             width:${size}px;
             height:${size}px;
             background:${color};
-            border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
-            animation: cubby-fall 1.8s ${delay}s ease-in forwards;
+            border: 3px solid #0f172a;
+            border-radius:${isCircle ? '50%' : '4px'};
+            animation: cubby-fall 1.5s ${delay}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
             transform: rotate(${rotation}deg);
             opacity:0;
         "></div>`;
@@ -785,101 +787,118 @@ function showRewardCelebration(points) {
     popup.innerHTML = `
         <style>
             @keyframes cubby-fall {
-                0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
-                100% { transform: translateY(320px) rotate(720deg); opacity: 0; }
+                0%   { transform: translateY(0px) rotate(0deg);   opacity: 1; }
+                100% { transform: translateY(500px) rotate(1080deg); opacity: 0; }
             }
-            @keyframes cubby-pop-in {
-                0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
-                65%  { transform: translate(-50%, -50%) scale(1.08); opacity: 1; }
+            @keyframes cubby-toy-pop {
+                0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
                 100% { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
             }
-            @keyframes cubby-star-spin {
-                0%   { transform: rotate(0deg) scale(1); }
-                50%  { transform: rotate(180deg) scale(1.3); }
-                100% { transform: rotate(360deg) scale(1); }
+            @keyframes cubby-star-bounce {
+                0%, 100% { transform: translateY(0) scale(1) rotate(-10deg); }
+                50%      { transform: translateY(-16px) scale(1.15) rotate(10deg); }
             }
             @keyframes cubby-fade-out {
-                0%   { opacity: 1; }
-                100% { opacity: 0; }
+                0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
             }
+            /* Google Fonts for playful look if available, else falls back to system display font */
+            @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
         </style>
 
         <!-- Overlay backdrop -->
         <div style="
             position: fixed; inset: 0; z-index: 99999;
-            background: rgba(0,0,0,0.45);
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             display: flex; align-items: center; justify-content: center;
         ">
             <!-- Confetti layer -->
-            <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none;">
+            <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:100000;">
                 ${confettiPieces}
             </div>
 
-            <!-- Celebration card -->
+            <!-- Neo-brutalist Toybox Card -->
             <div style="
                 position: absolute;
                 top: 50%; left: 50%;
+                z-index: 100001;
                 transform: translate(-50%, -50%) scale(1);
-                animation: cubby-pop-in 0.55s cubic-bezier(.34,1.56,.64,1) both;
-                background: linear-gradient(135deg, #a855f7 0%, #6366f1 50%, #3b82f6 100%);
-                border-radius: 32px;
-                padding: 40px 48px;
+                animation: cubby-toy-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+                background: #ffffff;
+                border: 8px solid #0f172a;
+                border-radius: 48px;
+                padding: 48px 40px;
                 text-align: center;
-                box-shadow: 0 20px 60px rgba(80,0,180,0.45), 0 0 0 6px rgba(255,255,255,0.15);
-                min-width: 280px;
-                max-width: 92vw;
+                box-shadow: 0 16px 0 #0f172a, 0 32px 64px rgba(0,0,0,0.4);
+                min-width: 320px;
+                max-width: 90vw;
             ">
-                <!-- Spinning star -->
+                <!-- Bouncing star sticker -->
                 <div style="
-                    font-size: 56px;
-                    animation: cubby-star-spin 1.5s linear infinite;
+                    font-size: 72px;
+                    animation: cubby-star-bounce 1.5s ease-in-out infinite;
                     display: inline-block;
-                    margin-bottom: 12px;
-                    filter: drop-shadow(0 0 12px #fbbf24);
-                ">⭐</div>
+                    margin-bottom: 16px;
+                    filter: drop-shadow(0 8px 0 rgba(0,0,0,0.15));
+                ">🌟</div>
 
+                <!-- Playful text -->
                 <div style="
-                    color: #fef08a;
+                    color: #ec4899;
+                    font-size: 16px;
+                    font-weight: 900;
+                    letter-spacing: 4px;
+                    text-transform: uppercase;
+                    margin-bottom: 8px;
+                    font-family: 'Fredoka One', system-ui, -apple-system, sans-serif;
+                ">You did it!</div>
+
+                <!-- Giant comic-style points -->
+                <div style="
+                    color: #fde047;
+                    font-size: 52px;
+                    font-weight: 900;
+                    font-family: 'Fredoka One', system-ui, -apple-system, sans-serif;
+                    line-height: 1.1;
+                    letter-spacing: -2px;
+                    -webkit-text-stroke: 4px #0f172a;
+                    text-shadow: 6px 6px 0 #0f172a;
+                    margin-bottom: 16px;
+                ">+${points} STARS</div>
+
+                <!-- Subtitle pill -->
+                <div style="
+                    display: inline-block;
+                    background: #f1f5f9;
+                    border: 3px solid #0f172a;
+                    border-radius: 99px;
+                    padding: 8px 24px;
+                    color: #334155;
                     font-size: 15px;
                     font-weight: 800;
-                    letter-spacing: 3px;
-                    text-transform: uppercase;
-                    margin-bottom: 6px;
-                    font-family: system-ui, sans-serif;
-                ">Great Job!</div>
-
-                <div style="
-                    color: white;
-                    font-size: 38px;
-                    font-weight: 900;
-                    font-family: system-ui, sans-serif;
-                    line-height: 1.15;
-                    text-shadow: 0 4px 12px rgba(0,0,0,0.25);
-                ">+${points} Stars!</div>
-
-                <div style="
-                    color: rgba(255,255,255,0.75);
-                    font-size: 13px;
-                    font-weight: 700;
-                    margin-top: 8px;
-                    font-family: system-ui, sans-serif;
-                ">You finished the video! 🎉</div>
-
-                <!-- Bouncing emojis -->
-                <div style="margin-top: 16px; font-size: 22px; letter-spacing: 6px;">🌟 🦄 🎈</div>
+                    font-family: system-ui, -apple-system, sans-serif;
+                    box-shadow: 0 4px 0 #0f172a;
+                ">Video Complete! 🚀</div>
             </div>
         </div>
     `;
 
     document.body.appendChild(popup);
 
-    // Auto-remove after 4 seconds with a fade-out
+    // Auto-remove after 4.5 seconds with a fade-out
     setTimeout(() => {
         if (popup && popup.parentNode) {
-            popup.style.animation = 'cubby-fade-out 0.5s ease forwards';
-            setTimeout(() => { if (popup.parentNode) popup.remove(); }, 500);
+             const card = popup.querySelector('div:nth-child(2)');
+             if (card) {
+                 card.style.animation = 'cubby-fade-out 0.4s ease-in forwards';
+             }
+             popup.style.transition = 'opacity 0.4s ease';
+             popup.style.opacity = '0';
+             setTimeout(() => { if (popup.parentNode) popup.remove(); }, 400);
         }
-    }, 3500);
+    }, 4000);
 }
 
 // ─── Recommendation Logic ────────────────────────────────────────────────────

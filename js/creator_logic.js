@@ -22,6 +22,12 @@ let chartViews = null;
 let chartLikesDislikes = null;
 let chartVideoSubscribers = null;
 
+// Sparklines
+let chartSparkSubs = null;
+let chartSparkViews = null;
+let chartSparkLikes = null;
+let chartSparkDislikes = null;
+
 // ═════════════════════════════════════════════════════════════════════════════
 //  INIT
 // ═════════════════════════════════════════════════════════════════════════════
@@ -32,16 +38,26 @@ document.addEventListener('DOMContentLoaded', () => {
     window.showTab = function (tabName) {
         document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
         document.querySelectorAll('nav a').forEach(a => {
-            a.classList.remove('bg-orange-50', 'text-orange-600', 'border-orange-500');
-            a.classList.add('text-gray-500', 'border-transparent');
+            a.classList.remove('bg-white/10', 'text-white', 'shadow-sm', 'border-white/5');
+            a.classList.add('text-gray-400');
+            const icon = a.querySelector('i');
+            if (icon) {
+                icon.classList.remove('text-white');
+                icon.classList.add('group-hover:text-white', 'transition-colors');
+            }
         });
 
         const tab = document.getElementById(`tab-${tabName}`);
         const nav = document.getElementById(`nav-${tabName}`);
         if (tab) tab.classList.remove('hidden');
         if (nav) {
-            nav.classList.add('bg-orange-50', 'text-orange-600', 'border-orange-500');
-            nav.classList.remove('text-gray-500', 'border-transparent');
+            nav.classList.add('bg-white/10', 'text-white', 'shadow-sm', 'border-white/5');
+            nav.classList.remove('text-gray-400');
+            const icon = nav.querySelector('i');
+            if (icon) {
+                icon.classList.add('text-white');
+                icon.classList.remove('group-hover:text-white', 'transition-colors');
+            }
         }
 
         // Close mobile sidebar on tab switch
@@ -513,6 +529,16 @@ function distributeValue(total, length) {
     return data;
 }
 
+function getGradient(ctxId, height, rgb) {
+    const canvas = document.getElementById(ctxId);
+    if (!canvas) return `rgba(${rgb}, 0.1)`;
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, `rgba(${rgb}, 0.25)`);
+    gradient.addColorStop(1, `rgba(${rgb}, 0.0)`);
+    return gradient;
+}
+
 function updateStatsCharts(videos) {
     const labels = generateTimeLabels(statsPeriod);
     const len = labels.length;
@@ -535,89 +561,108 @@ function updateStatsCharts(videos) {
             x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10, weight: 'bold' }, color: '#9CA3AF' } },
             y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { font: { size: 10, weight: 'bold' }, color: '#9CA3AF' } }
         },
-        elements: { line: { tension: 0.4, borderWidth: 2 }, point: { radius: 2, hoverRadius: 5 } }
+        elements: { line: { tension: 0.4, borderWidth: 3 }, point: { radius: 3, hoverRadius: 6, backgroundColor: '#ffffff', borderWidth: 2 } }
     };
 
-    // Subscribers Gained
+    // Main Charts
     if (chartSubscribers) chartSubscribers.destroy();
     chartSubscribers = new Chart(document.getElementById('chartSubscribers'), {
         type: 'line',
         data: {
             labels,
             datasets: [{
-                label: 'Subscribers',
-                data: subsData,
-                borderColor: '#F97316',
-                backgroundColor: 'rgba(249,115,22,0.1)',
+                label: 'Subscribers', data: subsData,
+                borderColor: '#3B82F6', pointBorderColor: '#3B82F6',
+                backgroundColor: getGradient('chartSubscribers', 220, '59,130,246'),
                 fill: true
             }]
         },
         options: chartOpts
     });
 
-    // Total Views
     if (chartViews) chartViews.destroy();
     chartViews = new Chart(document.getElementById('chartViews'), {
         type: 'line',
         data: {
             labels,
             datasets: [{
-                label: 'Views',
-                data: viewsData,
-                borderColor: '#3B82F6',
-                backgroundColor: 'rgba(59,130,246,0.1)',
+                label: 'Views', data: viewsData,
+                borderColor: '#10B981', pointBorderColor: '#10B981',
+                backgroundColor: getGradient('chartViews', 220, '16,185,129'),
                 fill: true
             }]
         },
         options: chartOpts
     });
 
-    // Likes vs Dislikes
     if (chartLikesDislikes) chartLikesDislikes.destroy();
     chartLikesDislikes = new Chart(document.getElementById('chartLikesDislikes'), {
-        type: 'line',
+        type: 'bar',
         data: {
             labels,
             datasets: [
-                {
-                    label: 'Likes',
-                    data: likesData,
-                    borderColor: '#22C55E',
-                    backgroundColor: 'rgba(34,197,94,0.1)',
-                    fill: true
-                },
-                {
-                    label: 'Dislikes',
-                    data: dislikesData,
-                    borderColor: '#EF4444',
-                    backgroundColor: 'rgba(239,68,68,0.1)',
-                    fill: true
-                }
+                { label: 'Likes', data: likesData, backgroundColor: '#10B981', borderRadius: 4, barPercentage: 0.6, categoryPercentage: 0.8 },
+                { label: 'Dislikes', data: dislikesData, backgroundColor: '#EF4444', borderRadius: 4, barPercentage: 0.6, categoryPercentage: 0.8 }
             ]
         },
         options: {
-            ...chartOpts,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: { font: { size: 11, weight: 'bold' }, usePointStyle: true, pointStyle: 'circle' }
-                }
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 12, font: { size: 10, weight: 'bold' }, color: '#9CA3AF' } },
+                y: { beginAtZero: true, grid: { color: '#F3F4F6', drawBorder: false }, ticks: { font: { size: 10, weight: 'bold' }, color: '#9CA3AF' } }
             }
         }
+    });
+
+    // Sparklines
+    const sparklineOpts = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { display: false, beginAtZero: true } },
+        elements: { line: { tension: 0.4, borderWidth: 2 }, point: { radius: 0 } },
+        layout: { padding: 0 }
+    };
+
+    if (chartSparkSubs) chartSparkSubs.destroy();
+    chartSparkSubs = new Chart(document.getElementById('sparkSubs'), {
+        type: 'line',
+        data: { labels, datasets: [{ data: subsData, borderColor: '#3B82F6', backgroundColor: getGradient('sparkSubs', 40, '59,130,246'), fill: true }] },
+        options: sparklineOpts
+    });
+
+    if (chartSparkViews) chartSparkViews.destroy();
+    chartSparkViews = new Chart(document.getElementById('sparkViews'), {
+        type: 'line',
+        data: { labels, datasets: [{ data: viewsData, borderColor: '#A855F7', backgroundColor: getGradient('sparkViews', 40, '168,85,247'), fill: true }] },
+        options: sparklineOpts
+    });
+
+    if (chartSparkLikes) chartSparkLikes.destroy();
+    chartSparkLikes = new Chart(document.getElementById('sparkLikes'), {
+        type: 'line',
+        data: { labels, datasets: [{ data: likesData, borderColor: '#10B981', backgroundColor: getGradient('sparkLikes', 40, '16,185,129'), fill: true }] },
+        options: sparklineOpts
+    });
+
+    if (chartSparkDislikes) chartSparkDislikes.destroy();
+    chartSparkDislikes = new Chart(document.getElementById('sparkDislikes'), {
+        type: 'line',
+        data: { labels, datasets: [{ data: dislikesData, borderColor: '#EF4444', backgroundColor: getGradient('sparkDislikes', 40, '239,68,68'), fill: true }] },
+        options: sparklineOpts
     });
 }
 
 window.setStatsPeriod = function (period) {
     statsPeriod = period;
     document.querySelectorAll('.stats-period-btn').forEach(btn => {
-        btn.classList.remove('bg-orange-500', 'text-white');
-        btn.classList.add('text-gray-500');
+        btn.classList.remove('bg-white', 'text-gray-800', 'shadow-sm', 'border-gray-100');
+        btn.classList.add('text-gray-500', 'border-transparent');
     });
     const activeBtn = document.getElementById(`stats-period-${period}`);
     if (activeBtn) {
-        activeBtn.classList.add('bg-orange-500', 'text-white');
-        activeBtn.classList.remove('text-gray-500');
+        activeBtn.classList.add('bg-white', 'text-gray-800', 'shadow-sm', 'border-gray-100');
+        activeBtn.classList.remove('text-gray-500', 'border-transparent');
     }
     loadStatistics();
 };

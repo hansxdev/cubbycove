@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tabName === 'uploads') loadMyUploads();
         if (tabName === 'statistics') loadStatistics();
         if (tabName === 'paths') loadLearningPaths();
+        if (tabName === 'overview') loadOverview();
     };
 
     // Upload Form
@@ -97,7 +98,7 @@ async function initCreatorStudio() {
         const displayName = currentUser.name || currentUser.email;
         if (nameEl) nameEl.textContent = displayName;
         if (avatarEl) avatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(displayName)}`;
-        loadMyUploads();
+        showTab('overview');
     } catch (e) {
         console.error('Creator init error:', e);
         window.location.href = '../login.html';
@@ -334,9 +335,20 @@ async function loadMyUploads() {
         const liveCount = creatorVideos.filter(v => v.status === 'approved').length;
         const pendingCount = creatorVideos.filter(v => v.status === 'pending').length;
         const totalViews = creatorVideos.reduce((sum, v) => sum + (v.views || 0), 0);
-        document.getElementById('stat-live').textContent = liveCount;
-        document.getElementById('stat-pending').textContent = pendingCount;
-        document.getElementById('stat-total-views').textContent = totalViews.toLocaleString();
+        
+        const elStatLive = document.getElementById('stat-live');
+        const elStatPending = document.getElementById('stat-pending');
+        const elStatTotalViews = document.getElementById('stat-total-views');
+        if (elStatLive) elStatLive.textContent = liveCount;
+        if (elStatPending) elStatPending.textContent = pendingCount;
+        if (elStatTotalViews) elStatTotalViews.textContent = totalViews.toLocaleString();
+
+        const ovLive = document.getElementById('overview-stat-live');
+        const ovPending = document.getElementById('overview-stat-pending');
+        const ovViews = document.getElementById('overview-stat-views');
+        if (ovLive) ovLive.textContent = liveCount;
+        if (ovPending) ovPending.textContent = pendingCount;
+        if (ovViews) ovViews.textContent = totalViews.toLocaleString();
 
         if (sorted.length === 0) {
             listEl.innerHTML = `
@@ -435,6 +447,111 @@ function openVideoDetail(videoId) {
         playerContainer.innerHTML = `<video src="${escapeHtml(video.url)}" class="w-full h-full" controls preload="metadata"></video>`;
     }
 
+    // ═════════════════════════════════════════════════════════════════════════════
+//  OVERVIEW TAB
+// ═════════════════════════════════════════════════════════════════════════════
+
+async function loadOverview() {
+    if (!currentUser) return;
+    try {
+        const { databases, DB_ID } = DataService._getServices();
+        const { Query } = Appwrite;
+
+        const res = await databases.listDocuments(DB_ID, 'videos', [
+            Query.equal('creatorEmail', currentUser.email),
+            Query.orderDesc('$createdAt'),
+            Query.limit(10)
+        ]);
+
+        creatorVideos = res.documents;
+        loadMyUploads(); // Populates counters & 'My Uploads'
+        renderOverviewCharts(creatorVideos);
+        renderOverviewCarousel(creatorVideos);
+    } catch(err) {
+        console.error('Overview error:', err);
+    }
+}
+
+let overviewChartSubs = null;
+let overviewChartViews = null;
+
+function renderOverviewCharts(videos) {
+    const labels = generateTimeLabels('week');
+    const len = labels.length;
+
+    const totalSubs = videos.reduce((s, v) => s + (v.subscriberGains || 0), 0);
+    const totalViews = videos.reduce((s, v) => s + (v.views || 0), 0);
+
+    const subsData = distributeValue(totalSubs, len);
+    const viewsData = distributeValue(totalViews, len);
+
+    const chartOpts = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 7, font: { size: 10, weight: 'bold' }, color: '#9CA3AF' } },
+            y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { font: { size: 10, weight: 'bold' }, color: '#9CA3AF' } }
+        },
+        elements: { line: { tension: 0.4, borderWidth: 2 }, point: { radius: 0 } }
+    };
+
+    if (overviewChartSubs) overviewChartSubs.destroy();
+    overviewChartSubs = new Chart(document.getElementById('overviewChartSubs'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Subscribers', data: subsData,
+                borderColor: '#F97316', pointBorderColor: '#F97316',
+                backgroundColor: getGradient('overviewChartSubs', 180, '249,115,22'),
+                fill: true
+            }]
+        },
+        options: chartOpts
+    });
+
+    if (overviewChartViews) overviewChartViews.destroy();
+    overviewChartViews = new Chart(document.getElementById('overviewChartViews'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Views', data: viewsData,
+                borderColor: '#3B82F6', pointBorderColor: '#3B82F6',
+                backgroundColor: getGradient('overviewChartViews', 180, '59,130,246'),
+                fill: true
+            }]
+        },
+        options: chartOpts
+    });
+}
+
+function renderOverviewCarousel(videos) {
+    const listEl = document.getElementById('overview-carousel');
+    if (!listEl) return;
+    
+    if (videos.length === 0) {
+        listEl.innerHTML = '<div class="text-xs font-bold text-gray-400 py-4 px-2 tracking-wide uppercase">No videos yet...</div>';
+        return;
+    }
+    
+    listEl.innerHTML = videos.map(v => {
+        const thumbnail = getVideoThumbnail(v.url);
+        return `
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 min-w-[200px] flex-shrink-0 hover:shadow-md transition-all cursor-pointer" onclick="openVideoDetail('${v.$id}')">
+                <div class="w-full h-28 bg-gray-100 rounded-xl overflow-hidden relative mb-3">
+                    ${thumbnail}
+                </div>
+                <h4 class="font-bold text-gray-800 text-sm truncate mb-2">${escapeHtml(v.title)}</h4>
+                <div class="flex items-center gap-3 text-[10px] font-black font-semibold text-gray-500">
+                    <span class="flex items-center text-blue-600"><i class="fa-solid fa-thumbs-up mr-1 text-blue-500"></i>${(v.likes || 0)}</span>
+                    <span class="flex items-center text-orange-400"><i class="fa-solid fa-thumbs-down mr-1"></i>${(v.dislikes || 0)}</span>
+                    <span class="flex items-center text-gray-500"><i class="fa-solid fa-eye mr-1 text-indigo-400"></i>${(v.views || 0)}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
     // Init per-video subscriber chart
     initVideoSubscribersChart(video);
 

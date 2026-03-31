@@ -126,9 +126,119 @@
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 sm:p-6 relative">
 
                 <!-- ═════════════════════════════════════════
+                     TAB 0: OVERVIEW
+                ═════════════════════════════════════════ -->
+                <div id="tab-overview" class="space-y-6 max-w-6xl mx-auto">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-2xl font-black text-gray-800">Creator Studio</h2>
+                    </div>
+
+                    <!-- 3 Top Stats -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+                        <!-- Live Videos -->
+                        <div class="bg-[#EFF6FF] p-4 rounded-3xl shadow-sm border border-[#DBEAFE] flex items-center gap-4 hover:shadow-md transition-shadow">
+                            <div class="w-14 h-14 rounded-2xl bg-[#3B82F6] text-white flex items-center justify-center text-2xl shadow-sm">
+                                <i class="fa-solid fa-tower-broadcast"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Live Videos</p>
+                                <h3 class="text-2xl font-black text-gray-800 mt-0.5" id="overview-stat-live">0</h3>
+                            </div>
+                        </div>
+                        <!-- Pending Review -->
+                        <div class="bg-[#FFF7ED] p-4 rounded-3xl shadow-sm border border-[#FFEDD5] flex items-center gap-4 hover:shadow-md transition-shadow">
+                            <div class="w-14 h-14 rounded-2xl bg-[#F97316] text-white flex items-center justify-center text-2xl shadow-sm">
+                                <i class="fa-solid fa-file-invoice"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Pending Review</p>
+                                <h3 class="text-2xl font-black text-gray-800 mt-0.5" id="overview-stat-pending">0</h3>
+                            </div>
+                        </div>
+                        <!-- Total Views -->
+                        <div class="bg-[#EFF6FF] p-4 rounded-3xl shadow-sm border border-[#DBEAFE] flex items-center gap-4 hover:shadow-md transition-shadow">
+                            <div class="w-14 h-14 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center text-2xl shadow-sm">
+                                <i class="fa-solid fa-eye"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Views</p>
+                                <h3 class="text-2xl font-black text-gray-800 mt-0.5" id="overview-stat-views">0</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Line Charts -->
+                    <div>
+                        <h3 class="text-lg font-black text-gray-800 mb-4">Statistics</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 p-6 flex flex-col">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h4 class="text-sm font-black text-gray-800">Subscribers Gained</h4>
+                                    <div class="text-[10px] font-bold text-gray-400 flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
+                                        <span class="w-2.5 h-1 rounded flex bg-[#F97316]"></span> Subscribers Gained
+                                    </div>
+                                </div>
+                                <div class="w-full h-[180px] relative"><canvas id="overviewChartSubs"></canvas></div>
+                            </div>
+                            <div class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 p-6 flex flex-col">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h4 class="text-sm font-black text-gray-800">Total Views</h4>
+                                    <div class="text-[10px] font-bold text-gray-400 flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
+                                        <span class="w-2.5 h-1 rounded flex bg-[#3B82F6]"></span> Total Views
+                                    </div>
+                                </div>
+                                <div class="w-full h-[180px] relative"><canvas id="overviewChartViews"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Row: Upload & Carousel -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
+                        <!-- Upload New Content Widget -->
+                        <div class="bg-white rounded-[2rem] shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-gray-100 p-8 flex flex-col justify-center text-center">
+                            <div class="w-16 h-16 bg-blue-50 text-blue-400 rounded-full mx-auto flex items-center justify-center text-3xl mb-4 border border-blue-100">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <h3 class="font-black text-gray-800 text-lg mb-1">Upload New Content</h3>
+                            <p class="text-[11px] font-bold text-gray-400 mb-6 px-4">Your video will be reviewed by our safety team before going live</p>
+                            
+                            <!-- Mock Inputs -->
+                            <div class="flex gap-2 mb-4">
+                                <div class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-left text-xs text-gray-400 font-semibold cursor-not-allowed">Video Source (YouTube URL)</div>
+                                <button onclick="showTab('new')" class="bg-[#0A2540] hover:bg-[#1A365D] text-white font-bold px-4 py-2 rounded-xl text-xs whitespace-nowrap transition-colors shadow-sm">Upload from Device</button>
+                            </div>
+                            <div class="flex gap-2 mb-6">
+                                <div class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-left text-xs text-gray-400 font-semibold cursor-not-allowed">Title</div>
+                                <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-left text-xs text-gray-400 font-semibold cursor-not-allowed w-28 flex justify-between items-center">Category <i class="fa-solid fa-chevron-down ml-1 text-[10px]"></i></div>
+                            </div>
+
+                            <button onclick="showTab('new')" class="bg-[#F97316] hover:bg-[#EA580C] text-white font-black py-3 rounded-2xl shadow-md transition-all text-sm w-full tracking-wide">
+                                Submit for Review
+                            </button>
+                        </div>
+
+                        <!-- Content Carousel -->
+                        <div class="lg:col-span-2 flex flex-col">
+                            <div class="flex justify-between items-center mb-4 px-1">
+                                <h3 class="text-lg font-black text-gray-800">Content Carousel</h3>
+                                <div class="flex gap-2">
+                                    <button class="w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-800 shadow-sm transition-colors"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                                    <button class="w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-800 shadow-sm transition-colors"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+                                </div>
+                            </div>
+                            <div class="flex gap-4 overflow-x-auto no-scrollbar pb-4 flex-1 items-stretch" id="overview-carousel">
+                                <div class="flex items-center justify-center w-full h-48 bg-gray-50 rounded-2xl border border-gray-100 border-dashed text-gray-400 font-bold text-sm">
+                                    <i class="fa-solid fa-circle-notch fa-spin mr-2 text-xl"></i> Loading Carousel...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═════════════════════════════════════════
                      TAB 1: MY UPLOADS
                 ═════════════════════════════════════════ -->
-                <div id="tab-uploads" class="space-y-6 max-w-5xl mx-auto">
+                <div id="tab-uploads" class="hidden space-y-6 max-w-5xl mx-auto">
                     <div class="flex items-center justify-between mb-2">
                         <h2 class="text-2xl font-black text-gray-800">My Uploads</h2>
                     </div>

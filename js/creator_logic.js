@@ -752,62 +752,80 @@ async function loadLearningPaths() {
 }
 
 window.openCreatePathModal = function() {
-    editingPathId = null;
-    selectedPathVideos = [];
-    document.getElementById('path-title').value = '';
-    document.getElementById('path-description').value = '';
-    document.getElementById('path-type').value = 'sequential';
-    document.getElementById('path-bonus').value = 50;
-    
-    // Update Modal Title & Button
-    document.querySelector('#path-create-modal h3').textContent = 'Create Learning Path';
-    document.getElementById('save-path-btn').textContent = 'Create Learning Path';
-    // Remove delete button if exists
-    const existingDel = document.getElementById('delete-path-btn');
-    if (existingDel) existingDel.remove();
+    try {
+        editingPathId = null;
+        selectedPathVideos = [];
+        document.getElementById('path-title').value = '';
+        document.getElementById('path-description').value = '';
+        document.getElementById('path-type').value = 'sequential';
+        document.getElementById('path-bonus').value = 50;
 
-    renderSelectedVideos();
-    renderAvailableVideos();
-    
-    document.getElementById('path-create-modal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+        // Update Modal Title & Button (guard against missing elements)
+        const modalTitle = document.querySelector('#path-create-modal h3');
+        if (modalTitle) modalTitle.textContent = 'Create Learning Path';
+        const saveBtn = document.getElementById('save-path-btn');
+        if (saveBtn) saveBtn.textContent = 'Create Learning Path';
+
+        // Remove delete button if exists
+        const existingDel = document.getElementById('delete-path-btn');
+        if (existingDel) existingDel.remove();
+
+        renderSelectedVideos();
+        renderAvailableVideos();
+
+        document.getElementById('path-create-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    } catch (e) {
+        console.error('openCreatePathModal error:', e);
+        // Make sure we never leave the page locked
+        document.body.style.overflow = '';
+    }
 };
 
 window.editLearningPath = function(pathId) {
-    const path = creatorPaths.find(p => p.$id === pathId);
-    if (!path) return;
+    try {
+        const path = creatorPaths.find(p => p.$id === pathId);
+        if (!path) return;
 
-    editingPathId = pathId;
-    document.getElementById('path-title').value = path.title;
-    document.getElementById('path-description').value = path.description || '';
-    document.getElementById('path-type').value = path.type || 'sequential';
-    document.getElementById('path-bonus').value = path.bonusPoints || 50;
+        editingPathId = pathId;
+        document.getElementById('path-title').value = path.title;
+        document.getElementById('path-description').value = path.description || '';
+        document.getElementById('path-type').value = path.type || 'sequential';
+        document.getElementById('path-bonus').value = path.bonusPoints || 50;
 
-    // Load selected videos from ID list
-    selectedPathVideos = (path.videoIds || []).map(id => {
-        return creatorVideos.find(v => v.$id === id) || { $id: id, title: 'Unknown Video', url: '' };
-    });
+        // Load selected videos from ID list
+        selectedPathVideos = (path.videoIds || []).map(id => {
+            return creatorVideos.find(v => v.$id === id) || { $id: id, title: 'Unknown Video', url: '' };
+        });
 
-    // Update Modal Title & Button
-    document.querySelector('#path-create-modal h3').textContent = 'Edit Learning Path';
-    document.getElementById('save-path-btn').textContent = 'Save Changes';
+        // Update Modal Title & Button (guard against missing elements)
+        const modalTitle = document.querySelector('#path-create-modal h3');
+        if (modalTitle) modalTitle.textContent = 'Edit Learning Path';
+        const saveBtn = document.getElementById('save-path-btn');
+        if (saveBtn) saveBtn.textContent = 'Save Changes';
 
-    // Add Delete Button if not exists
-    let delBtn = document.getElementById('delete-path-btn');
-    if (!delBtn) {
-        delBtn = document.createElement('button');
-        delBtn.id = 'delete-path-btn';
-        delBtn.className = 'text-red-500 hover:text-red-700 font-bold text-xs mr-auto ml-6';
-        delBtn.innerHTML = '<i class="fa-solid fa-trash mr-1"></i> Delete Path';
-        delBtn.onclick = () => deleteLearningPath(pathId);
-        document.querySelector('#path-create-modal .p-6.border-t').prepend(delBtn);
+        // Add Delete Button if not exists
+        let delBtn = document.getElementById('delete-path-btn');
+        if (!delBtn) {
+            delBtn = document.createElement('button');
+            delBtn.id = 'delete-path-btn';
+            delBtn.className = 'text-red-500 hover:text-red-700 font-bold text-xs mr-auto ml-6';
+            delBtn.innerHTML = '<i class="fa-solid fa-trash mr-1"></i> Delete Path';
+            delBtn.onclick = () => deleteLearningPath(pathId);
+            const footer = document.querySelector('#path-create-modal .p-6.border-t');
+            if (footer) footer.prepend(delBtn);
+        }
+
+        renderSelectedVideos();
+        renderAvailableVideos();
+
+        document.getElementById('path-create-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    } catch (e) {
+        console.error('editLearningPath error:', e);
+        // Make sure we never leave the page locked
+        document.body.style.overflow = '';
     }
-
-    renderSelectedVideos();
-    renderAvailableVideos();
-
-    document.getElementById('path-create-modal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
 };
 
 async function deleteLearningPath(pathId) {
@@ -953,18 +971,25 @@ window.saveLearningPath = async function() {
             creatorEmail: currentUser.email
         };
 
-        await DataService.addPath(pathData);
-        
-        closeCreatePathModal();
-        loadLearningPaths();
-        alert('Learning Path created successfully! 🚀');
+        // FIX: Branch on editingPathId — use update for edits, add for new paths.
+        if (editingPathId) {
+            await DataService.updatePath(editingPathId, pathData);
+            closeCreatePathModal();
+            loadLearningPaths();
+            alert('Learning Path updated successfully! ✅');
+        } else {
+            await DataService.addPath(pathData);
+            closeCreatePathModal();
+            loadLearningPaths();
+            alert('Learning Path created successfully! 🚀');
+        }
 
     } catch (e) {
         console.error('Save path error:', e);
         alert('Failed to save learning path. Please try again.');
     } finally {
         saveBtn.disabled = false;
-        saveBtn.textContent = 'Create Learning Path';
+        saveBtn.textContent = editingPathId ? 'Save Changes' : 'Create Learning Path';
     }
 };
 

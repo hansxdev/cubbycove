@@ -432,6 +432,14 @@ async function loadContinueWatching() {
 // VIDEO PLAYER MODAL — YouTube-style (70/30 Layout)
 // ─────────────────────────────────────────────────────────────────────────────
 window.openKidVideoModal = async function (videoDocId, pathId = null) {
+    // FIX: Always close any existing modal first to prevent black screen stacking
+    const existingModal = document.getElementById('kid-video-modal');
+    if (existingModal) {
+        _stopRewardTracking();
+        existingModal.remove();
+        document.body.style.overflow = '';
+    }
+
     // Find video from cache or fetch it
     let video = _allApprovedVideos.find(v => v.$id === videoDocId);
     if (!video) {
@@ -444,27 +452,23 @@ window.openKidVideoModal = async function (videoDocId, pathId = null) {
     const vidId = isYouTube ? ytMatch[1] : '';
     const safeUrl = (video.url || '').replace(/"/g, '&quot;');
 
+    // FIX: For YouTube, we use a plain div target and initialize via YT.Player API
+    // so we can accurately track play/pause state. For native video, use <video>.
     let playerHtml;
     if (isYouTube) {
-        playerHtml = `<iframe id="kid-modal-player" width="100%" height="100%" src="https://www.youtube.com/embed/${vidId}?autoplay=1&enablejsapi=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+        // The div will be replaced by the YT.Player constructor after the modal is in DOM
+        playerHtml = `<div id="kid-yt-player-target" style="width:100%;height:100%;"></div>`;
     } else {
         playerHtml = `<video id="kid-modal-player" src="${safeUrl}" class="w-full h-full" controls autoplay preload="metadata"></video>`;
     }
 
-    // Start Reward Tracking
-    const pointsArr = [video.pointsValue, 10]; // Fallback if pointsValue is missing
-    const finalPoints = pointsArr.find(p => p !== undefined && p !== null);
-    _startRewardTracking(videoDocId, video.duration || 0, finalPoints, pathId);
-
-    // Log watch history
+    // Log watch history (fire before modal build so it doesn't block UI)
     const session = _getChildSession();
     const thumbUrl = video.thumbnailUrl || (isYouTube ? `https://img.youtube.com/vi/${vidId}/mqdefault.jpg` : '');
     if (session?.$id) {
         DataService.logWatchHistory(session.$id, video.$id, video.title, video.category, video.url, thumbUrl);
         DataService.incrementVideoView(video.$id, '').catch(() => { });
-        // Log to Activity Log for parent dashboard
         DataService.logActivity(session.$id, 'watch', `Started watching: ${video.title}`, { videoId: video.$id, category: video.category });
-        // Log screen time with granular detail for Interest Heatmap
         DataService.logScreenTime(session.$id, 1, video.category?.toLowerCase() || 'entertainment', video.title);
     }
 
@@ -488,8 +492,6 @@ window.openKidVideoModal = async function (videoDocId, pathId = null) {
             <div class="absolute top-[30%] right-[15%] w-3 h-3 bg-blue-200 rounded-full shadow-[0_0_15px_#bfdbfe] animate-[pulse_3s_infinite]"></div>
             <div class="absolute bottom-[20%] left-[10%] w-2.5 h-2.5 bg-pink-200 rounded-full shadow-[0_0_12px_#fbcfe8] animate-[pulse_2.5s_infinite]"></div>
             <div class="absolute top-[50%] right-[40%] w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_8px_white] animate-[pulse_4s_infinite]"></div>
-            
-            <!-- Glowing Orbs -->
             <div class="absolute -top-20 -left-20 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl"></div>
             <div class="absolute bottom-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
         </div>
@@ -526,7 +528,7 @@ window.openKidVideoModal = async function (videoDocId, pathId = null) {
                     <button onclick="window._kidDislikeVideo('${video.$id}')" class="flex items-center gap-2 bg-[#fca5a5] text-red-950 px-6 py-2.5 rounded-full text-base font-black shadow-[0_4px_0_#ef4444] hover:translate-y-[2px] hover:shadow-[0_2px_0_#ef4444] active:translate-y-1 active:shadow-none transition-all group border-[3px] border-red-200">
                         <i class="fa-solid fa-thumbs-down group-hover:scale-110 transition-transform"></i> <span id="kid-dislike-count">${video.dislikes || 0}</span>
                     </button>
-                    <button id="kid-fav-btn" onclick="window._kidToggleFavorite('${video.$id}', '${video.title.replace(/'/g, "\\'")}', '${video.category}', '${safeUrl}', '${thumbUrl}')"
+                    <button id="kid-fav-btn" onclick="window._kidToggleFavorite('${video.$id}', '${video.title.replace(/'/g, "\\'")}'  , '${video.category}', '${safeUrl}', '${thumbUrl}')"
                         class="flex items-center gap-2 ${isFav ? 'bg-[#fbcfe8] text-pink-950 border-[3px] border-pink-300 shadow-[0_4px_0_#f472b6] hover:shadow-[0_2px_0_#f472b6]' : 'bg-white/10 text-white backdrop-blur-sm border-[3px] border-white/20 shadow-[0_4px_0_rgba(255,255,255,0.1)] hover:shadow-[0_2px_0_rgba(255,255,255,0.1)]'} px-6 py-2.5 rounded-full text-base font-black hover:translate-y-[2px] active:translate-y-1 active:shadow-none transition-all group">
                         <i class="fa-solid fa-heart ${isFav ? 'animate-pulse text-pink-500' : ''} group-hover:scale-110 transition-transform"></i> ${isFav ? 'Favorited' : 'Favorite'}
                     </button>
@@ -551,12 +553,81 @@ window.openKidVideoModal = async function (videoDocId, pathId = null) {
     document.body.appendChild(modal);
     document.body.style.overflow = 'hidden';
 
+    // FIX: Initialize the YouTube IFrame Player API for accurate play-state tracking.
+    // For native video, fall back to <video> element events.
+    if (isYouTube) {
+        _initYouTubePlayer(vidId, video, pathId);
+    } else {
+        // For native <video> elements, start tracking immediately
+        const pointsArr = [video.pointsValue, 10];
+        const finalPoints = pointsArr.find(p => p !== undefined && p !== null);
+        _startRewardTracking(videoDocId, video.duration || 0, finalPoints, pathId);
+    }
+
     // Close listeners
     document.getElementById('kid-modal-close-btn').addEventListener('click', _closeKidVideoModal);
     modal.addEventListener('click', (e) => {
         if (e.target === modal) _closeKidVideoModal();
     });
 };
+
+// ── YouTube IFrame Player API Integration ─────────────────────────────────────
+// Reference: https://developers.google.com/youtube/iframe_api_reference
+// We track _ytPlayer globally so _stopRewardTracking can destroy it on close.
+let _ytPlayer = null;
+
+function _initYouTubePlayer(vidId, video, pathId) {
+    const pointsArr = [video.pointsValue, 10];
+    const finalPoints = pointsArr.find(p => p !== undefined && p !== null);
+
+    const _doInit = () => {
+        // Destroy previous player if still alive
+        if (_ytPlayer) {
+            try { _ytPlayer.destroy(); } catch (e) {}
+            _ytPlayer = null;
+        }
+
+        _ytPlayer = new YT.Player('kid-yt-player-target', {
+            videoId: vidId,
+            playerVars: { autoplay: 1, rel: 0, modestbranding: 1 },
+            events: {
+                onReady: () => {
+                    // FIX: Start reward tracking AFTER player is ready so we know aspect ratio
+                    // is rendered and no DOM issues exist. Pass the actual duration if available.
+                    const dur = video.duration || 0;
+                    _startRewardTracking(video.$id, dur, finalPoints, pathId, 'youtube');
+                },
+                onStateChange: (event) => {
+                    // Expose current play state to the reward interval via a global flag.
+                    // YT.PlayerState.PLAYING === 1
+                    window._ytIsPlaying = (event.data === YT.PlayerState.PLAYING);
+                }
+            }
+        });
+    };
+
+    // The YT API may not be loaded yet the first time.
+    if (window.YT && window.YT.Player) {
+        _doInit();
+    } else {
+        // Load the API once and wait for the onYouTubeIframeAPIReady callback
+        if (!document.getElementById('yt-iframe-api-script')) {
+            const script = document.createElement('script');
+            script.id = 'yt-iframe-api-script';
+            script.src = 'https://www.youtube.com/iframe_api';
+            document.head.appendChild(script);
+        }
+        // Queue initialisation — the API calls window.onYouTubeIframeAPIReady when ready
+        const _prev = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = function () {
+            if (typeof _prev === 'function') _prev();
+            // Only proceed if the target element still exists (modal not closed early)
+            if (document.getElementById('kid-yt-player-target')) {
+                _doInit();
+            }
+        };
+    }
+}
 
 function _closeKidVideoModal() {
     _stopRewardTracking();
@@ -568,7 +639,9 @@ function _closeKidVideoModal() {
 }
 
 // ── Reward Logic Implementation ──────────────────────────────────────────────
-async function _startRewardTracking(videoId, duration, points, pathId = null) {
+// FIX: Accept an optional playerType argument ('youtube' | 'native') to choose
+// the correct play-state check without hardcoding isPlaying = true.
+async function _startRewardTracking(videoId, duration, points, pathId = null, playerType = 'native') {
     _currentVideoId = videoId;
     _currentPathId = pathId;
     _currentPointsValue = points;
@@ -580,25 +653,31 @@ async function _startRewardTracking(videoId, duration, points, pathId = null) {
         return;
     }
 
+    // FIX: Unknown duration falls back to 30 seconds (not 5 minutes).
+    // A short, achievable threshold ensures kids always feel rewarded.
     if (!duration || duration <= 0) {
-        console.warn('Video duration unknown. Using 5 min fallback for reward threshold.');
-        duration = 300; 
+        console.warn('Video duration unknown. Using 30s fallback reward threshold.');
+        duration = 30 / _completionThreshold; // equals 37.5s so threshold = 30s
     }
 
     const thresholdSeconds = duration * _completionThreshold;
-    console.log(`🎯 Tracking reward for ${videoId}. Need ${Math.round(thresholdSeconds)}s of watch time.`);
+    console.log(`🎯 Tracking reward for ${videoId} (${playerType}). Need ${Math.round(thresholdSeconds)}s of watch time.`);
+
+    // Reset the global YouTube play-state flag
+    window._ytIsPlaying = false;
 
     _rewardInterval = setInterval(() => {
-        const player = document.getElementById('kid-modal-player');
-        if (!player) return;
-
-        // Check if playing
+        // FIX: Choose the correct play-state detection based on player type.
         let isPlaying = false;
-        if (player.tagName === 'VIDEO') {
-            isPlaying = !player.paused;
+
+        if (playerType === 'youtube') {
+            // Driven by YT.PlayerState events set on window._ytIsPlaying
+            isPlaying = !!window._ytIsPlaying;
         } else {
-            // Limited check for YouTube iframe (requires PostMessage or API, but for MVP we assume presence)
-            isPlaying = true; 
+            // Native <video> element
+            const player = document.getElementById('kid-modal-player');
+            if (!player) return;
+            isPlaying = !player.paused && !player.ended;
         }
 
         if (isPlaying) {
@@ -620,6 +699,12 @@ function _stopRewardTracking() {
     _rewardInterval = null;
     _heartbeatInterval = null;
     _currentVideoId = null;
+    // FIX: Reset YouTube play-state flag and destroy the YT player instance cleanly
+    window._ytIsPlaying = false;
+    if (_ytPlayer) {
+        try { _ytPlayer.destroy(); } catch (e) {}
+        _ytPlayer = null;
+    }
 }
 
 function _heartbeat() {
@@ -664,22 +749,137 @@ async function _claimReward() {
 }
 
 function showRewardCelebration(points) {
-    const modal = document.getElementById('reward-celebration-modal');
-    const msg = document.getElementById('reward-message');
-    const container = document.getElementById('celebration-container');
-    
-    if (!modal || !msg || !container) return;
+    // FIX: The static DOM modal doesn't exist, so we dynamically build and inject
+    // a self-contained celebration popup with CSS confetti animation.
+    // It auto-removes after 4 seconds.
 
-    msg.textContent = `+${points} Stars Earned!`;
-    modal.classList.remove('hidden');
-    
-    // Animate scale
+    // Remove any lingering celebration from a previous trigger
+    const existing = document.getElementById('cubby-reward-celebration');
+    if (existing) existing.remove();
+
+    // Build confetti particles
+    const confettiColors = ['#f97316','#a855f7','#3b82f6','#22c55e','#eab308','#ec4899','#14b8a6'];
+    const confettiPieces = Array.from({ length: 28 }, (_, i) => {
+        const color = confettiColors[i % confettiColors.length];
+        const left = Math.random() * 100;
+        const delay = (Math.random() * 0.8).toFixed(2);
+        const size = (Math.random() * 8 + 6).toFixed(0);
+        const rotation = Math.round(Math.random() * 360);
+        return `<div style="
+            position:absolute;
+            left:${left}%;
+            top:-10px;
+            width:${size}px;
+            height:${size}px;
+            background:${color};
+            border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
+            animation: cubby-fall 1.8s ${delay}s ease-in forwards;
+            transform: rotate(${rotation}deg);
+            opacity:0;
+        "></div>`;
+    }).join('');
+
+    // Build the popup HTML with inline styles (no Tailwind dependency inside the popup)
+    const popup = document.createElement('div');
+    popup.id = 'cubby-reward-celebration';
+    popup.innerHTML = `
+        <style>
+            @keyframes cubby-fall {
+                0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
+                100% { transform: translateY(320px) rotate(720deg); opacity: 0; }
+            }
+            @keyframes cubby-pop-in {
+                0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+                65%  { transform: translate(-50%, -50%) scale(1.08); opacity: 1; }
+                100% { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
+            }
+            @keyframes cubby-star-spin {
+                0%   { transform: rotate(0deg) scale(1); }
+                50%  { transform: rotate(180deg) scale(1.3); }
+                100% { transform: rotate(360deg) scale(1); }
+            }
+            @keyframes cubby-fade-out {
+                0%   { opacity: 1; }
+                100% { opacity: 0; }
+            }
+        </style>
+
+        <!-- Overlay backdrop -->
+        <div style="
+            position: fixed; inset: 0; z-index: 99999;
+            background: rgba(0,0,0,0.45);
+            display: flex; align-items: center; justify-content: center;
+        ">
+            <!-- Confetti layer -->
+            <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none;">
+                ${confettiPieces}
+            </div>
+
+            <!-- Celebration card -->
+            <div style="
+                position: absolute;
+                top: 50%; left: 50%;
+                transform: translate(-50%, -50%) scale(1);
+                animation: cubby-pop-in 0.55s cubic-bezier(.34,1.56,.64,1) both;
+                background: linear-gradient(135deg, #a855f7 0%, #6366f1 50%, #3b82f6 100%);
+                border-radius: 32px;
+                padding: 40px 48px;
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(80,0,180,0.45), 0 0 0 6px rgba(255,255,255,0.15);
+                min-width: 280px;
+                max-width: 92vw;
+            ">
+                <!-- Spinning star -->
+                <div style="
+                    font-size: 56px;
+                    animation: cubby-star-spin 1.5s linear infinite;
+                    display: inline-block;
+                    margin-bottom: 12px;
+                    filter: drop-shadow(0 0 12px #fbbf24);
+                ">⭐</div>
+
+                <div style="
+                    color: #fef08a;
+                    font-size: 15px;
+                    font-weight: 800;
+                    letter-spacing: 3px;
+                    text-transform: uppercase;
+                    margin-bottom: 6px;
+                    font-family: system-ui, sans-serif;
+                ">Great Job!</div>
+
+                <div style="
+                    color: white;
+                    font-size: 38px;
+                    font-weight: 900;
+                    font-family: system-ui, sans-serif;
+                    line-height: 1.15;
+                    text-shadow: 0 4px 12px rgba(0,0,0,0.25);
+                ">+${points} Stars!</div>
+
+                <div style="
+                    color: rgba(255,255,255,0.75);
+                    font-size: 13px;
+                    font-weight: 700;
+                    margin-top: 8px;
+                    font-family: system-ui, sans-serif;
+                ">You finished the video! 🎉</div>
+
+                <!-- Bouncing emojis -->
+                <div style="margin-top: 16px; font-size: 22px; letter-spacing: 6px;">🌟 🦄 🎈</div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(popup);
+
+    // Auto-remove after 4 seconds with a fade-out
     setTimeout(() => {
-        container.classList.remove('scale-0');
-        container.classList.add('scale-100');
-    }, 10);
-
-    // Auto-hide after 5s or wait for button
+        if (popup && popup.parentNode) {
+            popup.style.animation = 'cubby-fade-out 0.5s ease forwards';
+            setTimeout(() => { if (popup.parentNode) popup.remove(); }, 500);
+        }
+    }, 3500);
 }
 
 // ─── Recommendation Logic ────────────────────────────────────────────────────

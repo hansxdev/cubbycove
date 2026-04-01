@@ -553,15 +553,21 @@ window.openKidVideoModal = async function (videoDocId, pathId = null) {
     document.body.appendChild(modal);
     document.body.style.overflow = 'hidden';
 
-    // FIX: Initialize the YouTube IFrame Player API for accurate play-state tracking.
-    // For native video, fall back to <video> element events.
+    // Initialize the YouTube IFrame Player API for accurate play-state tracking.
+    // For native video, wait for loadedmetadata to get the real duration.
     if (isYouTube) {
         _initYouTubePlayer(vidId, video, pathId);
     } else {
-        // For native <video> elements, start tracking immediately
-        const pointsArr = [video.pointsValue, 10];
-        const finalPoints = pointsArr.find(p => p !== undefined && p !== null);
-        _startRewardTracking(videoDocId, video.duration || 0, finalPoints, pathId);
+        // Bug 2 Fix (Native): Wait for real duration from the browser via loadedmetadata
+        // instead of relying on an often-missing DB field.
+        const finalPoints = [video.pointsValue, 10].find(p => p !== undefined && p !== null);
+        const player = document.getElementById('kid-modal-player');
+        if (player) {
+            player.addEventListener('loadedmetadata', () => {
+                // Use the real duration reported by the browser. No fallback.
+                _startRewardTracking(videoDocId, player.duration, finalPoints, pathId, 'native');
+            }, { once: true });
+        }
     }
 
     // Close listeners
@@ -577,8 +583,7 @@ window.openKidVideoModal = async function (videoDocId, pathId = null) {
 let _ytPlayer = null;
 
 function _initYouTubePlayer(vidId, video, pathId) {
-    const pointsArr = [video.pointsValue, 10];
-    const finalPoints = pointsArr.find(p => p !== undefined && p !== null);
+    const finalPoints = [video.pointsValue, 10].find(p => p !== undefined && p !== null);
 
     const _doInit = () => {
         // Destroy previous player if still alive
@@ -591,14 +596,15 @@ function _initYouTubePlayer(vidId, video, pathId) {
             videoId: vidId,
             playerVars: { autoplay: 1, rel: 0, modestbranding: 1 },
             events: {
-                onReady: () => {
-                    // FIX: Start reward tracking AFTER player is ready so we know aspect ratio
-                    // is rendered and no DOM issues exist. Pass the actual duration if available.
-                    const dur = video.duration || 0;
-                    _startRewardTracking(video.$id, dur, finalPoints, pathId, 'youtube');
+                onReady: (event) => {
+                    // Bug 2 Fix (YouTube): Get the actual video duration from the YouTube player
+                    // via getDuration() instead of relying on the DB field which is often undefined.
+                    // This eliminates the 30-second fallback exploit entirely.
+                    const realDuration = event.target.getDuration();
+                    console.log(`[YT] Real video duration from API: ${realDuration}s`);
+                    _startRewardTracking(video.$id, realDuration, finalPoints, pathId, 'youtube');
                 },
                 onStateChange: (event) => {
-                    // Expose current play state to the reward interval via a global flag.
                     // YT.PlayerState.PLAYING === 1
                     window._ytIsPlaying = (event.data === YT.PlayerState.PLAYING);
                 }
@@ -653,11 +659,12 @@ async function _startRewardTracking(videoId, duration, points, pathId = null, pl
         return;
     }
 
-    // FIX: Unknown duration falls back to 30 seconds (not 5 minutes).
-    // A short, achievable threshold ensures kids always feel rewarded.
+    // Bug 2 Fix: The 30-second fallback has been removed. If duration is unavailable
+    // or zero, we cannot reliably enforce the 80% threshold, so we skip reward tracking
+    // for this video to prevent exploitation.
     if (!duration || duration <= 0) {
-        console.warn('Video duration unknown. Using 30s fallback reward threshold.');
-        duration = 30 / _completionThreshold; // equals 37.5s so threshold = 30s
+        console.warn('[Rewards] Video duration unavailable. Reward tracking skipped for this video to prevent exploitation.');
+        return;
     }
 
     const thresholdSeconds = duration * _completionThreshold;
@@ -721,6 +728,16 @@ async function _claimReward() {
         const reward = await DataService.recordVideoReward(session.$id, _currentVideoId, _currentPointsValue);
         _rewardedVideoIds.add(_currentVideoId);
         
+        // Bug 1 Fix: After a successful DB update, sync the new totalPoints value back into
+        // sessionStorage so that on page refresh, DataService.getCurrentUser() reads the
+        // correct (updated) value from sessionStorage instead of the stale one.
+        const freshSession = _getChildSession();
+        if (freshSession) {
+            freshSession.totalPoints = (freshSession.totalPoints || 0) + _currentPointsValue;
+            sessionStorage.setItem('cubby_child_session', JSON.stringify(freshSession));
+            console.log(`✅ [Rewards] sessionStorage totalPoints synced to: ${freshSession.totalPoints}`);
+        }
+
         // If within a Learning Path, update progress
         if (_currentPathId) {
             console.log(`🛣️ Updating progress for path: ${_currentPathId}`);
@@ -740,7 +757,7 @@ async function _claimReward() {
 
         showRewardCelebration(_currentPointsValue);
         
-        // Update Video Card if visible (optional)
+        // Refresh video card badges
         loadKidVideos(); 
 
     } catch (e) {
@@ -1175,12 +1192,187 @@ window.handleKidLogout = async function () {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CUBBY SHOP — Item Catalog
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Defines which items are free (cost: 0) and which are premium (cost: stars).
+ * category: 'color' | 'icon' | 'theme'
+ * value: the actual value passed to pickAvatarColor / pickAvatarIcon / pickTheme
+ */
+const SHOP_CONFIG = {
+    // ── Avatar Colors (first 4 are FREE) ───────────────────────────────────────
+    'color_ef4444': { cost: 0,   category: 'color', value: '#ef4444', label: 'Cherry Red' },
+    'color_f97316': { cost: 0,   category: 'color', value: '#f97316', label: 'Sunset Orange' },
+    'color_eab308': { cost: 0,   category: 'color', value: '#eab308', label: 'Lemon Yellow' },
+    'color_22c55e': { cost: 0,   category: 'color', value: '#22c55e', label: 'Grass Green' },
+    // Premium colors (50 stars each)
+    'color_3b82f6': { cost: 50,  category: 'color', value: '#3b82f6', label: 'Ocean Blue' },
+    'color_8b5cf6': { cost: 50,  category: 'color', value: '#8b5cf6', label: 'Royal Violet' },
+    'color_ec4899': { cost: 50,  category: 'color', value: '#ec4899', label: 'Bubblegum Pink' },
+    'color_14b8a6': { cost: 50,  category: 'color', value: '#14b8a6', label: 'Aqua Teal' },
+    // ── Avatar Icons (first 4 are FREE) ────────────────────────────────────────
+    'icon_1':  { cost: 0,   category: 'icon', value: '../images/avatars/icon (1).png' },
+    'icon_2':  { cost: 0,   category: 'icon', value: '../images/avatars/icon (2).png' },
+    'icon_3':  { cost: 0,   category: 'icon', value: '../images/avatars/icon (3).png' },
+    'icon_4':  { cost: 0,   category: 'icon', value: '../images/avatars/icon (4).png' },
+    // Premium icons (75 stars each)
+    'icon_5':  { cost: 75,  category: 'icon', value: '../images/avatars/icon (5).png' },
+    'icon_6':  { cost: 75,  category: 'icon', value: '../images/avatars/icon (6).png' },
+    'icon_7':  { cost: 75,  category: 'icon', value: '../images/avatars/icon (7).png' },
+    'icon_8':  { cost: 75,  category: 'icon', value: '../images/avatars/icon (8).png' },
+    'icon_9':  { cost: 75,  category: 'icon', value: '../images/avatars/icon (9).png' },
+    'icon_10': { cost: 100, category: 'icon', value: '../images/avatars/icon (10).png' },
+    'icon_11': { cost: 100, category: 'icon', value: '../images/avatars/icon (11).png' },
+    'icon_12': { cost: 100, category: 'icon', value: '../images/avatars/icon (12).png' },
+    'icon_13': { cost: 100, category: 'icon', value: '../images/avatars/icon (13).png' },
+    'icon_14': { cost: 100, category: 'icon', value: '../images/avatars/icon (14).png' },
+    // ── Themes (Default is FREE) ────────────────────────────────────────────────
+    'theme_default':    { cost: 0,   category: 'theme', value: 'default',    label: 'Default' },
+    'theme_cherry':     { cost: 0,   category: 'theme', value: 'cherry',     label: 'Cherry' },
+    'theme_blueberry':  { cost: 0,   category: 'theme', value: 'blueberry',  label: 'Blueberry' },
+    'theme_sunflower':  { cost: 150, category: 'theme', value: 'sunflower',  label: 'Sunflower ✨' },
+};
+
+/**
+ * Returns the set of unlocked item IDs for the current session.
+ * Always includes all free items (cost === 0).
+ */
+function _getUnlockedItems() {
+    const session = _getChildSession();
+    const purchased = session?.prefs?.unlockedItems || [];
+    // Free items are always unlocked
+    const freeItems = Object.keys(SHOP_CONFIG).filter(id => SHOP_CONFIG[id].cost === 0);
+    return new Set([...freeItems, ...purchased]);
+}
+
+/**
+ * Handles a purchase attempt for a locked shop item.
+ * Deducts stars from sessionStorage and the database, then unlocks the item.
+ */
+async function _purchaseShopItem(itemId) {
+    const item = SHOP_CONFIG[itemId];
+    if (!item || item.cost === 0) return; // Item is free or unknown
+
+    const session = _getChildSession();
+    if (!session || !session.$id) return;
+
+    const currentPoints = session.totalPoints || 0;
+    if (currentPoints < item.cost) {
+        const needed = item.cost - currentPoints;
+        alert(`⭐ You need ${needed} more stars to unlock this!\n\nKeep watching videos to earn more stars! 🚀`);
+        return;
+    }
+
+    // Show confirmation
+    showConfirm(
+        `Spend ${item.cost} ⭐ Stars to unlock this?`,
+        async () => {
+            try {
+                // 1. Deduct from sessionStorage immediately for snappy UI
+                const freshSession = _getChildSession();
+                freshSession.totalPoints = (freshSession.totalPoints || 0) - item.cost;
+                const currentUnlocked = freshSession.prefs?.unlockedItems || [];
+                if (!freshSession.prefs) freshSession.prefs = {};
+                freshSession.prefs.unlockedItems = [...new Set([...currentUnlocked, itemId])];
+                sessionStorage.setItem('cubby_child_session', JSON.stringify(freshSession));
+
+                // 2. Update points counter in the header UI
+                const pointsVal = document.getElementById('header-total-points');
+                if (pointsVal) pointsVal.textContent = freshSession.totalPoints;
+
+                // 3. Persist point deduction and unlocked items list to the database
+                await Promise.all([
+                    DataService.updateChild(freshSession.$id, { totalPoints: freshSession.totalPoints }),
+                    DataService.updateChildPrefs(freshSession.$id, { unlockedItems: freshSession.prefs.unlockedItems })
+                ]);
+
+                // 4. Apply the item immediately
+                const cat = item.category;
+                if (cat === 'color')  window._applyColorPick(item.value);
+                if (cat === 'icon')   window._applyIconPick(item.value);
+                if (cat === 'theme')  window._applyThemePick(item.value);
+
+                // 5. Re-render the shop modal to reflect the new unlocked state
+                _renderShopOverlays();
+
+                alert(`🎉 Unlocked! You now have ${freshSession.totalPoints} ⭐ stars remaining.`);
+
+            } catch (e) {
+                // Roll back sessionStorage on DB failure
+                console.error('[Shop] Purchase failed:', e.message);
+                alert(`❌ Purchase failed: ${e.message}\n\nYour stars have been refunded.`);
+                // Re-read from DB to undo the optimistic update
+                try {
+                    const doc = await DataService.getChildWithPrefs(session.$id);
+                    if (doc) {
+                        const rollbackSession = _getChildSession();
+                        rollbackSession.totalPoints = doc.totalPoints;
+                        if (doc.unlockedItems) {
+                            if (!rollbackSession.prefs) rollbackSession.prefs = {};
+                            rollbackSession.prefs.unlockedItems = doc.unlockedItems;
+                        }
+                        sessionStorage.setItem('cubby_child_session', JSON.stringify(rollbackSession));
+                        if (pointsVal) pointsVal.textContent = rollbackSession.totalPoints;
+                    }
+                } catch (_) { /* silent */ }
+            }
+        }
+    );
+}
+
+/**
+ * Adds lock-icon overlays and star-cost badges to each shop item button.
+ * Called when the settings modal opens and after each purchase.
+ */
+function _renderShopOverlays() {
+    const unlocked = _getUnlockedItems();
+
+    Object.entries(SHOP_CONFIG).forEach(([itemId, item]) => {
+        const btn = document.querySelector(`[data-shop-id="${itemId}"]`);
+        if (!btn) return;
+
+        const isUnlocked = unlocked.has(itemId);
+        const lockEl = btn.querySelector('.shop-lock-badge');
+        if (!lockEl) return;
+
+        if (isUnlocked) {
+            lockEl.classList.add('hidden');
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            lockEl.classList.remove('hidden');
+            lockEl.innerHTML = `<i class="fa-solid fa-lock text-[8px]"></i><span class="text-[8px] font-black">${item.cost}⭐</span>`;
+            btn.classList.add('opacity-70');
+        }
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // KID PROFILE SETTINGS MODAL
 // ─────────────────────────────────────────────────────────────────────────────
 let _kidAvatarColor = '#60a5fa';
 let _kidAvatarIcon = '🐻';
 let _kidCoverColor = '#3b82f6';
 let _kidTheme = 'default';
+
+// Internal: Apply values directly (used by purchases and free picks alike)
+window._applyColorPick = function(color) {
+    _kidAvatarColor = color;
+    const preview = document.getElementById('kid-avatar-preview');
+    if (preview) preview.style.background = color;
+};
+window._applyIconPick = function(icon) {
+    _kidAvatarIcon = icon;
+    const preview = document.getElementById('kid-avatar-preview');
+    if (preview) {
+        if (icon.startsWith('../')) preview.innerHTML = `<img src="${icon}" class="w-full h-full object-contain p-1">`;
+        else preview.textContent = icon;
+    }
+};
+window._applyThemePick = function(theme) {
+    _kidTheme = theme;
+    document.body.className = document.body.className.replace(/\btheme-\S+/g, '');
+    if (theme !== 'default') document.body.classList.add('theme-' + theme);
+};
 
 window.openKidSettingsModal = async function () {
     const modal = document.getElementById('kid-settings-modal');
@@ -1234,38 +1426,75 @@ window.openKidSettingsModal = async function () {
         };
     }
 
+    // Sync unlockedItems from DB doc into the session so _getUnlockedItems() is fresh
+    if (freshDoc?.unlockedItems) {
+        const refreshedSession = _getChildSession();
+        if (refreshedSession) {
+            if (!refreshedSession.prefs) refreshedSession.prefs = {};
+            refreshedSession.prefs.unlockedItems = freshDoc.unlockedItems;
+            sessionStorage.setItem('cubby_child_session', JSON.stringify(refreshedSession));
+        }
+    }
+
+    // Populate the shop star counter
+    const shopStarEl = document.getElementById('shop-star-count');
+    if (shopStarEl) {
+        const freshSession = _getChildSession();
+        shopStarEl.textContent = freshSession?.totalPoints ?? freshDoc?.totalPoints ?? 0;
+    }
+
     modal.classList.remove('hidden');
+
+    // Render shop lock overlays AFTER modal is visible so DOM is ready
+    requestAnimationFrame(() => _renderShopOverlays());
 };
 
 window.closeKidSettingsModal = function () {
     document.getElementById('kid-settings-modal')?.classList.add('hidden');
 };
 
-window.pickAvatarColor = function (color) {
-    _kidAvatarColor = color;
-    const preview = document.getElementById('kid-avatar-preview');
-    if (preview) preview.style.background = color;
+/**
+ * Public pick functions now check the Shop catalog before applying.
+ * Free items apply instantly; locked items trigger the purchase flow.
+ */
+window.pickAvatarColor = function (itemId) {
+    const item = SHOP_CONFIG[itemId];
+    if (!item) return; // unknown item
+    const unlocked = _getUnlockedItems();
+    if (!unlocked.has(itemId)) {
+        _purchaseShopItem(itemId);
+        return;
+    }
+    window._applyColorPick(item.value);
 };
 
-window.pickAvatarIcon = function (icon) {
-    _kidAvatarIcon = icon;
-    const preview = document.getElementById('kid-avatar-preview');
-    if (preview) {
-        if (icon.startsWith('../')) preview.innerHTML = `<img src="${icon}" class="w-full h-full object-contain p-1">`;
-        else preview.textContent = icon;
+window.pickAvatarIcon = function (itemId) {
+    const item = SHOP_CONFIG[itemId];
+    if (!item) return;
+    const unlocked = _getUnlockedItems();
+    if (!unlocked.has(itemId)) {
+        _purchaseShopItem(itemId);
+        return;
     }
+    window._applyIconPick(item.value);
 };
 
 window.pickCoverColor = function (color) {
+    // Cover colors are all free — no shop gating needed
     _kidCoverColor = color;
     const coverPreview = document.getElementById('cover-color-preview');
     if (coverPreview) coverPreview.style.background = color;
 };
 
-window.pickTheme = function (theme) {
-    _kidTheme = theme;
-    document.body.className = document.body.className.replace(/\btheme-\S+/g, '');
-    if (theme !== 'default') document.body.classList.add('theme-' + theme);
+window.pickTheme = function (itemId) {
+    const item = SHOP_CONFIG[itemId];
+    if (!item) return;
+    const unlocked = _getUnlockedItems();
+    if (!unlocked.has(itemId)) {
+        _purchaseShopItem(itemId);
+        return;
+    }
+    window._applyThemePick(item.value);
 };
 
 window.saveKidSettings = async function () {

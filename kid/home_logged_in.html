@@ -479,7 +479,7 @@
         </div>
     </main>
 
-    <!-- KID SETTINGS MODAL -->
+    <!-- KID SETTINGS / SHOP MODAL -->
     <div id="kid-settings-modal"
         class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-7 relative max-h-[90vh] overflow-y-auto">
@@ -493,6 +493,12 @@
                     🐻
                 </div>
                 <h3 class="text-lg font-extrabold text-gray-800 mt-3">My Profile ✨</h3>
+                <!-- Star counter for the shop -->
+                <div class="mt-2 inline-flex items-center gap-2 bg-yellow-50 border-2 border-yellow-200 px-4 py-1.5 rounded-full">
+                    <i class="fa-solid fa-star text-yellow-500 text-sm animate-pulse"></i>
+                    <span class="font-black text-yellow-700 text-sm" id="shop-star-count">0</span>
+                    <span class="text-yellow-600 text-xs font-bold">Stars</span>
+                </div>
             </div>
             <div class="space-y-4">
                 <!-- Display Name -->
@@ -504,75 +510,126 @@
                 </div>
                 <!-- Avatar Color -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Avatar Color</label>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Avatar Color
+                        <span class="text-[10px] font-normal text-yellow-600 ml-1">🔒 = unlock with stars</span>
+                    </label>
                     <div id="avatar-color-grid" class="flex flex-wrap gap-2">
-                        <button onclick="pickAvatarColor('#ef4444')"
-                            class="w-8 h-8 rounded-full bg-red-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#f97316')"
-                            class="w-8 h-8 rounded-full bg-orange-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#eab308')"
-                            class="w-8 h-8 rounded-full bg-yellow-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#22c55e')"
-                            class="w-8 h-8 rounded-full bg-green-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#3b82f6')"
-                            class="w-8 h-8 rounded-full bg-blue-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#8b5cf6')"
-                            class="w-8 h-8 rounded-full bg-violet-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#ec4899')"
-                            class="w-8 h-8 rounded-full bg-pink-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#14b8a6')"
-                            class="w-8 h-8 rounded-full bg-teal-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <!-- Free colors -->
+                        <button data-shop-id="color_ef4444" onclick="pickAvatarColor('color_ef4444')"
+                            class="relative w-9 h-9 rounded-full bg-red-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="color_f97316" onclick="pickAvatarColor('color_f97316')"
+                            class="relative w-9 h-9 rounded-full bg-orange-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="color_eab308" onclick="pickAvatarColor('color_eab308')"
+                            class="relative w-9 h-9 rounded-full bg-yellow-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="color_22c55e" onclick="pickAvatarColor('color_22c55e')"
+                            class="relative w-9 h-9 rounded-full bg-green-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <!-- Premium colors (50 stars) -->
+                        <button data-shop-id="color_3b82f6" onclick="pickAvatarColor('color_3b82f6')"
+                            class="relative w-9 h-9 rounded-full bg-blue-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="color_8b5cf6" onclick="pickAvatarColor('color_8b5cf6')"
+                            class="relative w-9 h-9 rounded-full bg-violet-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="color_ec4899" onclick="pickAvatarColor('color_ec4899')"
+                            class="relative w-9 h-9 rounded-full bg-pink-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="color_14b8a6" onclick="pickAvatarColor('color_14b8a6')"
+                            class="relative w-9 h-9 rounded-full bg-teal-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
                     </div>
                 </div>
                 <!-- Avatar Icon -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Avatar Icon</label>
                     <div id="avatar-icon-grid" class="flex flex-wrap gap-2">
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (1).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (1).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (2).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (2).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (3).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (3).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (4).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (4).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (5).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (5).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (6).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (6).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (7).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (7).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (8).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (8).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (9).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (9).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (10).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (10).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (11).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (11).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (12).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (12).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (13).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (13).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (14).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (14).png" class="w-full h-full object-contain"></button>
+                        <!-- Free icons (1-4) -->
+                        <button data-shop-id="icon_1" onclick="pickAvatarIcon('icon_1')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (1).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_2" onclick="pickAvatarIcon('icon_2')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (2).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_3" onclick="pickAvatarIcon('icon_3')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (3).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_4" onclick="pickAvatarIcon('icon_4')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (4).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <!-- Premium icons 5-9 (75 stars) -->
+                        <button data-shop-id="icon_5" onclick="pickAvatarIcon('icon_5')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (5).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_6" onclick="pickAvatarIcon('icon_6')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (6).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_7" onclick="pickAvatarIcon('icon_7')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (7).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_8" onclick="pickAvatarIcon('icon_8')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (8).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_9" onclick="pickAvatarIcon('icon_9')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (9).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <!-- Premium icons 10-14 (100 stars) -->
+                        <button data-shop-id="icon_10" onclick="pickAvatarIcon('icon_10')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (10).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_11" onclick="pickAvatarIcon('icon_11')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (11).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_12" onclick="pickAvatarIcon('icon_12')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (12).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_13" onclick="pickAvatarIcon('icon_13')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (13).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_14" onclick="pickAvatarIcon('icon_14')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img src="../images/avatars/icon (14).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
                     </div>
                 </div>
-                <!-- Cover Color -->
+                <!-- Cover Color (all free) -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Cover Color</label>
                     <div class="flex flex-wrap gap-2">
@@ -599,29 +656,34 @@
                         placeholder="Tell your buddies about yourself!"></textarea>
                     <p class="text-xs text-gray-400 text-right"><span id="kid-bio-count">0</span>/100</p>
                 </div>
-                <!-- Theme Selector -->
+                <!-- Theme Selector (Sunflower is premium) -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Theme</label>
                     <div class="grid grid-cols-4 gap-2">
-                        <button onclick="pickTheme('default')"
-                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-blue-300 transition-colors">
+                        <button data-shop-id="theme_default" onclick="pickTheme('theme_default')"
+                            class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-blue-300 transition-colors">
                             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600"></div>
                             <span class="text-[10px] font-bold text-gray-500">Default</span>
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
                         </button>
-                        <button onclick="pickTheme('cherry')"
-                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-red-300 transition-colors">
+                        <button data-shop-id="theme_cherry" onclick="pickTheme('theme_cherry')"
+                            class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-red-300 transition-colors">
                             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-pink-600"></div>
                             <span class="text-[10px] font-bold text-gray-500">Cherry</span>
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
                         </button>
-                        <button onclick="pickTheme('blueberry')"
-                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-indigo-300 transition-colors">
+                        <button data-shop-id="theme_blueberry" onclick="pickTheme('theme_blueberry')"
+                            class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-indigo-300 transition-colors">
                             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600"></div>
                             <span class="text-[10px] font-bold text-gray-500">Blueberry</span>
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
                         </button>
-                        <button onclick="pickTheme('sunflower')"
-                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-yellow-300 transition-colors">
+                        <!-- Premium: Sunflower (150 stars) -->
+                        <button data-shop-id="theme_sunflower" onclick="pickTheme('theme_sunflower')"
+                            class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-yellow-300 transition-colors">
                             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500"></div>
                             <span class="text-[10px] font-bold text-gray-500">Sunflower</span>
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
                         </button>
                     </div>
                 </div>

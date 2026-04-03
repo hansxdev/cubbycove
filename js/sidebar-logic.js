@@ -3,6 +3,7 @@ function initSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
     const mainContent = document.getElementById('main-content');
+    const topNav = document.getElementById('top-nav');
     const body = document.body;
 
     if (!menuBtn || !sidebar) return;
@@ -26,32 +27,21 @@ function initSidebar() {
         const logoClosed = document.getElementById('logo-closed');
         const logoContainer = document.getElementById('logo-container');
 
-        if (logoLong && logoClosed && logoContainer) {
+        if (logoLong && logoClosed) {
             if (isClosed) {
                 // Show Closed, Hide Long
-                logoLong.classList.add('opacity-0');
-                logoLong.classList.remove('opacity-100');
+                logoLong.classList.add('opacity-0', 'scale-50');
+                logoLong.classList.remove('opacity-100', 'scale-100');
 
-                logoClosed.classList.add('opacity-100', 'delay-100');
-                logoClosed.classList.remove('opacity-0');
-
-                if (logoContainer) {
-                    logoContainer.classList.remove('w-48');
-                    logoContainer.classList.add('w-14');
-                }
+                logoClosed.classList.add('opacity-100', 'scale-100');
+                logoClosed.classList.remove('opacity-0', 'scale-50');
             } else {
                 // Show Long, Hide Closed
-                logoLong.classList.add('opacity-100', 'delay-100');
-                logoLong.classList.remove('opacity-0');
+                logoLong.classList.add('opacity-100', 'scale-100');
+                logoLong.classList.remove('opacity-0', 'scale-50');
 
-                logoClosed.classList.add('opacity-0');
-                logoClosed.classList.remove('opacity-100', 'delay-100');
-
-                // Adjust Container Width (approximate width for full logo)
-                if (logoContainer) {
-                    logoContainer.classList.remove('w-14');
-                    logoContainer.classList.add('w-48');
-                }
+                logoClosed.classList.add('opacity-0', 'scale-50');
+                logoClosed.classList.remove('opacity-100', 'scale-100');
             }
         }
     }
@@ -61,7 +51,7 @@ function initSidebar() {
 
         if (isDesktop) {
             // Desktop: Toggle Width (Mini vs Full)
-            const isFullWidth = sidebar.classList.contains('w-64');
+            const isFullWidth = sidebar.classList.contains('w-[17.5rem]');
 
             const labels = sidebar.querySelectorAll('.sidebar-label');
             const headers = sidebar.querySelectorAll('.sidebar-header');
@@ -72,12 +62,17 @@ function initSidebar() {
 
             if (isFullWidth) {
                 // COLLAPSE
-                sidebar.classList.remove('w-64');
-                sidebar.classList.add('w-20');
+                sidebar.classList.remove('w-[17.5rem]');
+                sidebar.classList.add('w-[6rem]'); // Minimizing to 6rem width
 
-                if (mainContent && mainContent.classList.contains('lg:ml-64')) {
-                    mainContent.classList.remove('lg:ml-64');
-                    mainContent.classList.add('lg:ml-20');
+                if (mainContent && mainContent.classList.contains('lg:ml-[17.5rem]')) {
+                    mainContent.classList.remove('lg:ml-[17.5rem]');
+                    mainContent.classList.add('lg:ml-[6rem]');
+                }
+
+                if (topNav && topNav.classList.contains('lg:left-[18.25rem]')) {
+                    topNav.classList.remove('lg:left-[18.25rem]');
+                    topNav.classList.add('lg:left-[6.75rem]');
                 }
 
                 // Animate Labels Out
@@ -110,12 +105,17 @@ function initSidebar() {
                 updateLogo(true);
             } else {
                 // EXPAND
-                sidebar.classList.remove('w-20');
-                sidebar.classList.add('w-64');
+                sidebar.classList.remove('w-[6rem]');
+                sidebar.classList.add('w-[17.5rem]');
 
-                if (mainContent && mainContent.classList.contains('lg:ml-20')) {
-                    mainContent.classList.remove('lg:ml-20');
-                    mainContent.classList.add('lg:ml-64');
+                if (mainContent && mainContent.classList.contains('lg:ml-[6rem]')) {
+                    mainContent.classList.remove('lg:ml-[6rem]');
+                    mainContent.classList.add('lg:ml-[17.5rem]');
+                }
+
+                if (topNav && topNav.classList.contains('lg:left-[6.75rem]')) {
+                    topNav.classList.remove('lg:left-[6.75rem]');
+                    topNav.classList.add('lg:left-[18.25rem]');
                 }
 
                 // Animate Labels In
@@ -171,30 +171,17 @@ function initSidebar() {
             sidebar.classList.remove('-translate-x-full'); // Remove mobile hiding
 
             // Just ensure it's in a valid state (Full)
-            if (!sidebar.classList.contains('w-64') && !sidebar.classList.contains('w-20')) {
-                sidebar.classList.add('w-64');
+            if (!sidebar.classList.contains('w-[17.5rem]') && !sidebar.classList.contains('w-[6rem]')) {
+                sidebar.classList.add('w-[17.5rem]');
             }
-
-            // If we want to force reset to full on resize:
-            /*
-            sidebar.classList.add('w-64');
-            sidebar.classList.remove('w-20');
-            if (mainContent) {
-                mainContent.classList.add('lg:ml-64');
-                mainContent.classList.remove('lg:ml-20');
-            }
-            sidebar.querySelectorAll('.sidebar-label, .sidebar-header, .sidebar-promo, .sidebar-status').forEach(el => el.classList.remove('hidden'));
-            sidebar.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('justify-center'));
-            updateLogo(false);
-            */
 
             if (overlay) overlay.classList.add('hidden');
             body.style.overflow = 'auto';
         } else {
             // Mobile Reset: Hide sidebar
             sidebar.classList.add('-translate-x-full');
-            sidebar.classList.remove('w-20');
-            sidebar.classList.add('w-64');
+            sidebar.classList.remove('w-[6rem]');
+            sidebar.classList.add('w-[17.5rem]');
 
             // Clean up mini-sidebar artifacts
             const labels = sidebar.querySelectorAll('.sidebar-label');
@@ -214,9 +201,15 @@ function initSidebar() {
             status.forEach(el => el.classList.remove('opacity-0', 'w-0'));
 
             if (mainContent) {
-                mainContent.classList.remove('lg:ml-20');
-                mainContent.classList.add('lg:ml-64');
+                mainContent.classList.remove('lg:ml-[6rem]');
+                mainContent.classList.add('lg:ml-[17.5rem]');
             }
+            if (topNav) {
+                topNav.classList.remove('lg:left-[6.75rem]');
+                topNav.classList.add('lg:left-[18.25rem]');
+            }
+
+            updateLogo(false);
 
             if (overlay) overlay.classList.add('hidden');
             body.style.overflow = 'auto';

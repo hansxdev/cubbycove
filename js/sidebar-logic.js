@@ -46,6 +46,31 @@ function initSidebar() {
         }
     }
 
+    function setExpandedStyles() {
+        const labels = sidebar.querySelectorAll('.sidebar-label');
+        const headers = sidebar.querySelectorAll('.sidebar-header');
+        const promos = sidebar.querySelectorAll('.sidebar-promo');
+        const links = sidebar.querySelectorAll('.sidebar-link');
+        const status = sidebar.querySelectorAll('.sidebar-status');
+        const hideMini = sidebar.querySelectorAll('.sidebar-hide-mini');
+
+        labels.forEach(el => el.classList.remove('w-0', 'opacity-0', 'translate-x-[-10px]', 'hidden'));
+        [...headers, ...promos].forEach(el => el.classList.remove('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0', 'overflow-hidden'));
+        hideMini.forEach(el => el.classList.remove('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0', 'overflow-hidden'));
+        
+        sidebar.querySelectorAll('.space-y-4').forEach(el => {
+            el.classList.remove('mx-1.5');
+            el.classList.add('mx-6');
+        });
+
+        links.forEach(el => {
+            el.classList.remove('justify-center', 'px-0', 'aspect-square', 'w-[4.5rem]', 'mx-auto');
+            el.classList.add('gap-3', 'pr-4', 'pl-1.5');
+        });
+
+        status.forEach(el => el.classList.remove('opacity-0', 'w-0'));
+    }
+
     function toggleMenu() {
         const isDesktop = window.innerWidth >= 1024;
 
@@ -53,17 +78,10 @@ function initSidebar() {
             // Desktop: Toggle Width (Mini vs Full)
             const isFullWidth = sidebar.classList.contains('w-[17.5rem]');
 
-            const labels = sidebar.querySelectorAll('.sidebar-label');
-            const headers = sidebar.querySelectorAll('.sidebar-header');
-            const promos = sidebar.querySelectorAll('.sidebar-promo');
-            const links = sidebar.querySelectorAll('.sidebar-link');
-            const status = sidebar.querySelectorAll('.sidebar-status');
-            const hideMini = sidebar.querySelectorAll('.sidebar-hide-mini');
-
             if (isFullWidth) {
                 // COLLAPSE
                 sidebar.classList.remove('w-[17.5rem]');
-                sidebar.classList.add('w-[6rem]'); // Minimizing to 6rem width
+                sidebar.classList.add('w-[6rem]');
 
                 if (mainContent) {
                     mainContent.classList.remove('lg:ml-[17.5rem]', 'lg:ml-64');
@@ -76,35 +94,30 @@ function initSidebar() {
                 }
 
                 // Animate Labels Out
-                labels.forEach(el => {
+                sidebar.querySelectorAll('.sidebar-label').forEach(el => {
                     el.classList.add('w-0', 'opacity-0', 'translate-x-[-10px]', 'hidden');
                 });
 
                 // Hide Headers & Promos (Collapse Height)
-                [...headers, ...promos].forEach(el => {
+                [...sidebar.querySelectorAll('.sidebar-header'), ...sidebar.querySelectorAll('.sidebar-promo')].forEach(el => {
                     el.classList.add('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0', 'overflow-hidden');
                 });
 
-                // Completely hide specific sections (like friends list container)
-                hideMini.forEach(el => {
+                sidebar.querySelectorAll('.sidebar-hide-mini').forEach(el => {
                     el.classList.add('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0', 'overflow-hidden');
                 });
 
-                // Center Icons and ensure padding/margins don't crop
-                const linkContainers = sidebar.querySelectorAll('.mx-6.mb-8');
-                linkContainers.forEach(el => {
+                sidebar.querySelectorAll('.space-y-4').forEach(el => {
                     el.classList.remove('mx-6');
                     el.classList.add('mx-1.5');
                 });
 
-                links.forEach(el => {
+                sidebar.querySelectorAll('.sidebar-link').forEach(el => {
                     el.classList.remove('gap-3', 'pr-4', 'pl-1.5');
                     el.classList.add('justify-center', 'px-0', 'aspect-square', 'w-[4.5rem]', 'mx-auto');
-                    el.classList.add('rounded-full'); // Already has it usually, but let's be sure
                 });
 
-                // Hide status dots
-                status.forEach(el => el.classList.add('opacity-0', 'w-0'));
+                sidebar.querySelectorAll('.sidebar-status').forEach(el => el.classList.add('opacity-0', 'w-0'));
 
                 updateLogo(true);
             } else {
@@ -122,36 +135,7 @@ function initSidebar() {
                     topNav.classList.add('lg:left-[18.25rem]');
                 }
 
-                // Animate Labels In
-                labels.forEach(el => {
-                    el.classList.remove('w-0', 'opacity-0', 'translate-x-[-10px]', 'hidden');
-                });
-
-                // Show Headers & Promos
-                [...headers, ...promos].forEach(el => {
-                    el.classList.remove('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0', 'overflow-hidden');
-                });
-
-                // Show hidden mini sections
-                hideMini.forEach(el => {
-                    el.classList.remove('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0', 'overflow-hidden');
-                });
-
-                // Restore Links
-                const linkContainers = sidebar.querySelectorAll('.mx-1.5.mb-8');
-                linkContainers.forEach(el => {
-                    el.classList.remove('mx-1.5');
-                    el.classList.add('mx-6');
-                });
-
-                links.forEach(el => {
-                    el.classList.remove('justify-center', 'px-0', 'aspect-square', 'w-[4.5rem]', 'mx-auto');
-                    el.classList.add('gap-3', 'pr-4', 'pl-1.5');
-                });
-
-                // Show status dots
-                status.forEach(el => el.classList.remove('opacity-0', 'w-0'));
-
+                setExpandedStyles();
                 updateLogo(false);
             }
         } else {
@@ -178,11 +162,16 @@ function initSidebar() {
     window.addEventListener('resize', () => {
         if (window.innerWidth >= 1024) {
             // Desktop Reset: Ensure visible and full width
-            sidebar.classList.remove('-translate-x-full'); // Remove mobile hiding
+            sidebar.classList.remove('-translate-x-full');
 
-            // Just ensure it's in a valid state (Full)
             if (!sidebar.classList.contains('w-[17.5rem]') && !sidebar.classList.contains('w-[6rem]')) {
                 sidebar.classList.add('w-[17.5rem]');
+            }
+
+            // Always ensure the mini cleanup is run if someone dragged window from mobile to desktop
+            if (sidebar.classList.contains('w-[17.5rem]')) {
+                setExpandedStyles();
+                updateLogo(false);
             }
 
             if (overlay) overlay.classList.add('hidden');
@@ -193,22 +182,8 @@ function initSidebar() {
             sidebar.classList.remove('w-[6rem]');
             sidebar.classList.add('w-[17.5rem]');
 
-            // Clean up mini-sidebar artifacts
-            const labels = sidebar.querySelectorAll('.sidebar-label');
-            const headers = sidebar.querySelectorAll('.sidebar-header');
-            const promos = sidebar.querySelectorAll('.sidebar-promo');
-            const links = sidebar.querySelectorAll('.sidebar-link');
-            const status = sidebar.querySelectorAll('.sidebar-status');
-            const hideMini = sidebar.querySelectorAll('.sidebar-hide-mini');
-
-            labels.forEach(el => el.classList.remove('w-0', 'opacity-0', 'translate-x-[-10px]'));
-            [...headers, ...promos].forEach(el => el.classList.remove('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0'));
-            hideMini.forEach(el => el.classList.remove('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0'));
-            links.forEach(el => {
-                el.classList.remove('justify-center', 'px-0');
-                el.classList.add('gap-4', 'px-4');
-            });
-            status.forEach(el => el.classList.remove('opacity-0', 'w-0'));
+            setExpandedStyles();
+            updateLogo(false);
 
             if (mainContent) {
                 mainContent.classList.remove('lg:ml-[6rem]');
@@ -218,8 +193,6 @@ function initSidebar() {
                 topNav.classList.remove('lg:left-[6.75rem]');
                 topNav.classList.add('lg:left-[18.25rem]');
             }
-
-            updateLogo(false);
 
             if (overlay) overlay.classList.add('hidden');
             body.style.overflow = 'auto';

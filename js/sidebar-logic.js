@@ -65,38 +65,42 @@ function initSidebar() {
                 sidebar.classList.remove('w-[17.5rem]');
                 sidebar.classList.add('w-[6rem]'); // Minimizing to 6rem width
 
-                if (mainContent && mainContent.classList.contains('lg:ml-[17.5rem]')) {
-                    mainContent.classList.remove('lg:ml-[17.5rem]');
+                if (mainContent) {
+                    mainContent.classList.remove('lg:ml-[17.5rem]', 'lg:ml-64');
                     mainContent.classList.add('lg:ml-[6rem]');
                 }
 
-                if (topNav && topNav.classList.contains('lg:left-[18.25rem]')) {
+                if (topNav) {
                     topNav.classList.remove('lg:left-[18.25rem]');
                     topNav.classList.add('lg:left-[6.75rem]');
                 }
 
                 // Animate Labels Out
                 labels.forEach(el => {
-                    el.classList.add('w-0', 'opacity-0', 'translate-x-[-10px]');
+                    el.classList.add('w-0', 'opacity-0', 'translate-x-[-10px]', 'hidden');
                 });
 
                 // Hide Headers & Promos (Collapse Height)
                 [...headers, ...promos].forEach(el => {
-                    el.classList.add('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0');
-                    // Handle HRs if needed or just let them stay? 
-                    // HRs usually have margin, so we might want to hide them too or give them a class.
-                    // For now, let's just accept HRs might look weird or just hide promos.
+                    el.classList.add('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0', 'overflow-hidden');
                 });
 
                 // Completely hide specific sections (like friends list container)
                 hideMini.forEach(el => {
-                    el.classList.add('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0');
+                    el.classList.add('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0', 'overflow-hidden');
                 });
 
-                // Center Icons by removing gap and padding
+                // Center Icons and ensure padding/margins don't crop
+                const linkContainers = sidebar.querySelectorAll('.mx-6.mb-8');
+                linkContainers.forEach(el => {
+                    el.classList.remove('mx-6');
+                    el.classList.add('mx-1.5');
+                });
+
                 links.forEach(el => {
-                    el.classList.remove('gap-4', 'px-4');
-                    el.classList.add('justify-center', 'px-0');
+                    el.classList.remove('gap-3', 'pr-4', 'pl-1.5');
+                    el.classList.add('justify-center', 'px-0', 'aspect-square', 'w-[4.5rem]', 'mx-auto');
+                    el.classList.add('rounded-full'); // Already has it usually, but let's be sure
                 });
 
                 // Hide status dots
@@ -108,35 +112,41 @@ function initSidebar() {
                 sidebar.classList.remove('w-[6rem]');
                 sidebar.classList.add('w-[17.5rem]');
 
-                if (mainContent && mainContent.classList.contains('lg:ml-[6rem]')) {
+                if (mainContent) {
                     mainContent.classList.remove('lg:ml-[6rem]');
                     mainContent.classList.add('lg:ml-[17.5rem]');
                 }
 
-                if (topNav && topNav.classList.contains('lg:left-[6.75rem]')) {
+                if (topNav) {
                     topNav.classList.remove('lg:left-[6.75rem]');
                     topNav.classList.add('lg:left-[18.25rem]');
                 }
 
                 // Animate Labels In
                 labels.forEach(el => {
-                    el.classList.remove('w-0', 'opacity-0', 'translate-x-[-10px]');
+                    el.classList.remove('w-0', 'opacity-0', 'translate-x-[-10px]', 'hidden');
                 });
 
                 // Show Headers & Promos
                 [...headers, ...promos].forEach(el => {
-                    el.classList.remove('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0');
+                    el.classList.remove('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0', 'overflow-hidden');
                 });
 
                 // Show hidden mini sections
                 hideMini.forEach(el => {
-                    el.classList.remove('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0');
+                    el.classList.remove('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0', 'overflow-hidden');
                 });
 
                 // Restore Links
+                const linkContainers = sidebar.querySelectorAll('.mx-1.5.mb-8');
+                linkContainers.forEach(el => {
+                    el.classList.remove('mx-1.5');
+                    el.classList.add('mx-6');
+                });
+
                 links.forEach(el => {
-                    el.classList.remove('justify-center', 'px-0');
-                    el.classList.add('gap-4', 'px-4');
+                    el.classList.remove('justify-center', 'px-0', 'aspect-square', 'w-[4.5rem]', 'mx-auto');
+                    el.classList.add('gap-3', 'pr-4', 'pl-1.5');
                 });
 
                 // Show status dots

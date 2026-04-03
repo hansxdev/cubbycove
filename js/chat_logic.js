@@ -1,5 +1,5 @@
 // CUBBYCHAT LOGIC — Handles the real-time chat interface for kids.
-let _currentChild = null;
+// _currentChild is declared in buddy_logic.js or kid_logic.js
 let _buddyId = '';
 let _buddyName = '';
 let _buddyDocId = '';

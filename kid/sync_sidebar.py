@@ -3,7 +3,7 @@ import re
 
 base_path = r"c:\Users\Admin\Documents\cubbycove\kid"
 source_file = os.path.join(base_path, "home_logged_in.html")
-targets = ["games.html", "chat.html", "favorites.html", "history.html"]
+targets = ["games.html", "favorites.html", "history.html"]
 
 with open(source_file, "r", encoding="utf-8") as f:
     source_content = f.read()

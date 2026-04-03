@@ -91,7 +91,7 @@
                 <div class="grid relative w-full pt-2">
                     <!-- KID SECTION -->
                     <div id="kidSection" class="col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform translate-x-0 opacity-100 z-10 w-full pointer-events-auto">
-                        <form id="kidForm" class="space-y-5">
+                        <form id="kidForm" class="space-y-5" onsubmit="handleKidLogin(); return false;">
                             <div>
                                 <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR USERNAME</label>
                                 <input id="kidUsername" type="text" placeholder="e.g. SuperMario123"
@@ -114,7 +114,7 @@
                                 </div>
                             </div>
                             <div class="pt-2">
-                                <button type="button" id="kidLoginBtn" onclick="handleKidLogin()"
+                                <button type="submit" id="kidLoginBtn"
                                     class="w-full bg-[#fde047] text-amber-900 font-black text-xl py-4 rounded-full btn-play border-2 border-[#d97706] flex items-center justify-center gap-2 cursor-pointer hover:bg-[#fef08a] transition-colors">
                                     LET'S PLAY! <span class="text-2xl ml-1"></span>
                                 </button>
@@ -129,7 +129,7 @@
 
                     <!-- PARENT SECTION -->
                     <div id="parentSection" class="col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform translate-x-8 opacity-0 z-0 w-full pointer-events-none">
-                        <form id="parentForm" class="space-y-5">
+                        <form id="parentForm" class="space-y-5" onsubmit="handleParentLogin(); return false;">
                             <div>
                                 <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR EMAIL</label>
                                 <input id="parentEmail" type="email" placeholder="e.g. parent@email.com"
@@ -147,7 +147,7 @@
                                 </div>
                             </div>
                             <div class="pt-2">
-                                <button type="button" id="parentLoginBtn" onclick="handleParentLogin()"
+                                <button type="submit" id="parentLoginBtn"
                                     class="w-full bg-purple-500 text-white font-black text-xl py-4 rounded-full btn-parent border-2 border-purple-700 flex items-center justify-center gap-2 cursor-pointer hover:bg-purple-600 transition-colors">
                                     Sign In <i class="fa-solid fa-arrow-right"></i>
                                 </button>

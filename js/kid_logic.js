@@ -954,84 +954,84 @@ function showRewardCelebration(points) {
  */
 const GAMES_CATALOG = [
     {
-        id: 'bubble-woods',
-        title: 'Bubble Woods',
-        category: 'Casual',
-        embedUrl: 'https://play.famobi.com/bubble-woods',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/BubbleWoodsTeaser.jpg',
-        color: '#86efac', border: '#4ade80', shadow: '#16a34a'
-    },
-    {
-        id: 'candy-bubble',
-        title: 'Candy Bubble',
+        id: 'play2048',
+        title: '2048',
         category: 'Puzzle',
-        embedUrl: 'https://play.famobi.com/candy-bubble',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/CandyBubbleTeaser.jpg',
-        color: '#fbcfe8', border: '#f472b6', shadow: '#be185d'
-    },
-    {
-        id: 'smarty-bubbles',
-        title: 'Smarty Bubbles',
-        category: 'Puzzle',
-        embedUrl: 'https://play.famobi.com/smarty-bubbles',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/SmartyBubblesTeaser.jpg',
-        color: '#c084fc', border: '#a855f7', shadow: '#7e22ce'
-    },
-    {
-        id: 'solitaire-classic',
-        title: 'Solitaire Classic',
-        category: 'Cards',
-        embedUrl: 'https://play.famobi.com/solitaire-classic',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/SolitaireClassicTeaser.jpg',
-        color: '#6ee7b7', border: '#34d399', shadow: '#059669'
-    },
-    {
-        id: 'element-blocks',
-        title: 'Element Blocks',
-        category: 'Puzzle',
-        embedUrl: 'https://play.famobi.com/element-blocks',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/ElementBlocksTeaser.jpg',
-        color: '#93c5fd', border: '#60a5fa', shadow: '#2563eb'
-    },
-    {
-        id: 'tower-crash-3d',
-        title: 'Tower Crash 3D',
-        category: 'Skill',
-        embedUrl: 'https://play.famobi.com/tower-crash-3d',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/TowerCrash3DTeaser.jpg',
-        color: '#fca5a5', border: '#f87171', shadow: '#dc2626'
-    },
-    {
-        id: 'color-pixel-art-classic',
-        title: 'Color Pixel Art',
-        category: 'Creative',
-        embedUrl: 'https://play.famobi.com/color-pixel-art-classic',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/ColorPixelArtClassicTeaser.jpg',
+        embedUrl: 'https://play2048.co/',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=play2048&backgroundColor=fde68a',
         color: '#fde68a', border: '#fbbf24', shadow: '#b45309'
     },
     {
-        id: 'mahjong-classic',
-        title: 'Mahjong Classic',
+        id: 'hextris',
+        title: 'Hextris',
+        category: 'Puzzle',
+        embedUrl: 'https://hextris.io/',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=hextris&backgroundColor=fca5a5',
+        color: '#fca5a5', border: '#f87171', shadow: '#dc2626'
+    },
+    {
+        id: 'flappy-bird',
+        title: 'Flappy Bird',
+        category: 'Skill',
+        embedUrl: 'https://flappybird.io/',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=flappy&backgroundColor=86efac',
+        color: '#86efac', border: '#4ade80', shadow: '#16a34a'
+    },
+    {
+        id: 'pacman',
+        title: 'Pacman',
+        category: 'Arcade',
+        embedUrl: 'https://pacman.platzh1rsch.ch/',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=pacman&backgroundColor=fef08a',
+        color: '#fef08a', border: '#fde047', shadow: '#ca8a04'
+    },
+    {
+        id: 'astray',
+        title: 'Astray Maze',
+        category: 'Adventure',
+        embedUrl: 'https://playcanv.as/p/2OlkUaxF/',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=astray&backgroundColor=93c5fd',
+        color: '#93c5fd', border: '#60a5fa', shadow: '#2563eb'
+    },
+    {
+        id: 'swooop',
+        title: 'Swooop',
+        category: 'Action',
+        embedUrl: 'https://playcanv.as/p/JtL2iqIH/',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=swooop&backgroundColor=c084fc',
+        color: '#c084fc', border: '#a855f7', shadow: '#7e22ce'
+    },
+    {
+        id: 'core',
+        title: 'Core',
+        category: 'Skill',
+        embedUrl: 'https://playcanv.as/p/44MRmJRU/',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=core&backgroundColor=fbcfe8',
+        color: '#fbcfe8', border: '#f472b6', shadow: '#be185d'
+    },
+    {
+        id: 'radius-raid',
+        title: 'Radius Raid',
+        category: 'Shooter',
+        embedUrl: 'https://play.js13kgames.com/radius-raid/',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=radius&backgroundColor=6ee7b7',
+        color: '#6ee7b7', border: '#34d399', shadow: '#059669'
+    },
+    {
+        id: 'tower',
+        title: 'Tower',
         category: 'Strategy',
-        embedUrl: 'https://play.famobi.com/mahjong-classic',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/MahjongClassicTeaser.jpg',
+        embedUrl: 'https://play.js13kgames.com/tower/',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=tower&backgroundColor=fed7aa',
         color: '#fed7aa', border: '#fb923c', shadow: '#c2410c'
     },
     {
-        id: 'perfect-piano',
-        title: 'Perfect Piano',
-        category: 'Music',
-        embedUrl: 'https://play.famobi.com/perfect-piano',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/PerfectPianoTeaser.jpg',
-        color: '#bfdbfe', border: '#60a5fa', shadow: '#1d4ed8'
-    },
-    {
-        id: 'spider-solitaire-classic',
-        title: 'Spider Solitaire',
-        category: 'Cards',
-        embedUrl: 'https://play.famobi.com/spider-solitaire-classic',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/SpiderSolitaireClassicTeaser.jpg',
-        color: '#a5b4fc', border: '#818cf8', shadow: '#4338ca'
+        id: 'space-company',
+        title: 'Space Company',
+        category: 'Idle',
+        embedUrl: 'https://sparticle999.github.io/SpaceCompany/',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=space&backgroundColor=cbd5e1',
+        color: '#cbd5e1', border: '#94a3b8', shadow: '#475569'
     },
 ];
 

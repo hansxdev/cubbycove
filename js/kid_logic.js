@@ -953,14 +953,7 @@ function showRewardCelebration(points) {
  *   shadow    – box-shadow bottom hex
  */
 const GAMES_CATALOG = [
-    {
-        id: 'play2048',
-        title: '2048',
-        category: 'Puzzle',
-        embedUrl: 'https://play2048.co/',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=play2048&backgroundColor=fde68a',
-        color: '#fde68a', border: '#fbbf24', shadow: '#b45309'
-    },
+    // ── Verified working games ────────────────────────────────────────────────
     {
         id: 'hextris',
         title: 'Hextris',
@@ -986,14 +979,6 @@ const GAMES_CATALOG = [
         color: '#fef08a', border: '#fde047', shadow: '#ca8a04'
     },
     {
-        id: 'astray',
-        title: 'Astray Maze',
-        category: 'Adventure',
-        embedUrl: 'https://playcanv.as/p/2OlkUaxF/',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=astray&backgroundColor=93c5fd',
-        color: '#93c5fd', border: '#60a5fa', shadow: '#2563eb'
-    },
-    {
         id: 'swooop',
         title: 'Swooop',
         category: 'Action',
@@ -1001,37 +986,54 @@ const GAMES_CATALOG = [
         thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=swooop&backgroundColor=c084fc',
         color: '#c084fc', border: '#a855f7', shadow: '#7e22ce'
     },
+    // ── New open-source games (GitHub Pages — no iframe restrictions) ─────────
     {
-        id: 'core',
-        title: 'Core',
+        id: 'snake',
+        title: 'Snake',
+        category: 'Arcade',
+        embedUrl: 'https://aiunites.github.io/gameatica-site/games/snake.html',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=snake&backgroundColor=bbf7d0',
+        color: '#bbf7d0', border: '#4ade80', shadow: '#15803d'
+    },
+    {
+        id: 'tetris',
+        title: 'Tetris',
+        category: 'Puzzle',
+        embedUrl: 'https://aiunites.github.io/gameatica-site/games/tetris.html',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=tetris&backgroundColor=a5f3fc',
+        color: '#a5f3fc', border: '#22d3ee', shadow: '#0e7490'
+    },
+    {
+        id: 'breakout',
+        title: 'Breakout',
+        category: 'Arcade',
+        embedUrl: 'https://aiunites.github.io/gameatica-site/games/breakout.html',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=breakout&backgroundColor=fde68a',
+        color: '#fde68a', border: '#fbbf24', shadow: '#b45309'
+    },
+    {
+        id: 'pong',
+        title: 'Pong',
         category: 'Skill',
-        embedUrl: 'https://playcanv.as/p/44MRmJRU/',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=core&backgroundColor=fbcfe8',
-        color: '#fbcfe8', border: '#f472b6', shadow: '#be185d'
+        embedUrl: 'https://aiunites.github.io/gameatica-site/games/pong.html',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=pong&backgroundColor=e9d5ff',
+        color: '#e9d5ff', border: '#c084fc', shadow: '#7c3aed'
     },
     {
-        id: 'radius-raid',
-        title: 'Radius Raid',
-        category: 'Shooter',
-        embedUrl: 'https://play.js13kgames.com/radius-raid/',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=radius&backgroundColor=6ee7b7',
-        color: '#6ee7b7', border: '#34d399', shadow: '#059669'
+        id: 'asteroids',
+        title: 'Asteroids',
+        category: 'Action',
+        embedUrl: 'https://aiunites.github.io/gameatica-site/games/asteroids.html',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=asteroids&backgroundColor=fecaca',
+        color: '#fecaca', border: '#f87171', shadow: '#b91c1c'
     },
     {
-        id: 'tower',
-        title: 'Tower',
-        category: 'Strategy',
-        embedUrl: 'https://play.js13kgames.com/tower/',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=tower&backgroundColor=fed7aa',
+        id: 'puzzle2048',
+        title: '2048',
+        category: 'Puzzle',
+        embedUrl: 'https://aiunites.github.io/gameatica-site/games/2048.html',
+        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=puzzle2048&backgroundColor=fed7aa',
         color: '#fed7aa', border: '#fb923c', shadow: '#c2410c'
-    },
-    {
-        id: 'space-company',
-        title: 'Space Company',
-        category: 'Idle',
-        embedUrl: 'https://sparticle999.github.io/SpaceCompany/',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=space&backgroundColor=cbd5e1',
-        color: '#cbd5e1', border: '#94a3b8', shadow: '#475569'
     },
 ];
 

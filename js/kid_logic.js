@@ -954,52 +954,12 @@ function showRewardCelebration(points) {
  */
 const GAMES_CATALOG = [
     {
-        id: 'jewel-burst',
-        title: 'Jewel Burst',
-        category: 'Puzzle',
-        embedUrl: 'https://play.famobi.com/jewel-burst',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/JewelBurstTeaser.jpg',
-        color: '#c084fc', border: '#a855f7', shadow: '#7e22ce'
-    },
-    {
         id: 'bubble-woods',
         title: 'Bubble Woods',
         category: 'Casual',
         embedUrl: 'https://play.famobi.com/bubble-woods',
         thumb: 'https://img.famobi.com/portal/html5games/images/tmp/BubbleWoodsTeaser.jpg',
         color: '#86efac', border: '#4ade80', shadow: '#16a34a'
-    },
-    {
-        id: 'knife-smash',
-        title: 'Knife Smash',
-        category: 'Skill',
-        embedUrl: 'https://play.famobi.com/knife-smash',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/KnifeSmashTeaser.jpg',
-        color: '#fca5a5', border: '#f87171', shadow: '#dc2626'
-    },
-    {
-        id: 'subway-surfers',
-        title: 'Subway Surfers',
-        category: 'Runner',
-        embedUrl: 'https://play.famobi.com/subway-surfers',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/SubwaySurfersTeaser.jpg',
-        color: '#93c5fd', border: '#60a5fa', shadow: '#2563eb'
-    },
-    {
-        id: 'solitaire',
-        title: 'Classic Solitaire',
-        category: 'Cards',
-        embedUrl: 'https://play.famobi.com/solitaire',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/SolitaireTeaser.jpg',
-        color: '#6ee7b7', border: '#34d399', shadow: '#059669'
-    },
-    {
-        id: 'snake-and-ladders',
-        title: 'Snake & Ladders',
-        category: 'Board',
-        embedUrl: 'https://play.famobi.com/snake-and-ladders',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/SnakeLaddersTeaser.jpg',
-        color: '#fde68a', border: '#fbbf24', shadow: '#b45309'
     },
     {
         id: 'candy-bubble',
@@ -1010,27 +970,67 @@ const GAMES_CATALOG = [
         color: '#fbcfe8', border: '#f472b6', shadow: '#be185d'
     },
     {
-        id: 'mahjong-alchemy',
-        title: 'Mahjong Alchemy',
+        id: 'smarty-bubbles',
+        title: 'Smarty Bubbles',
+        category: 'Puzzle',
+        embedUrl: 'https://play.famobi.com/smarty-bubbles',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/SmartyBubblesTeaser.jpg',
+        color: '#c084fc', border: '#a855f7', shadow: '#7e22ce'
+    },
+    {
+        id: 'solitaire-classic',
+        title: 'Solitaire Classic',
+        category: 'Cards',
+        embedUrl: 'https://play.famobi.com/solitaire-classic',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/SolitaireClassicTeaser.jpg',
+        color: '#6ee7b7', border: '#34d399', shadow: '#059669'
+    },
+    {
+        id: 'element-blocks',
+        title: 'Element Blocks',
+        category: 'Puzzle',
+        embedUrl: 'https://play.famobi.com/element-blocks',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/ElementBlocksTeaser.jpg',
+        color: '#93c5fd', border: '#60a5fa', shadow: '#2563eb'
+    },
+    {
+        id: 'tower-crash-3d',
+        title: 'Tower Crash 3D',
+        category: 'Skill',
+        embedUrl: 'https://play.famobi.com/tower-crash-3d',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/TowerCrash3DTeaser.jpg',
+        color: '#fca5a5', border: '#f87171', shadow: '#dc2626'
+    },
+    {
+        id: 'color-pixel-art-classic',
+        title: 'Color Pixel Art',
+        category: 'Creative',
+        embedUrl: 'https://play.famobi.com/color-pixel-art-classic',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/ColorPixelArtClassicTeaser.jpg',
+        color: '#fde68a', border: '#fbbf24', shadow: '#b45309'
+    },
+    {
+        id: 'mahjong-classic',
+        title: 'Mahjong Classic',
         category: 'Strategy',
-        embedUrl: 'https://play.famobi.com/mahjong-alchemy',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/MahjongAlchemyTeaser.jpg',
+        embedUrl: 'https://play.famobi.com/mahjong-classic',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/MahjongClassicTeaser.jpg',
         color: '#fed7aa', border: '#fb923c', shadow: '#c2410c'
     },
     {
-        id: 'magic-tower',
-        title: 'Magic Tower',
-        category: 'Adventure',
-        embedUrl: 'https://play.famobi.com/magic-tower',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/MagicTowerTeaser.jpg',
+        id: 'perfect-piano',
+        title: 'Perfect Piano',
+        category: 'Music',
+        embedUrl: 'https://play.famobi.com/perfect-piano',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/PerfectPianoTeaser.jpg',
         color: '#bfdbfe', border: '#60a5fa', shadow: '#1d4ed8'
     },
     {
-        id: 'galaxy-attack',
-        title: 'Galaxy Attack',
-        category: 'Shooter',
-        embedUrl: 'https://play.famobi.com/galaxy-attack',
-        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/GalaxyAttackTeaser.jpg',
+        id: 'spider-solitaire-classic',
+        title: 'Spider Solitaire',
+        category: 'Cards',
+        embedUrl: 'https://play.famobi.com/spider-solitaire-classic',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/SpiderSolitaireClassicTeaser.jpg',
         color: '#a5b4fc', border: '#818cf8', shadow: '#4338ca'
     },
 ];
@@ -1212,7 +1212,7 @@ window.openGameModal = function (gameId) {
                 style="width:100%; height:100%; border:none; display:block;"
                 allow="autoplay; fullscreen; accelerometer; gyroscope; payment"
                 allowfullscreen
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock"
                 title="${game.title}"
                 loading="eager"
             ></iframe>

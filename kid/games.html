@@ -210,68 +210,27 @@
             </div>
         </div>
 
-        <!-- Game Grid -->
+        <!-- Game Grid — dynamically populated by renderGamesGrid() in kid_logic.js -->
         <div class="px-6 py-6 pb-20">
-            <h2 class="flex items-center gap-3 text-2xl font-black text-gray-800 mb-6 drop-shadow-sm">
-                <i class="fa-solid fa-shapes text-cubby-purple text-3xl"></i> All Games
-            </h2>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="flex items-center gap-3 text-2xl font-black text-gray-800 drop-shadow-sm">
+                    <i class="fa-solid fa-shapes text-cubby-purple text-3xl"></i> All Games
+                </h2>
+                <!-- Reward hint pill -->
+                <span class="hidden sm:flex items-center gap-1.5 bg-yellow-50 border-2 border-yellow-200 text-yellow-700 text-xs font-black px-3 py-1.5 rounded-full">
+                    <i class="fa-solid fa-star text-yellow-500 animate-pulse"></i>
+                    Play 3 min → earn +10 Stars!
+                </span>
+            </div>
 
-                <!-- Game Card 1 -->
-                <div class="bg-[#bbf7d0] rounded-3xl border-[5px] border-[#4ade80] p-[5px] shadow-[0_6px_0_#22c55e] hover:shadow-[0_2px_0_#22c55e] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer group flex flex-col">
-                    <div class="bg-white rounded-[20px] pb-4 flex flex-col items-center justify-center relative overflow-hidden h-full pt-8">
-                        <div class="w-16 h-16 bg-[#bbf7d0] text-[#166534] border-4 border-[#4ade80] rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </div>
-                        <h3 class="font-extrabold text-gray-800 text-base text-center px-2 leading-tight">Math Whiz</h3>
-                        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Educational</p>
-                    </div>
+            <!-- This container is filled by kid_logic.js → renderGamesGrid() on DOMContentLoaded -->
+            <div id="games-grid-container"
+                 class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <!-- Loading skeleton shown until JS fires -->
+                <div class="col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-5 flex flex-col items-center py-16 text-gray-400">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl text-cubby-purple mb-3"></i>
+                    <p class="font-bold">Loading games…</p>
                 </div>
-
-                <!-- Game Card 2 -->
-                <div class="bg-[#fef08a] rounded-3xl border-[5px] border-[#fde047] p-[5px] shadow-[0_6px_0_#eab308] hover:shadow-[0_2px_0_#eab308] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer group flex flex-col">
-                    <div class="bg-white rounded-[20px] pb-4 flex flex-col items-center justify-center relative overflow-hidden h-full pt-8">
-                        <div class="w-16 h-16 bg-[#fef08a] text-[#854d0e] border-4 border-[#fde047] rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-chess-knight"></i>
-                        </div>
-                        <h3 class="font-extrabold text-gray-800 text-base text-center px-2 leading-tight">Knight's Quest</h3>
-                        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Puzzle</p>
-                    </div>
-                </div>
-
-                <!-- Game Card 3 -->
-                <div class="bg-[#bfdbfe] rounded-3xl border-[5px] border-[#60a5fa] p-[5px] shadow-[0_6px_0_#3b82f6] hover:shadow-[0_2px_0_#3b82f6] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer group flex flex-col">
-                    <div class="bg-white rounded-[20px] pb-4 flex flex-col items-center justify-center relative overflow-hidden h-full pt-8">
-                        <div class="w-16 h-16 bg-[#bfdbfe] text-[#1e40af] border-4 border-[#60a5fa] rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-car-side"></i>
-                        </div>
-                        <h3 class="font-extrabold text-gray-800 text-base text-center px-2 leading-tight">Tiny Racers</h3>
-                        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Racing</p>
-                    </div>
-                </div>
-
-                <!-- Game Card 4 -->
-                <div class="bg-[#fed7aa] rounded-3xl border-[5px] border-[#fb923c] p-[5px] shadow-[0_6px_0_#f97316] hover:shadow-[0_2px_0_#f97316] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer group flex flex-col">
-                    <div class="bg-white rounded-[20px] pb-4 flex flex-col items-center justify-center relative overflow-hidden h-full pt-8">
-                        <div class="w-16 h-16 bg-[#fed7aa] text-[#c2410c] border-4 border-[#fb923c] rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-cookie-bite"></i>
-                        </div>
-                        <h3 class="font-extrabold text-gray-800 text-base text-center px-2 leading-tight">Cookie Clicker</h3>
-                        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Casual</p>
-                    </div>
-                </div>
-
-                <!-- Game Card 5 -->
-                <div class="bg-[#fbcfe8] rounded-3xl border-[5px] border-[#f472b6] p-[5px] shadow-[0_6px_0_#ec4899] hover:shadow-[0_2px_0_#ec4899] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer group flex flex-col">
-                    <div class="bg-white rounded-[20px] pb-4 flex flex-col items-center justify-center relative overflow-hidden h-full pt-8">
-                        <div class="w-16 h-16 bg-[#fbcfe8] text-[#be185d] border-4 border-[#f472b6] rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-paintbrush"></i>
-                        </div>
-                        <h3 class="font-extrabold text-gray-800 text-base text-center px-2 leading-tight">Coloring Book</h3>
-                        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Creative</p>
-                    </div>
-                </div>
-
             </div>
         </div>
     </main>

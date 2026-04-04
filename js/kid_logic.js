@@ -99,6 +99,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadContinueWatching();
     }
 
+    // Games page — render the dynamic game card grid
+    if (document.getElementById('games-grid-container')) {
+        renderGamesGrid();
+    }
+
     // History page
     if (path.includes('history.html')) {
         loadHistoryPage();
@@ -115,6 +120,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     _screenTimeStart = Date.now();
     _screenTimeFlushed = false;
 });
+
+/**
+ * playMemoryGame()
+ * Alias wired to the featured "Play Now" hero banner button in games.html.
+ * Opens the first game in the catalog (update GAMES_CATALOG[0] to the desired
+ * featured game at any time).
+ */
+window.playMemoryGame = function () {
+    const featured = GAMES_CATALOG[0];
+    if (featured) openGameModal(featured.id);
+};
 
 async function _initRewardState() {
     const session = _getChildSession();
@@ -916,6 +932,496 @@ function showRewardCelebration(points) {
              setTimeout(() => { if (popup.parentNode) popup.remove(); }, 400);
         }
     }, 4000);
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// GAMES SYSTEM — Famobi Embed Grid + Full-Screen Modal + Anti-Cheat Timer
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * GAME CATALOG
+ * Each object represents one embeddable Famobi HTML5 game.
+ *
+ * Fields:
+ *   id        – unique key used as the element ID suffix
+ *   title     – display name
+ *   category  – genre tag shown on the card
+ *   embedUrl  – the Famobi embed URL loaded inside the iframe
+ *   thumb     – thumbnail shown on the card (Famobi CDN preview or placeholder)
+ *   color     – card accent color (Tailwind value used inside the inline-style)
+ *   border    – border-color hex for the 3-D card shadow
+ *   shadow    – box-shadow bottom hex
+ */
+const GAMES_CATALOG = [
+    {
+        id: 'jewel-burst',
+        title: 'Jewel Burst',
+        category: 'Puzzle',
+        embedUrl: 'https://play.famobi.com/jewel-burst',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/JewelBurstTeaser.jpg',
+        color: '#c084fc', border: '#a855f7', shadow: '#7e22ce'
+    },
+    {
+        id: 'bubble-woods',
+        title: 'Bubble Woods',
+        category: 'Casual',
+        embedUrl: 'https://play.famobi.com/bubble-woods',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/BubbleWoodsTeaser.jpg',
+        color: '#86efac', border: '#4ade80', shadow: '#16a34a'
+    },
+    {
+        id: 'knife-smash',
+        title: 'Knife Smash',
+        category: 'Skill',
+        embedUrl: 'https://play.famobi.com/knife-smash',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/KnifeSmashTeaser.jpg',
+        color: '#fca5a5', border: '#f87171', shadow: '#dc2626'
+    },
+    {
+        id: 'subway-surfers',
+        title: 'Subway Surfers',
+        category: 'Runner',
+        embedUrl: 'https://play.famobi.com/subway-surfers',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/SubwaySurfersTeaser.jpg',
+        color: '#93c5fd', border: '#60a5fa', shadow: '#2563eb'
+    },
+    {
+        id: 'solitaire',
+        title: 'Classic Solitaire',
+        category: 'Cards',
+        embedUrl: 'https://play.famobi.com/solitaire',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/SolitaireTeaser.jpg',
+        color: '#6ee7b7', border: '#34d399', shadow: '#059669'
+    },
+    {
+        id: 'snake-and-ladders',
+        title: 'Snake & Ladders',
+        category: 'Board',
+        embedUrl: 'https://play.famobi.com/snake-and-ladders',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/SnakeLaddersTeaser.jpg',
+        color: '#fde68a', border: '#fbbf24', shadow: '#b45309'
+    },
+    {
+        id: 'candy-bubble',
+        title: 'Candy Bubble',
+        category: 'Puzzle',
+        embedUrl: 'https://play.famobi.com/candy-bubble',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/CandyBubbleTeaser.jpg',
+        color: '#fbcfe8', border: '#f472b6', shadow: '#be185d'
+    },
+    {
+        id: 'mahjong-alchemy',
+        title: 'Mahjong Alchemy',
+        category: 'Strategy',
+        embedUrl: 'https://play.famobi.com/mahjong-alchemy',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/MahjongAlchemyTeaser.jpg',
+        color: '#fed7aa', border: '#fb923c', shadow: '#c2410c'
+    },
+    {
+        id: 'magic-tower',
+        title: 'Magic Tower',
+        category: 'Adventure',
+        embedUrl: 'https://play.famobi.com/magic-tower',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/MagicTowerTeaser.jpg',
+        color: '#bfdbfe', border: '#60a5fa', shadow: '#1d4ed8'
+    },
+    {
+        id: 'galaxy-attack',
+        title: 'Galaxy Attack',
+        category: 'Shooter',
+        embedUrl: 'https://play.famobi.com/galaxy-attack',
+        thumb: 'https://img.famobi.com/portal/html5games/images/tmp/GalaxyAttackTeaser.jpg',
+        color: '#a5b4fc', border: '#818cf8', shadow: '#4338ca'
+    },
+];
+
+/**
+ * renderGamesGrid()
+ * Loops over GAMES_CATALOG and injects game cards into the element
+ * with id="games-grid-container". Compatible with both games.html and
+ * the Quick Games section on home_logged_in.html.
+ */
+function renderGamesGrid() {
+    const container = document.getElementById('games-grid-container');
+    if (!container) return;
+
+    container.innerHTML = GAMES_CATALOG.map(game => _buildGameCard(game)).join('');
+}
+
+/**
+ * Build a single game card HTML string matching the site's neo-brutalist style.
+ * @param {Object} game - An entry from GAMES_CATALOG
+ * @returns {string} HTML string
+ */
+function _buildGameCard(game) {
+    // Fallback thumbnail using DiceBear identicon if Famobi image fails to load
+    const fallbackThumb = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(game.id)}`;
+
+    return `
+        <div id="game-card-${game.id}"
+             class="game-card group cursor-pointer rounded-3xl p-[5px] transition-all hover:translate-y-1 active:translate-y-2 active:shadow-none flex flex-col"
+             style="background:${game.color}; border: 5px solid ${game.border}; box-shadow: 0 6px 0 ${game.shadow};"
+             onclick="openGameModal('${game.id}')"
+             role="button"
+             aria-label="Play ${game.title}">
+            <div class="bg-white rounded-[20px] overflow-hidden flex flex-col h-full">
+                <!-- Thumbnail -->
+                <div class="relative w-full aspect-video overflow-hidden bg-gray-100">
+                    <img
+                        src="${game.thumb}"
+                        alt="${game.title}"
+                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        loading="lazy"
+                        onerror="this.src='${fallbackThumb}'; this.style.padding='12px';"
+                    >
+                    <!-- Category pill -->
+                    <span class="absolute bottom-2 left-2 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm"
+                          style="background:${game.shadow};">
+                        ${game.category}
+                    </span>
+                    <!-- Play overlay on hover -->
+                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div class="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center shadow-xl">
+                            <i class="fa-solid fa-play text-2xl ml-1" style="color:${game.shadow};"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- Info -->
+                <div class="flex-1 flex flex-col items-center justify-center p-3 text-center"
+                     style="background:${game.color}18;">
+                    <h3 class="font-extrabold text-gray-800 text-sm leading-tight drop-shadow-sm">
+                        ${game.title}
+                    </h3>
+                    <!-- Timer hint -->
+                    <p class="text-[10px] font-bold mt-1 opacity-60" style="color:${game.shadow};">
+                        <i class="fa-solid fa-star text-[8px]"></i> Play 3 min → +10 Stars
+                    </p>
+                </div>
+            </div>
+        </div>`;
+}
+
+// ─── Game Player Modal ────────────────────────────────────────────────────────
+
+/**
+ * openGameModal(gameId)
+ * Creates a full-screen game-player modal containing a sandboxed iframe.
+ * Also starts the anti-cheat playtime reward timer.
+ *
+ * @param {string} gameId - Must match a game's `id` field in GAMES_CATALOG
+ */
+window.openGameModal = function (gameId) {
+    // Find the game definition
+    const game = GAMES_CATALOG.find(g => g.id === gameId);
+    if (!game) { console.warn('[Games] Unknown game id:', gameId); return; }
+
+    // Destroy any existing game modal first (prevents stacking)
+    const existing = document.getElementById('kid-game-modal');
+    if (existing) {
+        _stopGameRewardTracking();
+        existing.remove();
+        document.body.style.overflow = '';
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'kid-game-modal';
+    // Full-screen overlay — z-index above the nav/sidebar but below the celebration popup
+    modal.style.cssText = `
+        position: fixed; inset: 0; z-index: 200;
+        display: flex; flex-direction: column;
+        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    `;
+
+    modal.innerHTML = `
+        <!-- ══ Header Bar ══════════════════════════════════════════════════ -->
+        <div id="game-modal-header" style="
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 20px;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            flex-shrink: 0;
+        ">
+            <!-- Left: Title + category -->
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="
+                    width:40px; height:40px; border-radius:50%;
+                    background:${game.color}30;
+                    border: 2px solid ${game.color};
+                    display:flex; align-items:center; justify-content:center;
+                ">
+                    <i class="fa-solid fa-gamepad" style="color:${game.color}; font-size:16px;"></i>
+                </div>
+                <div>
+                    <p style="color:white; font-weight:900; font-size:16px; margin:0; line-height:1.2;">${game.title}</p>
+                    <p style="color:rgba(255,255,255,0.5); font-size:11px; font-weight:700; margin:0;">${game.category}</p>
+                </div>
+            </div>
+
+            <!-- Center: Play-time progress bar + countdown -->
+            <div id="game-timer-ui" style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; max-width:320px; margin: 0 24px;">
+                <div style="display:flex; align-items:center; gap:8px; width:100%;">
+                    <i class="fa-solid fa-star" style="color:#fde047; font-size:13px;"></i>
+                    <div style="flex:1; height:8px; background:rgba(255,255,255,0.15); border-radius:99px; overflow:hidden;">
+                        <div id="game-progress-bar" style="
+                            height:100%; width:0%;
+                            background: linear-gradient(90deg, #fde047, #f59e0b);
+                            border-radius:99px;
+                            transition: width 1s linear;
+                        "></div>
+                    </div>
+                    <span id="game-timer-label" style="color:rgba(255,255,255,0.7); font-size:11px; font-weight:800; white-space:nowrap;">0:00 / 3:00</span>
+                </div>
+                <div id="game-idle-badge" style="
+                    display:none; background:#f97316; color:white;
+                    font-size:10px; font-weight:900; padding:2px 10px;
+                    border-radius:99px; letter-spacing:0.5px;
+                ">
+                    <i class="fa-solid fa-pause"></i> Paused — Move to resume!
+                </div>
+            </div>
+
+            <!-- Right: Close button -->
+            <button id="game-close-btn"
+                onclick="closeGameModal()"
+                style="
+                    background: rgba(239,68,68,0.2);
+                    border: 2px solid rgba(239,68,68,0.5);
+                    color: #fca5a5;
+                    font-weight: 900;
+                    font-size: 13px;
+                    padding: 8px 18px;
+                    border-radius: 99px;
+                    cursor: pointer;
+                    display: flex; align-items: center; gap: 6px;
+                    transition: background 0.2s;
+                    font-family: inherit;
+                "
+                onmouseover="this.style.background='rgba(239,68,68,0.4)'"
+                onmouseout="this.style.background='rgba(239,68,68,0.2)'"
+                aria-label="Close Game">
+                <i class="fa-solid fa-times"></i> Close Game
+            </button>
+        </div>
+
+        <!-- ══ Game IFrame ═════════════════════════════════════════════════ -->
+        <div style="flex:1; position:relative; overflow:hidden;">
+            <iframe
+                id="game-iframe"
+                src="${game.embedUrl}"
+                style="width:100%; height:100%; border:none; display:block;"
+                allow="autoplay; fullscreen; accelerometer; gyroscope; payment"
+                allowfullscreen
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock"
+                title="${game.title}"
+                loading="eager"
+            ></iframe>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+
+    // Start the anti-cheat playtime tracker
+    _startGameRewardTracking(game);
+};
+
+/**
+ * closeGameModal()
+ * Destroys the game iframe (to stop audio/music) and clears all timers.
+ * If the reward was already claimed, progress is kept — no double-awarding.
+ */
+window.closeGameModal = function () {
+    _stopGameRewardTracking();
+
+    const modal = document.getElementById('kid-game-modal');
+    if (modal) {
+        // Src-nulling destroys the iframe's browsing context → stops audio immediately
+        const iframe = document.getElementById('game-iframe');
+        if (iframe) iframe.src = 'about:blank';
+
+        modal.remove();
+        document.body.style.overflow = '';
+    }
+};
+
+// ─── Anti-Cheat Time-Based Reward Engine ─────────────────────────────────────
+//
+// Design:
+//   • _gamePlayInterval  – ticks every 1 s; accumulates "active" seconds.
+//   • _gameIdleTimeout   – resets on every activity event; fires after 30 s of
+//                          silence to pause the accumulator (sets _gameIsIdle).
+//   • Activity events: mousemove, touchstart, touchmove, keydown, click.
+//
+// Earning flow:
+//   1. Kid opens a game  → _gamePlayInterval starts, _gameIsIdle = false.
+//   2. Kid goes quiet    → _gameIdleTimeout fires after 30 s → _gameIsIdle = true.
+//   3. Kid acts again    → activity handler resets timeout, _gameIsIdle = false.
+//   4. _gamePlayInterval only counts seconds when _gameIsIdle === false.
+//   5. When active seconds reach GAME_REWARD_THRESHOLD_S → _claimGameReward().
+
+const GAME_REWARD_THRESHOLD_S = 180; // 3 minutes of active, non-idle playtime
+const GAME_IDLE_TIMEOUT_MS    = 30000; // 30 s idle window before pausing timer
+
+let _gamePlayInterval  = null; // setInterval handle — 1-second tick
+let _gameIdleTimeout   = null; // setTimeout handle — 30-second idle sentinel
+let _gameActiveSeconds = 0;    // accumulated active (non-idle) seconds
+let _gameIsIdle        = false; // true when the idle sentinel has fired
+let _gameRewardClaimed = false; // guard against double-awarding in one session
+let _currentGameId     = null;  // id of the currently tracked game
+
+/**
+ * _startGameRewardTracking(game)
+ * Initialise all state for a fresh game session and wire up activity listeners.
+ *
+ * @param {Object} game - Entry from GAMES_CATALOG
+ */
+function _startGameRewardTracking(game) {
+    // Clean slate for this session
+    _gameActiveSeconds = 0;
+    _gameIsIdle        = false;
+    _gameRewardClaimed = false;
+    _currentGameId     = game.id;
+
+    console.log(`[Games] 🎮 Tracking started for "${game.title}". Need ${GAME_REWARD_THRESHOLD_S}s of active play.`);
+
+    // ── Activity listener ──────────────────────────────────────────────────
+    // Attached to `document` so it fires even when the cursor leave the iframe
+    // (cross-origin iframes do NOT forward pointer events, so activity inside
+    //  the game itself does not count — the kid must interact with the page
+    //  wrapper or move the mouse in the host document).
+    //
+    // IMPORTANT: We also listen for `blur`/`focus` on the window so that if
+    // the kid alt-tabs away the idle timer fires normally.
+    const _onActivity = () => {
+        if (_gameIsIdle) {
+            _gameIsIdle = false;
+            // Hide the "Paused" badge
+            const badge = document.getElementById('game-idle-badge');
+            if (badge) badge.style.display = 'none';
+            console.log('[Games] ▶ Timer resumed (activity detected).');
+        }
+        // Reset the idle sentinel on every interaction
+        clearTimeout(_gameIdleTimeout);
+        _gameIdleTimeout = setTimeout(_onIdle, GAME_IDLE_TIMEOUT_MS);
+    };
+
+    const _onIdle = () => {
+        _gameIsIdle = true;
+        // Show the "Paused" badge in the modal header
+        const badge = document.getElementById('game-idle-badge');
+        if (badge) badge.style.display = 'block';
+        console.log('[Games] ⏸ Timer paused — no activity for 30 s.');
+    };
+
+    // Store refs on window so _stopGameRewardTracking can remove them
+    window._gameActivityHandler = _onActivity;
+
+    ['mousemove', 'touchstart', 'touchmove', 'keydown', 'click', 'pointerdown'].forEach(evt => {
+        document.addEventListener(evt, _onActivity, { passive: true });
+    });
+
+    // Arm initial idle sentinel (kid has 30 s to interact before the timer pauses)
+    _gameIdleTimeout = setTimeout(_onIdle, GAME_IDLE_TIMEOUT_MS);
+
+    // ── 1-second accumulator tick ──────────────────────────────────────────
+    _gamePlayInterval = setInterval(() => {
+        // Only count while the modal still exists and the kid is not idle
+        if (!document.getElementById('kid-game-modal')) {
+            _stopGameRewardTracking();
+            return;
+        }
+
+        if (!_gameIsIdle) {
+            _gameActiveSeconds++;
+        }
+
+        // Update UI: progress bar and label
+        const pct   = Math.min((_gameActiveSeconds / GAME_REWARD_THRESHOLD_S) * 100, 100);
+        const bar   = document.getElementById('game-progress-bar');
+        const label = document.getElementById('game-timer-label');
+        if (bar)   bar.style.width = `${pct}%`;
+        if (label) {
+            const mins = Math.floor(_gameActiveSeconds / 60);
+            const secs = _gameActiveSeconds % 60;
+            label.textContent = `${mins}:${String(secs).padStart(2, '0')} / 3:00`;
+        }
+
+        // Check reward threshold
+        if (_gameActiveSeconds >= GAME_REWARD_THRESHOLD_S && !_gameRewardClaimed) {
+            _gameRewardClaimed = true;
+            _claimGameReward();
+        }
+    }, 1000);
+}
+
+/**
+ * _stopGameRewardTracking()
+ * Clears all timers and activity listeners. Safe to call multiple times.
+ */
+function _stopGameRewardTracking() {
+    if (_gamePlayInterval) { clearInterval(_gamePlayInterval); _gamePlayInterval = null; }
+    if (_gameIdleTimeout)  { clearTimeout(_gameIdleTimeout);  _gameIdleTimeout  = null; }
+
+    // Remove activity listeners
+    if (window._gameActivityHandler) {
+        ['mousemove', 'touchstart', 'touchmove', 'keydown', 'click', 'pointerdown'].forEach(evt => {
+            document.removeEventListener(evt, window._gameActivityHandler);
+        });
+        window._gameActivityHandler = null;
+    }
+
+    _gameActiveSeconds = 0;
+    _gameIsIdle        = false;
+    _currentGameId     = null;
+
+    console.log('[Games] ⏹ Reward tracking stopped.');
+}
+
+/**
+ * _claimGameReward()
+ * Awards 10 stars via the same DataService path used by video rewards.
+ * Shows the celebration modal layered over the game session so the kid
+ * sees the reward immediately, then they can choose to keep playing.
+ */
+async function _claimGameReward() {
+    const session = _getChildSession();
+    if (!session || !session.$id) return;
+
+    const GAME_POINTS = 10;
+
+    console.log('[Games] 🌟 3-minute threshold reached! Awarding', GAME_POINTS, 'stars.');
+
+    try {
+        // Re-use the same DataService reward recorder as video completions.
+        // We use `rewardType: 'game_play'` and source the current game id.
+        await DataService.recordVideoReward(session.$id, `game_${_currentGameId}`, GAME_POINTS);
+
+        // Sync points into sessionStorage immediately (same fix as video rewards)
+        const freshSession = _getChildSession();
+        if (freshSession) {
+            freshSession.totalPoints = (freshSession.totalPoints || 0) + GAME_POINTS;
+            sessionStorage.setItem('cubby_child_session', JSON.stringify(freshSession));
+        }
+
+        // Update the header star counter
+        const pointsVal = document.getElementById('header-total-points');
+        if (pointsVal) {
+            pointsVal.textContent = (parseInt(pointsVal.textContent) || 0) + GAME_POINTS;
+        }
+
+        // Show the existing neo-brutalist celebration popup (from showRewardCelebration)
+        // It renders over the game modal because z-index 99999 > game modal's 200.
+        showRewardCelebration(GAME_POINTS);
+
+        // Stop the interval — reward has been claimed, no more ticking needed
+        _stopGameRewardTracking();
+
+    } catch (e) {
+        console.error('[Games] Reward claim failed:', e.message);
+        // On failure, reset the guard so the kid can earn it again if they replay
+        _gameRewardClaimed = false;
+    }
 }
 
 // ─── Recommendation Logic ────────────────────────────────────────────────────

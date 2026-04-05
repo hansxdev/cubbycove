@@ -953,6 +953,15 @@ function showRewardCelebration(points) {
  *   shadow    – box-shadow bottom hex
  */
 const GAMES_CATALOG = [
+    // ── FEATURED GAME ──────────────────────────────────────────────────────────
+    {
+        id: 'conservation-of-bass',
+        title: 'Conservation of Bass',
+        category: 'Puzzle',
+        embedUrl: 'https://itch.io/embed-upload/4378040?color=201e2e',
+        thumb: 'https://img.itch.zone/aW1nLzI2MTUxNjM1LnBuZw==/315x250%23c/rKECFL.png',
+        color: '#201e2e', border: '#ec4899', shadow: '#be185d'
+    },
     // ── Verified working games ────────────────────────────────────────────────
     {
         id: 'hextris',

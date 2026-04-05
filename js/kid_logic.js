@@ -953,22 +953,13 @@ function showRewardCelebration(points) {
  *   shadow    – box-shadow bottom hex
  */
 const GAMES_CATALOG = [
-    // ── FEATURED GAME ──────────────────────────────────────────────────────────
-    {
-        id: 'conservation-of-bass',
-        title: 'Conservation of Bass',
-        category: 'Puzzle',
-        embedUrl: 'https://html-classic.itch.zone/html/16937824/index.html',
-        thumb: 'https://img.itch.zone/aW1nLzI2MTUxNjM1LnBuZw==/315x250%23c/rKECFL.png',
-        color: '#201e2e', border: '#ec4899', shadow: '#be185d'
-    },
     // ── Verified working games ────────────────────────────────────────────────
     {
         id: 'hextris',
         title: 'Hextris',
         category: 'Puzzle',
         embedUrl: 'https://hextris.io/',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=hextris&backgroundColor=fca5a5',
+        thumb: 'https://imgs.search.brave.com/HfAThsJrI06fhRF0T6YX9MvotDelVd3PRqS74Fx7mlI/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/ZXhwZXJpbW9ua2V5/LmNvbS9nYW1lcy9z/d2YtZ2FtZXMvaGV4/dHJpcy9oZXh0cmlz/LmpwZw',
         color: '#fca5a5', border: '#f87171', shadow: '#dc2626'
     },
     {
@@ -976,7 +967,7 @@ const GAMES_CATALOG = [
         title: 'Flappy Bird',
         category: 'Skill',
         embedUrl: 'https://flappybird.io/',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=flappy&backgroundColor=86efac',
+        thumb: 'https://imgs.search.brave.com/lFI-uxSYh8XMzg4-_6x_Rnlwg2l0oAyVIQU3RjUBUNM/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93YWxs/cGFwZXJjYXZlLmNv/bS93cC93cDY5NTY4/NzEuanBn',
         color: '#86efac', border: '#4ade80', shadow: '#16a34a'
     },
     {
@@ -984,65 +975,57 @@ const GAMES_CATALOG = [
         title: 'Pacman',
         category: 'Arcade',
         embedUrl: 'https://pacman.platzh1rsch.ch/',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=pacman&backgroundColor=fef08a',
+        thumb: 'https://imgs.search.brave.com/Jfr8DT3LKstmDl_fLDV3xLOvR6nMIUUNhH8HJ7aKLEk/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93YWxs/cGFwZXJzLmNvbS9p/bWFnZXMvZmVhdHVy/ZWQvcGFjbWFuLTU1/dHUyeWhqM2U2Nmlt/bXIuanBn',
         color: '#fef08a', border: '#fde047', shadow: '#ca8a04'
     },
     {
         id: 'swooop',
-        title: 'Swooop',
+        title: 'Swoop',
         category: 'Action',
         embedUrl: 'https://playcanv.as/p/JtL2iqIH/',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=swooop&backgroundColor=c084fc',
+        thumb: 'https://imgs.search.brave.com/fbCTEDTO21THa7K0AylEAr11nYqr4Bb1xOdhzvllbXs/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tLm1l/ZGlhLWFtYXpvbi5j/b20vaW1hZ2VzL0kv/ODEtQTJFbVNYWkwu/cG5n',
         color: '#c084fc', border: '#a855f7', shadow: '#7e22ce'
     },
-    // ── New open-source games (GitHub Pages — no iframe restrictions) ─────────
+    // ── AddictingGames titles ─────────────────────────────────────────────────
     {
-        id: 'snake',
-        title: 'Snake',
-        category: 'Arcade',
-        embedUrl: 'https://aiunites.github.io/gameatica-site/games/snake.html',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=snake&backgroundColor=bbf7d0',
-        color: '#bbf7d0', border: '#4ade80', shadow: '#15803d'
-    },
-    {
-        id: 'tetris',
-        title: 'Tetris',
-        category: 'Puzzle',
-        embedUrl: 'https://aiunites.github.io/gameatica-site/games/tetris.html',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=tetris&backgroundColor=a5f3fc',
-        color: '#a5f3fc', border: '#22d3ee', shadow: '#0e7490'
-    },
-    {
-        id: 'breakout',
-        title: 'Breakout',
-        category: 'Arcade',
-        embedUrl: 'https://aiunites.github.io/gameatica-site/games/breakout.html',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=breakout&backgroundColor=fde68a',
+        id: 'viking-queen-defense',
+        title: 'Viking Queen Defense',
+        category: 'Strategy',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/24555',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fimage_2025-09-04_165417114.png&w=1920&q=100',
         color: '#fde68a', border: '#fbbf24', shadow: '#b45309'
     },
     {
-        id: 'pong',
-        title: 'Pong',
-        category: 'Skill',
-        embedUrl: 'https://aiunites.github.io/gameatica-site/games/pong.html',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=pong&backgroundColor=e9d5ff',
-        color: '#e9d5ff', border: '#c084fc', shadow: '#7c3aed'
-    },
-    {
-        id: 'asteroids',
-        title: 'Asteroids',
+        id: 'cube-killer',
+        title: 'Cube Killer',
         category: 'Action',
-        embedUrl: 'https://aiunites.github.io/gameatica-site/games/asteroids.html',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=asteroids&backgroundColor=fecaca',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/25160',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2FCubeKillerv2.png&w=1920&q=100',
         color: '#fecaca', border: '#f87171', shadow: '#b91c1c'
     },
     {
-        id: 'puzzle2048',
-        title: '2048',
+        id: 'dunk-a-lot',
+        title: 'Dunk a Lot',
+        category: 'Sports',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/10000732',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fdunk-a-lot.jpg&w=1920&q=100',
+        color: '#bbf7d0', border: '#4ade80', shadow: '#15803d'
+    },
+    {
+        id: 'smartle',
+        title: 'Smartle',
         category: 'Puzzle',
-        embedUrl: 'https://aiunites.github.io/gameatica-site/games/2048.html',
-        thumb: 'https://api.dicebear.com/7.x/shapes/svg?seed=puzzle2048&backgroundColor=fed7aa',
-        color: '#fed7aa', border: '#fb923c', shadow: '#c2410c'
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/10000156',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2FAddicting%2520Games.png&w=1920&q=100',
+        color: '#a5f3fc', border: '#22d3ee', shadow: '#0e7490'
+    },
+    {
+        id: 'super-frog',
+        title: 'Super Frog',
+        category: 'Adventure',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/24590',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fsuperfrog_gamethumb.jpg&w=1920&q=100',
+        color: '#86efac', border: '#22c55e', shadow: '#15803d'
     },
 ];
 

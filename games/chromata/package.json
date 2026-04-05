@@ -1,0 +1,10 @@
+{
+  "name": "project-chromata",
+  "version": "1.4.0.0",
+  "description": "An incremental game about mixing colors.",
+  "main": "electron-main.js",
+  "author": "Ceron Eternal",
+  "dependencies": {
+    "steamworks.js": "^0.4.0"
+  }
+}

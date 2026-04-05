@@ -991,7 +991,7 @@ const GAMES_CATALOG = [
         id: 'viking-queen-defense',
         title: 'Viking Queen Defense',
         category: 'Strategy',
-        embedUrl: 'https://www.addictinggames.com/embed/html5-games/24555',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/24590',
         thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fimage_2025-09-04_165417114.png&w=1920&q=100',
         color: '#fde68a', border: '#fbbf24', shadow: '#b45309'
     },
@@ -1007,7 +1007,7 @@ const GAMES_CATALOG = [
         id: 'dunk-a-lot',
         title: 'Dunk a Lot',
         category: 'Sports',
-        embedUrl: 'https://www.addictinggames.com/embed/html5-games/10000732',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/24555',
         thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fdunk-a-lot.jpg&w=1920&q=100',
         color: '#bbf7d0', border: '#4ade80', shadow: '#15803d'
     },
@@ -1015,7 +1015,7 @@ const GAMES_CATALOG = [
         id: 'smartle',
         title: 'Smartle',
         category: 'Puzzle',
-        embedUrl: 'https://www.addictinggames.com/embed/html5-games/10000156',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/10000732',
         thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2FAddicting%2520Games.png&w=1920&q=100',
         color: '#a5f3fc', border: '#22d3ee', shadow: '#0e7490'
     },
@@ -1023,7 +1023,7 @@ const GAMES_CATALOG = [
         id: 'super-frog',
         title: 'Super Frog',
         category: 'Adventure',
-        embedUrl: 'https://www.addictinggames.com/embed/html5-games/24590',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/10000156',
         thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fsuperfrog_gamethumb.jpg&w=1920&q=100',
         color: '#86efac', border: '#22c55e', shadow: '#15803d'
     },
@@ -1204,9 +1204,9 @@ window.openGameModal = function (gameId) {
                 id="game-iframe"
                 src="${game.embedUrl}"
                 style="width:100%; height:100%; border:none; display:block;"
-                allow="autoplay; fullscreen; accelerometer; gyroscope; payment"
+                allow="autoplay; fullscreen; accelerometer; gyroscope; magnetometer; orientation; orientation-lock"
                 allowfullscreen
-                sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups allow-modals"
                 title="${game.title}"
                 loading="eager"
             ></iframe>

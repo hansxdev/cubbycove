@@ -958,7 +958,7 @@ const GAMES_CATALOG = [
         id: 'conservation-of-bass',
         title: 'Conservation of Bass',
         category: 'Puzzle',
-        embedUrl: 'https://itch.io/embed-upload/4378040?color=201e2e',
+        embedUrl: 'https://html-classic.itch.zone/html/16937824/index.html',
         thumb: 'https://img.itch.zone/aW1nLzI2MTUxNjM1LnBuZw==/315x250%23c/rKECFL.png',
         color: '#201e2e', border: '#ec4899', shadow: '#be185d'
     },

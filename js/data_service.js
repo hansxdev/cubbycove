@@ -2209,6 +2209,241 @@ const DataService = {
             }
             throw e;
         }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TIME MANAGEMENT & SETTINGS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Update time management settings for a child.
+     * Stored on the Children document for simplicity and polling.
+     * @param {string} childId
+     * @param {Object} settings - { dailyAllowanceMinutes, bedtime, warningThresholdMinutes, allowChat, allowGames, blacklistedGames }
+     */
+    updateChildTimeSettings: async function (childId, settings) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const payload = {};
+        if (settings.dailyAllowanceMinutes !== undefined) payload.screenTimeLogs = (payload.screenTimeLogs || ''); // we store settings in a new field
+        // We encode all time settings into a single JSON string stored in a dedicated field
+        const existing = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+        const existingMeta = (() => { try { return JSON.parse(existing.bio?.startsWith('{') ? existing.bio : '{}'); } catch(e) { return {}; } })();
+        // Store settings as JSON in activityLogs field repurposed as metadata (we'll use a dedicated approach via Appwrite prefs instead)
+        // Actually store as structured JSON string in existing schema-compatible field
+        const settingsPayload = {
+            dailyAllowanceMinutes: settings.dailyAllowanceMinutes ?? 60,
+            bedtime: settings.bedtime ?? '',
+            warningThresholdMinutes: settings.warningThresholdMinutes ?? 5,
+            allowChat: settings.allowChat !== undefined ? settings.allowChat : (existing.allowChat ?? true),
+            allowGames: settings.allowGames !== undefined ? settings.allowGames : (existing.allowGames ?? true),
+        };
+        // Encode as JSON in screenTimeLogs (repurposed for settings since it's a large string field)
+        const settingsJson = JSON.stringify({ _timeSettings: settingsPayload, _v: 1 });
+        return await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
+            screenTimeLogs: settingsJson,
+            allowChat: settingsPayload.allowChat,
+            allowGames: settingsPayload.allowGames,
+        });
+    },
+
+    /**
+     * Get time management settings for a child.
+     * @param {string} childId
+     * @returns {Object} Settings object with defaults
+     */
+    getChildTimeSettings: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const defaults = {
+            dailyAllowanceMinutes: 60,
+            bedtime: '',
+            warningThresholdMinutes: 5,
+            allowChat: true,
+            allowGames: true,
+        };
+        try {
+            const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+            if (child.screenTimeLogs && child.screenTimeLogs.startsWith('{')) {
+                const parsed = JSON.parse(child.screenTimeLogs);
+                if (parsed._timeSettings) {
+                    return { ...defaults, ...parsed._timeSettings };
+                }
+            }
+            return { ...defaults, allowChat: child.allowChat ?? true, allowGames: child.allowGames ?? true };
+        } catch (e) {
+            console.warn('getChildTimeSettings error:', e.message);
+            return defaults;
+        }
+    },
+
+    /**
+     * Get aggregated screen time data for a child — used for Reports widgets.
+     * Returns { totalMinutesToday, byCategory, byDay (last 7 days), topContent }
+     * @param {string} childId
+     */
+    getScreenTimeSummary: async function (childId) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekAgo = new Date(now);
+        weekAgo.setDate(now.getDate() - 7);
+
+        try {
+            const [todayLogs, weekLogs, activityLogs] = await Promise.all([
+                databases.listDocuments(DB_ID, 'screen_time_logs', [
+                    Query.equal('childId', childId),
+                    Query.greaterThanEqual('timestamp', todayStart.toISOString()),
+                    Query.limit(200)
+                ]).catch(() => ({ documents: [] })),
+                databases.listDocuments(DB_ID, 'screen_time_logs', [
+                    Query.equal('childId', childId),
+                    Query.greaterThanEqual('timestamp', weekAgo.toISOString()),
+                    Query.orderDesc('timestamp'),
+                    Query.limit(500)
+                ]).catch(() => ({ documents: [] })),
+                databases.listDocuments(DB_ID, 'activity_logs', [
+                    Query.equal('childId', childId),
+                    Query.greaterThanEqual('timestamp', weekAgo.toISOString()),
+                    Query.orderDesc('timestamp'),
+                    Query.limit(100)
+                ]).catch(() => ({ documents: [] }))
+            ]);
+
+            // Total today
+            const totalMinutesToday = todayLogs.documents.reduce((sum, l) => sum + (l.minutes || 0), 0);
+
+            // By category (today)
+            const byCategory = {};
+            todayLogs.documents.forEach(l => {
+                const cat = l.category || 'general';
+                byCategory[cat] = (byCategory[cat] || 0) + (l.minutes || 0);
+            });
+
+            // By day (last 7 days) — group by date string
+            const byDay = {};
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(now.getDate() - i);
+                byDay[d.toLocaleDateString('en-US', { weekday: 'short' })] = 0;
+            }
+            weekLogs.documents.forEach(l => {
+                const label = new Date(l.timestamp).toLocaleDateString('en-US', { weekday: 'short' });
+                if (byDay[label] !== undefined) {
+                    byDay[label] += (l.minutes || 0);
+                }
+            });
+
+            // Top content (from activity logs)
+            const contentCount = {};
+            activityLogs.documents.forEach(l => {
+                if (l.type === 'watch' || l.type === 'play') {
+                    const key = l.action || 'Unknown';
+                    contentCount[key] = (contentCount[key] || 0) + 1;
+                }
+            });
+            const topContent = Object.entries(contentCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([action, count]) => ({ action, count }));
+
+            // Hour distribution (0–23)
+            const byHour = Array(24).fill(0);
+            weekLogs.documents.forEach(l => {
+                const hour = new Date(l.timestamp).getHours();
+                byHour[hour] += (l.minutes || 0);
+            });
+
+            return { totalMinutesToday, byCategory, byDay, topContent, byHour, totalActivities: activityLogs.documents.length };
+        } catch (e) {
+            console.warn('getScreenTimeSummary error:', e.message);
+            return { totalMinutesToday: 0, byCategory: {}, byDay: {}, topContent: [], byHour: Array(24).fill(0), totalActivities: 0 };
+        }
+    },
+
+    /**
+     * Get the merged activity feed for a child (logs + threats + watch history).
+     * @param {string} childId
+     * @param {number} limit
+     * @returns {Array} sorted newest-first unified feed items
+     */
+    getUnifiedActivityFeed: async function (childId, limit = 50) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+
+        try {
+            const [actLogs, threats, watchHistory] = await Promise.all([
+                databases.listDocuments(DB_ID, 'activity_logs', [
+                    Query.equal('childId', childId),
+                    Query.orderDesc('timestamp'),
+                    Query.limit(100)
+                ]).catch(() => ({ documents: [] })),
+                databases.listDocuments(DB_ID, COLLECTIONS.THREAT_LOGS, [
+                    Query.equal('childId', childId),
+                    Query.orderDesc('$createdAt'),
+                    Query.limit(20)
+                ]).catch(() => ({ documents: [] })),
+                databases.listDocuments(DB_ID, 'kid_watch_history', [
+                    Query.equal('childId', childId),
+                    Query.orderDesc('watchedAt'),
+                    Query.limit(30)
+                ]).catch(() => ({ documents: [] }))
+            ]);
+
+            const feed = [];
+
+            // Activity logs
+            actLogs.documents.forEach(l => {
+                feed.push({
+                    id: l.$id,
+                    type: l.type || 'activity',
+                    action: l.action,
+                    timestamp: l.timestamp,
+                    metadata: l.metadata,
+                    feedCategory: l.type === 'message_sent' ? 'social' :
+                                  l.type === 'buddy_add' ? 'social' :
+                                  l.type === 'play' ? 'game' : 'activity'
+                });
+            });
+
+            // Threat logs
+            threats.documents.forEach(t => {
+                feed.push({
+                    id: t.$id,
+                    type: 'threat',
+                    action: `⚠️ ${t.violationType || 'Safety Alert'}: ${(t.messageContent || t.content || '').slice(0, 80)}`,
+                    timestamp: t.$createdAt,
+                    metadata: JSON.stringify({ resolved: t.resolved, status: t.status }),
+                    feedCategory: 'threat'
+                });
+            });
+
+            // Watch history (dedupe by videoId)
+            const seenVideos = new Set();
+            watchHistory.documents.forEach(h => {
+                if (seenVideos.has(h.videoId)) return;
+                seenVideos.add(h.videoId);
+                feed.push({
+                    id: h.$id,
+                    type: 'watch',
+                    action: `Watched: ${h.videoTitle || 'a video'}`,
+                    timestamp: h.watchedAt,
+                    metadata: JSON.stringify({ category: h.videoCategory }),
+                    feedCategory: 'activity'
+                });
+            });
+
+            // Sort newest first and limit
+            return feed
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                .slice(0, limit);
+
+        } catch (e) {
+            console.warn('getUnifiedActivityFeed error:', e.message);
+            return [];
+        }
     }
 };
 

@@ -4,63 +4,62 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Parent Dashboard - CubbyCove</title>
+    <meta name="description" content="CubbyCove Parent Dashboard — monitor your child's activity, screen time, and safety alerts all in one place.">
     <link rel="icon" type="image/png" href="../images/closedlogo.png">
-
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-
-    <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../js/tailwind-config.js"></script>
-
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <style>
-        /* Playful Glass Theme Patterns & Utilities */
         body { font-family: 'Nunito', sans-serif; background-color: #DDF3FF; overflow: hidden; }
-        
-        /* Subtle animated background pattern */
         .bg-pattern {
             background-image: radial-gradient(#bae6fd 2px, transparent 2px), radial-gradient(#bae6fd 2px, transparent 2px);
             background-size: 40px 40px;
             background-position: 0 0, 20px 20px;
             opacity: 0.5;
-            position: absolute;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
+            position: absolute; inset: 0; z-index: 0; pointer-events: none;
         }
-
         .glass-card {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255,255,255,0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 2px solid rgba(255, 255, 255, 0.9);
-            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+            border: 2px solid rgba(255,255,255,0.9);
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
             border-radius: 2rem;
         }
-
-        .nav-pill {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .nav-pill.active {
-            background-color: #28C7AE;
-            color: white;
-            box-shadow: 0 4px 15px rgba(40, 199, 174, 0.3);
-        }
-
-        .pill-toggle {
-            transition: all 0.2s ease;
-        }
-        
+        .nav-pill { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+        .nav-pill.active { background-color: #28C7AE; color: white; box-shadow: 0 4px 15px rgba(40,199,174,0.3); }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        /* Tab panels */
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* Feed card types */
+        .feed-card-threat { border-left: 4px solid #f43f5e; background: #fff5f5; }
+        .feed-card-activity { border-left: 4px solid #3b82f6; background: #f0f7ff; }
+        .feed-card-game { border-left: 4px solid #8b5cf6; background: #f5f3ff; }
+        .feed-card-social { border-left: 4px solid #10b981; background: #f0fdf4; }
+
+        /* Settings tab buttons */
+        .settings-tab-btn { transition: all 0.2s; }
+        .settings-tab-btn.active { background: #28C7AE; color: white; }
+
+        /* Hero summary gradient */
+        .hero-summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* Time ring */
+        .time-ring-container { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+        .time-ring-label { position: absolute; text-align: center; }
+
+        /* Warning overlay for time */
+        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .slide-down { animation: slideDown 0.4s ease forwards; }
     </style>
 </head>
 
@@ -68,7 +67,7 @@
 
     <!-- Sidebar -->
     <aside class="w-64 lg:w-72 bg-[#DDF3FF] flex flex-col z-20 shrink-0 relative transition-transform duration-300 transform -translate-x-full lg:translate-x-0 absolute lg:relative h-full" id="sidebar">
-        <!-- Logo Area -->
+        <!-- Logo -->
         <div class="h-28 flex items-center px-8 shrink-0 pb-4">
             <div class="flex items-center gap-3">
                 <img src="../images/closedlogo.png" class="w-10 h-10 object-contain drop-shadow-sm" alt="CubbyCove Logo">
@@ -78,17 +77,14 @@
 
         <!-- Navigation -->
         <nav class="flex-1 px-5 space-y-2 relative z-10">
-            <a href="#" class="nav-pill active flex items-center gap-4 px-5 py-4 rounded-[1.25rem] font-bold text-[15px]">
-                <i class="fa-solid fa-border-all text-lg mb-0.5"></i>
-                Dashboard
+            <a href="#" id="nav-dashboard" onclick="switchTab('dashboard')" class="nav-pill active flex items-center gap-4 px-5 py-4 rounded-[1.25rem] font-bold text-[15px]">
+                <i class="fa-solid fa-border-all text-lg mb-0.5"></i> Dashboard
             </a>
-            <a href="#" class="nav-pill text-gray-500 hover:bg-white/50 flex items-center gap-4 px-5 py-4 rounded-[1.25rem] font-bold text-[15px]">
-                <i class="fa-solid fa-clock-rotate-left text-lg mb-0.5 opacity-70"></i>
-                Activity Log
+            <a href="#" id="nav-activity" onclick="switchTab('activity')" class="nav-pill text-gray-500 hover:bg-white/50 flex items-center gap-4 px-5 py-4 rounded-[1.25rem] font-bold text-[15px]">
+                <i class="fa-solid fa-clock-rotate-left text-lg mb-0.5 opacity-70"></i> Activity Log
             </a>
-            <a href="#" class="nav-pill text-gray-500 hover:bg-white/50 flex items-center gap-4 px-5 py-4 rounded-[1.25rem] font-bold text-[15px]">
-                <i class="fa-solid fa-chart-line text-lg mb-0.5 opacity-70"></i>
-                Reports
+            <a href="#" id="nav-reports" onclick="switchTab('reports')" class="nav-pill text-gray-500 hover:bg-white/50 flex items-center gap-4 px-5 py-4 rounded-[1.25rem] font-bold text-[15px]">
+                <i class="fa-solid fa-chart-line text-lg mb-0.5 opacity-70"></i> Reports
             </a>
 
             <div class="pt-6 pb-2">
@@ -96,22 +92,18 @@
             </div>
 
             <button onclick="openSettingsModal()" class="w-full nav-pill text-gray-500 hover:bg-white/50 flex items-center gap-4 px-5 py-4 rounded-[1.25rem] font-bold text-[15px] transition-all">
-                <i class="fa-solid fa-gear text-lg mb-0.5 opacity-70"></i>
-                Settings
+                <i class="fa-solid fa-gear text-lg mb-0.5 opacity-70"></i> Settings
             </button>
             <a href="#" class="w-full nav-pill text-gray-500 hover:bg-white/50 flex items-center gap-4 px-5 py-4 rounded-[1.25rem] font-bold text-[15px]">
-                <i class="fa-regular fa-circle-question text-lg mb-0.5 opacity-70"></i>
-                Help & Support
+                <i class="fa-regular fa-circle-question text-lg mb-0.5 opacity-70"></i> Help &amp; Support
             </a>
         </nav>
 
         <!-- Bottom Profile -->
         <div class="p-5 mt-auto relative z-10 shrink-0 mb-4">
             <button onclick="handleParentLogout()" class="w-full bg-white/60 hover:bg-white border-2 border-white/80 text-gray-600 hover:text-red-500 font-bold py-4 rounded-[1.25rem] transition-all flex items-center gap-3 justify-center shadow-sm">
-                <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                Log Out
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> Log Out
             </button>
-            
             <div class="mt-4 flex items-center gap-3 px-2 cursor-pointer group" onclick="openSettingsModal()">
                 <img id="sidebar-parent-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Mommy" class="w-10 h-10 rounded-full bg-white shadow-sm border border-white group-hover:scale-105 transition-transform">
                 <div class="flex-1 min-w-0">
@@ -122,33 +114,31 @@
         </div>
     </aside>
 
-    <!-- Main Content Array -->
+    <!-- Main Content -->
     <main class="flex-1 flex flex-col relative bg-[#DDF3FF] overflow-hidden rounded-l-[2.5rem] shadow-[-10px_0_30px_rgba(0,0,0,0.02)]">
-        
-        <!-- Global Login Request Header (Slide-down) -->
+
+        <!-- Login Request Slide-down Header -->
         <div id="global-login-request-header" class="absolute top-0 left-0 right-0 z-50 transition-transform duration-500 transform -translate-y-full">
             <div class="px-6 lg:px-10 pt-4 pb-2">
                 <div class="max-w-[1400px] mx-auto drop-shadow-md">
-                    <div id="global-unread-list" class="space-y-3">
-                        <!-- Pending requests injected here -->
-                    </div>
+                    <div id="global-unread-list" class="space-y-3"></div>
                 </div>
             </div>
         </div>
 
         <div class="bg-pattern"></div>
-        
+
         <div class="absolute inset-0 overflow-y-auto overflow-x-hidden custom-scrollbar p-6 lg:p-10">
             <div class="max-w-[1400px] mx-auto space-y-8">
-                
-                <!-- TOP HEADER: Child Profiles -->
+
+                <!-- Top Header: Child Profiles -->
                 <div>
                     <div class="flex items-center justify-between mb-5">
                         <div class="flex items-center gap-3">
                             <button onclick="document.getElementById('sidebar').classList.toggle('-translate-x-full')" class="lg:hidden w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-gray-500 hover:text-cubby-purple cursor-pointer transition-colors">
                                 <i class="fa-solid fa-bars"></i>
                             </button>
-                            <h2 class="text-2xl font-extrabold tracking-tight text-gray-800">Child Profiles</h2>
+                            <h2 id="page-heading" class="text-2xl font-extrabold tracking-tight text-gray-800">Child Profiles</h2>
                         </div>
                         <div id="notif-bell-btn" onclick="toggleNotifPanel()" class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-cubby-purple cursor-pointer transition-colors relative">
                             <i class="fa-regular fa-bell text-lg"></i>
@@ -158,192 +148,354 @@
 
                     <!-- Notification Panel -->
                     <div id="notif-panel" class="hidden absolute top-[4.5rem] right-4 sm:right-6 lg:right-10 w-[calc(100vw-2rem)] sm:w-[360px] max-h-[480px] bg-white rounded-[1.75rem] shadow-2xl border border-gray-100 z-[60] flex flex-col overflow-hidden">
-                        <!-- Panel Header -->
                         <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 shrink-0">
                             <h3 class="text-[15px] font-extrabold text-gray-800">Notifications</h3>
                             <button onclick="toggleNotifPanel()" class="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors text-gray-500">
                                 <i class="fa-solid fa-times text-xs"></i>
                             </button>
                         </div>
-                        <!-- Scrollable notification list -->
                         <div id="notifications-container" class="flex-1 overflow-y-auto custom-scrollbar relative" style="min-height:100px">
                             <div id="notif-list" class="p-4 space-y-3"></div>
                         </div>
                     </div>
-                    
+
                     <div class="flex items-center gap-4 overflow-x-auto overflow-y-visible py-2 pb-4 custom-scrollbar" id="sidebar-kids-list">
-                        <!-- Dynamic Child Profiles Injected Here -->
                         <div class="text-gray-500 font-bold text-sm">Loading profiles...</div>
                     </div>
                 </div>
 
-                <!-- DASHBOARD GRID -->
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    
-                    <!-- Left Column (Span 8) -->
-                    <div class="lg:col-span-8 flex flex-col gap-8">
-                        
-                        <!-- Screen Time Chart -->
-                        <div class="glass-card p-8 flex flex-col min-h-[400px]">
-                            <div class="flex items-start justify-between mb-6">
-                                <div>
-                                    <h3 class="text-lg font-extrabold text-gray-800">Screen Time Overview</h3>
-                                    <p class="text-sm font-bold text-gray-500 mt-1">Today's Activity (<span id="stat-screen-time">0 hr 0 min</span>)</p>
-                                </div>
-                                <div class="bg-gray-50/80 border border-gray-100 rounded-[1rem] px-3 py-1.5 flex items-center gap-2 cursor-pointer shadow-sm relative hover:bg-white transition-colors">
-                                    <select id="timeModeSelect" onchange="changeTimeMode(this.value)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-sm">
-                                        <option value="daily">Today</option>
-                                        <option value="weekly">This Week</option>
-                                    </select>
-                                    <span id="timeModeDisplay" class="text-sm font-bold text-gray-600">Today</span>
-                                    <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
-                                </div>
-                            </div>
-                            
-                            <div class="flex-1 relative w-full mt-4">
-                                <canvas id="screenTimeChart"></canvas>
-                            </div>
-                        </div>
+                <!-- ══════════════════════════════════════════════════════ -->
+                <!--  TAB: DASHBOARD                                        -->
+                <!-- ══════════════════════════════════════════════════════ -->
+                <div id="tab-dashboard" class="tab-panel active">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                        <!-- Learning & Rewards / Activity Log -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <!-- Learning Progress -->
-                            <div class="glass-card p-6 flex items-center gap-6">
-                                <div class="w-20 h-20 bg-orange-100/50 rounded-full flex flex-col items-center justify-center text-4xl shrink-0 border-4 border-white shadow-sm relative">
-                                    🪙
-                                    <div class="absolute -right-1 -top-1 w-6 h-6 bg-yellow-400 rounded-full border-2 border-white flex items-center justify-center">
-                                        <i class="fa-solid fa-bolt text-white text-[10px]"></i>
+                        <!-- Left Column (8) -->
+                        <div class="lg:col-span-8 flex flex-col gap-8">
+                            <!-- Screen Time Chart -->
+                            <div class="glass-card p-8 flex flex-col min-h-[400px]">
+                                <div class="flex items-start justify-between mb-6">
+                                    <div>
+                                        <h3 class="text-lg font-extrabold text-gray-800">Screen Time Overview</h3>
+                                        <p class="text-sm font-bold text-gray-500 mt-1">Today's Activity (<span id="stat-screen-time">0 hr 0 min</span>)</p>
+                                    </div>
+                                    <div class="bg-gray-50/80 border border-gray-100 rounded-[1rem] px-3 py-1.5 flex items-center gap-2 cursor-pointer shadow-sm relative hover:bg-white transition-colors">
+                                        <select id="timeModeSelect" onchange="changeTimeMode(this.value)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-sm">
+                                            <option value="daily">Today</option>
+                                            <option value="weekly">This Week</option>
+                                        </select>
+                                        <span id="timeModeDisplay" class="text-sm font-bold text-gray-600">Today</span>
+                                        <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
                                     </div>
                                 </div>
-                                <div class="flex-1">
-                                    <h3 class="text-lg font-extrabold text-gray-800 mb-1">Learning & Rewards</h3>
-                                    <p class="text-sm font-bold text-cubby-purple mb-3">Level 4: Super Learner (85%)</p>
-                                    <div class="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden mb-2">
-                                        <div class="h-full bg-[#28C7AE] rounded-full w-[85%]"></div>
-                                    </div>
-                                    <a href="#" class="text-sm font-extrabold text-[#28C7AE] hover:text-teal-600 transition-colors">Learn More <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></a>
+                                <div class="flex-1 relative w-full mt-4">
+                                    <canvas id="screenTimeChart"></canvas>
                                 </div>
                             </div>
 
-                            <!-- Small Activity Snippet -->
-                            <div class="glass-card p-6 flex flex-col">
-                                <h3 class="text-md font-extrabold text-gray-800 mb-4">Recent Achievements</h3>
-                                <div class="space-y-3 flex-1 overflow-y-auto" id="activity-list">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center text-green-500 font-bold text-xs"><i class="fa-solid fa-calculator"></i></div>
-                                        <div class="flex-1"><p class="text-sm font-bold text-gray-700">Math Master</p><p class="text-[11px] font-bold text-gray-400">12 mins ago</p></div>
-                                        <i class="fa-solid fa-chevron-right text-xs text-gray-300"></i>
+                            <!-- Learning & Achievements Row -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="glass-card p-6 flex items-center gap-6">
+                                    <div class="w-20 h-20 bg-orange-100/50 rounded-full flex flex-col items-center justify-center text-4xl shrink-0 border-4 border-white shadow-sm relative">
+                                        🪙
+                                        <div class="absolute -right-1 -top-1 w-6 h-6 bg-yellow-400 rounded-full border-2 border-white flex items-center justify-center">
+                                            <i class="fa-solid fa-bolt text-white text-[10px]"></i>
+                                        </div>
                                     </div>
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-500 font-bold text-xs"><i class="fa-solid fa-microscope"></i></div>
-                                        <div class="flex-1"><p class="text-sm font-bold text-gray-700">Science Explorer</p><p class="text-[11px] font-bold text-gray-400">1 hour ago</p></div>
-                                        <i class="fa-solid fa-chevron-right text-xs text-gray-300"></i>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-extrabold text-gray-800 mb-1">Rewards</h3>
+                                        <div id="rewards-progress-container">
+                                            <p class="text-sm font-bold text-gray-400">Loading...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="glass-card p-6 flex flex-col">
+                                    <h3 class="text-md font-extrabold text-gray-800 mb-4">Recent Activity</h3>
+                                    <div class="space-y-3 flex-1 overflow-y-auto relative" id="activity-list" style="min-height:80px">
+                                        <div class="absolute inset-0 flex items-center justify-center text-sm text-gray-400 font-medium">Loading...</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                    </div>
-
-                    <!-- Right Column (Span 4) -->
-                    <div class="lg:col-span-4 flex flex-col gap-8">
-                        <!-- Safety & Filters (Used as general toggle actions / notifications) -->
-                        <div class="glass-card p-8 flex-1 flex flex-col">
-                            <h3 class="text-xl font-extrabold text-gray-800 mb-6">Safety & Filters</h3>
-                            
-                            <div class="space-y-4">
-                                <!-- Filter 1 -->
-                                <div class="bg-white/60 hover:bg-white rounded-2xl p-4 flex items-center justify-between border border-white/80 shadow-sm transition-all">
-                                    <div class="flex items-center gap-4">
-                                        <div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 border border-white shadow-sm shrink-0">
-                                            <i class="fa-solid fa-shield-cat text-xl"></i>
-                                        </div>
-                                        <div>
-                                            <h4 class="font-extrabold text-gray-800 text-sm">Content Filter</h4>
-                                            <p class="text-xs font-bold text-gray-400 leading-tight mt-0.5">Manage suitable content and age filters</p>
-                                        </div>
-                                    </div>
-                                    <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-2">
-                                        <input type="checkbox" checked class="sr-only peer">
-                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-[#28C7AE] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all shadow-inner"></div>
-                                    </label>
+                        <!-- Right Column (4) -->
+                        <div class="lg:col-span-4 flex flex-col gap-8">
+                            <div class="glass-card p-8 flex-1 flex flex-col">
+                                <h3 class="text-xl font-extrabold text-gray-800 mb-6">Safety &amp; Alerts</h3>
+                                <div id="safety-list" class="flex-1 overflow-y-auto space-y-3 custom-scrollbar" style="min-height:80px">
+                                    <div class="flex items-center justify-center py-8 text-gray-400 font-bold text-sm">Loading...</div>
                                 </div>
-
-                                <!-- Filter 2 -->
-                                <div class="bg-white/60 hover:bg-white rounded-2xl p-4 flex items-center justify-between border border-white/80 shadow-sm transition-all">
-                                    <div class="flex items-center gap-4">
-                                        <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 border border-white shadow-sm shrink-0">
-                                            <i class="fa-solid fa-magnifying-glass text-xl"></i>
-                                        </div>
-                                        <div>
-                                            <h4 class="font-extrabold text-gray-800 text-sm">Safe Search</h4>
-                                            <p class="text-xs font-bold text-gray-400 leading-tight mt-0.5">Block explicit web queries</p>
-                                        </div>
-                                    </div>
-                                    <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-2">
-                                        <!-- Fake toggle style matching image -->
-                                        <div class="w-11 h-6 bg-orange-400 rounded-full flex items-center px-[2px] shadow-inner justify-end">
-                                            <div class="bg-white rounded-full h-5 w-5 shadow-sm"></div>
-                                        </div>
-                                    </label>
+                                <div class="mt-auto pt-6 text-center">
+                                    <button onclick="switchTab('activity')" class="text-sm font-extrabold text-gray-400 hover:text-[#28C7AE] transition-colors">View Full Activity Log →</button>
                                 </div>
-
-                                <!-- Filter 3 -->
-                                <div class="bg-white/60 hover:bg-white rounded-2xl p-4 flex items-center justify-between border border-white/80 shadow-sm transition-all">
-                                    <div class="flex items-center gap-4">
-                                        <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-500 border border-white shadow-sm shrink-0">
-                                            <i class="fa-solid fa-bag-shopping text-xl"></i>
-                                        </div>
-                                        <div>
-                                            <h4 class="font-extrabold text-gray-800 text-sm">Purchase Approval</h4>
-                                            <p class="text-xs font-bold text-gray-400 leading-tight mt-0.5">Require PIN for store items</p>
-                                        </div>
-                                    </div>
-                                    <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-2">
-                                        <input type="checkbox" checked class="sr-only peer">
-                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-[#28C7AE] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all shadow-inner"></div>
-                                    </label>
-                                </div>
-
-                                <!-- Hidden real hooks for JS -->
-                                <div class="hidden">
-                                     <div id="unread-requests-list"></div>
-                                     <div id="safety-list"></div>
-                                </div>
-
-                            </div>
-                            
-                            <div class="mt-auto pt-6 text-center">
-                                <button class="text-sm font-extrabold text-gray-400 hover:text-gray-600 transition-colors">View All Settings</button>
                             </div>
                         </div>
                     </div>
-
                 </div>
+
+                <!-- ══════════════════════════════════════════════════════ -->
+                <!--  TAB: ACTIVITY LOG                                     -->
+                <!-- ══════════════════════════════════════════════════════ -->
+                <div id="tab-activity" class="tab-panel">
+                    <div class="glass-card p-8">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-xl font-extrabold text-gray-800">Activity Log</h3>
+                                <p class="text-sm text-gray-500 font-bold mt-1">A unified feed of your child's activities, watching, gaming &amp; social interactions.</p>
+                            </div>
+                            <!-- Filter pills -->
+                            <div class="flex gap-2 flex-wrap" id="activity-log-filters">
+                                <button onclick="filterActivityLog('all')" class="log-filter-btn active px-4 py-1.5 rounded-full text-xs font-extrabold bg-[#28C7AE] text-white shadow-sm transition-all">All</button>
+                                <button onclick="filterActivityLog('threat')" class="log-filter-btn px-4 py-1.5 rounded-full text-xs font-extrabold bg-red-100 text-red-600 hover:bg-red-200 transition-all">🔴 Safety</button>
+                                <button onclick="filterActivityLog('activity')" class="log-filter-btn px-4 py-1.5 rounded-full text-xs font-extrabold bg-blue-100 text-blue-600 hover:bg-blue-200 transition-all">🔵 Activity</button>
+                                <button onclick="filterActivityLog('social')" class="log-filter-btn px-4 py-1.5 rounded-full text-xs font-extrabold bg-green-100 text-green-600 hover:bg-green-200 transition-all">🟢 Social</button>
+                                <button onclick="filterActivityLog('game')" class="log-filter-btn px-4 py-1.5 rounded-full text-xs font-extrabold bg-purple-100 text-purple-600 hover:bg-purple-200 transition-all">🎮 Games</button>
+                            </div>
+                        </div>
+                        <div id="activity-feed-container" class="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar">
+                            <div class="flex items-center justify-center py-16 text-gray-400 font-bold">
+                                <i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading activity...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══════════════════════════════════════════════════════ -->
+                <!--  TAB: REPORTS                                          -->
+                <!-- ══════════════════════════════════════════════════════ -->
+                <div id="tab-reports" class="tab-panel">
+                    <!-- Hero Summary -->
+                    <div class="hero-summary-card rounded-[2rem] p-8 mb-8 text-white shadow-xl">
+                        <div class="flex items-start gap-5">
+                            <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl backdrop-blur-sm shrink-0">🦉</div>
+                            <div>
+                                <p class="text-xs font-black uppercase tracking-widest text-white/70 mb-1">Weekly Intelligence Snapshot</p>
+                                <p id="hero-summary-text" class="text-xl font-extrabold leading-snug">Loading your child's weekly summary...</p>
+                                <p id="hero-summary-sub" class="text-sm text-white/70 font-bold mt-2">Analyzing activity data...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                        <!-- Time Budget Widget -->
+                        <div class="lg:col-span-4 glass-card p-8 flex flex-col items-center">
+                            <h3 class="text-lg font-extrabold text-gray-800 mb-1 self-start">Today's Budget</h3>
+                            <p class="text-xs font-bold text-gray-400 mb-6 self-start">Time used vs. daily allowance</p>
+                            <div class="time-ring-container w-48 h-48">
+                                <canvas id="timeBudgetChart" width="192" height="192"></canvas>
+                                <div class="time-ring-label">
+                                    <p id="ring-used" class="text-3xl font-black text-gray-800">0m</p>
+                                    <p id="ring-total" class="text-xs font-bold text-gray-400">of 60m</p>
+                                </div>
+                            </div>
+                            <div class="mt-6 grid grid-cols-2 gap-3 w-full">
+                                <div class="bg-gray-50 rounded-2xl p-4 text-center">
+                                    <p class="text-2xl font-black text-[#28C7AE]" id="ring-remaining">60m</p>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">Remaining</p>
+                                </div>
+                                <div class="bg-gray-50 rounded-2xl p-4 text-center">
+                                    <p class="text-2xl font-black text-gray-800" id="ring-pct">0%</p>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">Used</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Category Distribution -->
+                        <div class="lg:col-span-4 glass-card p-8">
+                            <h3 class="text-lg font-extrabold text-gray-800 mb-1">Activity Breakdown</h3>
+                            <p class="text-xs font-bold text-gray-400 mb-4">Today's time by category</p>
+                            <div class="relative" style="height:200px">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                            <div id="category-legend" class="mt-4 space-y-2"></div>
+                        </div>
+
+                        <!-- Weekly Bar Chart -->
+                        <div class="lg:col-span-4 glass-card p-8">
+                            <h3 class="text-lg font-extrabold text-gray-800 mb-1">7-Day Overview</h3>
+                            <p class="text-xs font-bold text-gray-400 mb-4">Daily screen time this week</p>
+                            <div class="relative" style="height:200px">
+                                <canvas id="weeklyChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Activity Heatmap (Hour Distribution) -->
+                        <div class="lg:col-span-8 glass-card p-8">
+                            <h3 class="text-lg font-extrabold text-gray-800 mb-1">Activity Heatmap</h3>
+                            <p class="text-xs font-bold text-gray-400 mb-6">Most active hours this week (minutes)</p>
+                            <div class="relative" style="height:140px">
+                                <canvas id="heatmapChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Top Content -->
+                        <div class="lg:col-span-4 glass-card p-8">
+                            <h3 class="text-lg font-extrabold text-gray-800 mb-1">Top Content</h3>
+                            <p class="text-xs font-bold text-gray-400 mb-5">Most visited this week</p>
+                            <div id="top-content-list" class="space-y-3">
+                                <div class="text-sm text-gray-400 font-bold">Loading...</div>
+                            </div>
+                        </div>
+
+                        <!-- Safety Scorecard -->
+                        <div class="lg:col-span-12 glass-card p-8">
+                            <h3 class="text-lg font-extrabold text-gray-800 mb-2">Safety Scorecard</h3>
+                            <p class="text-xs font-bold text-gray-400 mb-6">Threats detected &amp; resolved this week</p>
+                            <div id="safety-scorecard" class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                <div class="bg-gray-50 rounded-2xl p-5 text-center">
+                                    <p id="sc-total-threats" class="text-4xl font-black text-gray-800">—</p>
+                                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Total Alerts</p>
+                                </div>
+                                <div class="bg-green-50 rounded-2xl p-5 text-center">
+                                    <p id="sc-resolved" class="text-4xl font-black text-green-500">—</p>
+                                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Resolved</p>
+                                </div>
+                                <div class="bg-red-50 rounded-2xl p-5 text-center">
+                                    <p id="sc-pending" class="text-4xl font-black text-red-400">—</p>
+                                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Pending</p>
+                                </div>
+                                <div class="bg-blue-50 rounded-2xl p-5 text-center">
+                                    <p id="sc-grade" class="text-4xl font-black text-blue-500">—</p>
+                                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Safety Grade</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
-
     </main>
 
-    <!-- Modals (Simplified hooks for compatibility) -->
+    <!-- Hidden hooks for JS compatibility -->
+    <div class="hidden">
+        <div id="unread-requests-list"></div>
+        <div id="safety-list-hidden"></div>
+    </div>
+
+    <!-- Approval Modal Hook -->
     <div id="approval-modal" class="hidden"></div>
-    <div id="edit-child-modal" class="hidden"></div>
+
+    <!-- Edit Child Modal -->
+    <div id="edit-child-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full mx-auto relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onclick="closeEditChildModal()" class="absolute top-4 right-4 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"><i class="fa-solid fa-times text-sm"></i></button>
+            <h3 class="font-black text-xl mb-6 text-gray-800">Edit Child Profile</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Display Name</label>
+                    <input id="editChildName" type="text" class="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#28C7AE]" placeholder="Name">
+                </div>
+                <div>
+                    <label class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Username</label>
+                    <input id="editChildUsername" type="text" class="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#28C7AE]" placeholder="username">
+                </div>
+                <div>
+                    <label class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Password</label>
+                    <input id="editChildPassword" type="text" class="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#28C7AE]" placeholder="password">
+                </div>
+                <div class="flex gap-6">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="editAllowChat" class="w-4 h-4 accent-[#28C7AE]"><span class="font-bold text-sm text-gray-700">Allow Chat</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="editAllowGames" class="w-4 h-4 accent-[#28C7AE]"><span class="font-bold text-sm text-gray-700">Allow Games</span></label>
+                </div>
+                <!-- Avatar selector -->
+                <div>
+                    <label class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-2 block">Avatar</label>
+                    <div class="flex gap-3 flex-wrap">
+                        <script>
+                            const avatarSeeds = ['Felix','Max','Zoe','Luna','Finn','Mia','Jake','Lily'];
+                            document.write(avatarSeeds.map(s => `<label class="cursor-pointer"><input type="radio" name="editAvatar" value="${s}" class="sr-only peer"><div class="w-12 h-12 rounded-full border-3 border-transparent peer-checked:border-[#28C7AE] peer-checked:ring-2 peer-checked:ring-[#28C7AE]/30 transition-all overflow-hidden"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${s}" class="w-full h-full"></div></label>`).join(''));
+                        </script>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-8">
+                <button onclick="closeEditChildModal()" class="flex-1 bg-gray-100 text-gray-600 font-bold py-3 rounded-2xl hover:bg-gray-200 transition-colors">Cancel</button>
+                <button id="editChildSaveBtn" onclick="saveEditedChild()" class="flex-1 bg-[#28C7AE] text-white font-bold py-3 rounded-2xl hover:bg-teal-500 transition-colors">Save Changes</button>
+            </div>
+
+            <!-- Time Settings Section -->
+            <div class="mt-8 border-t border-gray-100 pt-6">
+                <h4 class="font-extrabold text-gray-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-clock text-[#28C7AE]"></i> Time Management</h4>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Daily Allowance (minutes)</label>
+                        <div class="flex items-center gap-3">
+                            <input id="editDailyAllowance" type="number" min="10" max="480" step="5" value="60" class="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#28C7AE]">
+                            <span class="text-sm font-bold text-gray-400">mins/day</span>
+                        </div>
+                        <p class="text-[11px] text-gray-400 font-bold mt-1">Total time your child can use CubbyCove each day.</p>
+                    </div>
+                    <div>
+                        <label class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Bedtime (Curfew)</label>
+                        <input id="editBedtime" type="time" class="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#28C7AE]">
+                        <p class="text-[11px] text-gray-400 font-bold mt-1">Portal locks at this time. Leave blank to disable.</p>
+                    </div>
+                    <div>
+                        <label class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Warning Before Timeout</label>
+                        <select id="editWarningThreshold" class="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#28C7AE]">
+                            <option value="1">1 minute before</option>
+                            <option value="5" selected>5 minutes before</option>
+                            <option value="10">10 minutes before</option>
+                            <option value="15">15 minutes before</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="saveTimeSettingsBtn" onclick="saveChildTimeSettings()" class="w-full mt-5 bg-gradient-to-r from-[#28C7AE] to-[#20a88f] text-white font-extrabold py-3 rounded-2xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-clock"></i> Save Time Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
     <div id="settings-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
-        <!-- Kept functional structure invisible unless triggered, style can be fixed later -->
-        <div class="bg-white rounded-3xl p-8 max-w-sm w-full mx-auto relative shadow-2xl">
-             <button onclick="closeSettingsModal()" class="absolute top-4 right-4"><i class="fa-solid fa-times"></i></button>
-             <h3 class="font-black text-xl mb-4 text-center">Settings</h3>
-             <button onclick="handleParentLogout()" class="w-full bg-red-500 text-white font-bold py-3 rounded-2xl">Log Out</button>
-             <div class="hidden">
-                 <input type="file" id="settings-avatar-upload">
-                 <img id="settings-avatar">
-                 <p id="settings-email"></p>
-                 <textarea id="settings-bio"></textarea><span id="bio-char-count"></span>
-                 <input id="settings-username"><p id="username-cooldown"></p>
-                 <input id="settings-current-pass"><input id="settings-new-pass">
-                 <input type="checkbox" id="settings-darkmode">
-                 <button onclick="saveSettings()">Save</button>
-             </div>
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full mx-auto relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onclick="closeSettingsModal()" class="absolute top-4 right-4 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"><i class="fa-solid fa-times text-sm"></i></button>
+            <h3 class="font-black text-xl mb-6 text-center text-gray-800">Account Settings</h3>
+
+            <div class="space-y-5">
+                <div class="flex flex-col items-center gap-3 mb-2">
+                    <div class="relative">
+                        <img id="settings-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=parent" class="w-20 h-20 rounded-full border-4 border-gray-100 shadow-sm object-cover">
+                        <label class="absolute -bottom-1 -right-1 w-7 h-7 bg-[#28C7AE] rounded-full flex items-center justify-center cursor-pointer shadow-sm">
+                            <i class="fa-solid fa-camera text-white text-[10px]"></i>
+                            <input type="file" id="settings-avatar-upload" class="sr-only" accept="image/*">
+                        </label>
+                    </div>
+                    <p id="settings-email" class="text-sm font-bold text-gray-500"></p>
+                </div>
+
+                <div>
+                    <label class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Display Name</label>
+                    <input id="settings-username" type="text" class="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#28C7AE]">
+                    <p id="username-cooldown" class="text-[11px] text-gray-400 font-bold mt-1"></p>
+                </div>
+                <div>
+                    <label class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Bio</label>
+                    <textarea id="settings-bio" rows="2" maxlength="200" class="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#28C7AE] resize-none"></textarea>
+                    <p class="text-[11px] text-gray-400 font-bold mt-1"><span id="bio-char-count">0</span>/200</p>
+                </div>
+                <div>
+                    <label class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">Current Password</label>
+                    <input id="settings-current-pass" type="password" class="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#28C7AE]" placeholder="Current password">
+                </div>
+                <div>
+                    <label class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-1.5 block">New Password</label>
+                    <input id="settings-new-pass" type="password" class="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#28C7AE]" placeholder="New password">
+                </div>
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="settings-darkmode" class="w-4 h-4 accent-[#28C7AE]">
+                    <span class="font-bold text-sm text-gray-700">Dark Mode</span>
+                </label>
+            </div>
+
+            <div class="flex gap-3 mt-8">
+                <button onclick="closeSettingsModal()" class="flex-1 bg-gray-100 text-gray-600 font-bold py-3 rounded-2xl hover:bg-gray-200 transition-colors">Cancel</button>
+                <button onclick="saveSettings()" class="flex-1 bg-[#28C7AE] text-white font-bold py-3 rounded-2xl hover:bg-teal-500 transition-colors">Save</button>
+            </div>
+            <button onclick="handleParentLogout()" class="w-full mt-3 bg-red-50 text-red-500 font-bold py-3 rounded-2xl hover:bg-red-100 transition-colors border border-red-100">Log Out</button>
         </div>
     </div>
 

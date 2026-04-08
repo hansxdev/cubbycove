@@ -119,7 +119,195 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     _screenTimeStart = Date.now();
     _screenTimeFlushed = false;
+
+    // Start screen-time enforcement after auth is confirmed
+    if (user) {
+        _initScreenTimeEnforcer(user.$id);
+    }
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCREEN TIME ENFORCER — Daily Allowance + Curfew + Warning Overlay
+// Uses Smart Polling (60s) — no Appwrite Realtime needed.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _enforcerInterval = null;
+let _warningShown     = false;
+let _lockoutTriggered = false;
+
+async function _initScreenTimeEnforcer(childId) {
+    if (!childId) return;
+
+    // Run once immediately, then every 60s (visibility-aware)
+    await _runEnforcerCheck(childId);
+
+    _enforcerInterval = setInterval(async () => {
+        if (document.visibilityState === 'visible' && !_lockoutTriggered) {
+            await _runEnforcerCheck(childId);
+        }
+    }, 60000);
+
+    window.addEventListener('beforeunload', () => {
+        if (_enforcerInterval) clearInterval(_enforcerInterval);
+    });
+}
+
+async function _runEnforcerCheck(childId) {
+    try {
+        const { databases, DB_ID, COLLECTIONS } = window.AppwriteService;
+        const { Query } = Appwrite;
+
+        // 1. Fetch time settings from Children doc
+        const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId)
+            .catch(() => null);
+        if (!child) return;
+
+        // Parse settings stored in screenTimeLogs field
+        let settings = { dailyAllowanceMinutes: 60, bedtime: '', warningThresholdMinutes: 5 };
+        if (child.screenTimeLogs && child.screenTimeLogs.startsWith('{')) {
+            try {
+                const parsed = JSON.parse(child.screenTimeLogs);
+                if (parsed._timeSettings) settings = { ...settings, ...parsed._timeSettings };
+            } catch (e) { /* use defaults */ }
+        }
+
+        // 2. Check curfew (bedtime)
+        if (settings.bedtime) {
+            const now = new Date();
+            const [bh, bm] = settings.bedtime.split(':').map(Number);
+            const bedtimeMs = bh * 60 + bm;
+            const nowMs     = now.getHours() * 60 + now.getMinutes();
+            if (nowMs >= bedtimeMs) {
+                _triggerLockout('curfew', settings.bedtime);
+                return;
+            }
+
+            // Warn if approaching curfew within warning threshold
+            const minsUntilBedtime = bedtimeMs - nowMs;
+            if (minsUntilBedtime <= settings.warningThresholdMinutes && !_warningShown) {
+                _showWarningOverlay(minsUntilBedtime, 'bedtime');
+            }
+        }
+
+        // 3. Check daily allowance
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const todayLogs = await databases.listDocuments(DB_ID, 'screen_time_logs', [
+            Query.equal('childId', childId),
+            Query.greaterThanEqual('timestamp', todayStart.toISOString()),
+            Query.limit(200)
+        ]).catch(() => ({ documents: [] }));
+
+        const usedMinutes = todayLogs.documents.reduce((sum, l) => sum + (l.minutes || 0), 0);
+        // Add current unsaved session minutes
+        const currentSessionMins = (Date.now() - _screenTimeStart) / 60000;
+        const totalUsed = usedMinutes + currentSessionMins;
+        const remaining = settings.dailyAllowanceMinutes - totalUsed;
+
+        if (remaining <= 0) {
+            _triggerLockout('allowance', settings.dailyAllowanceMinutes);
+            return;
+        }
+
+        if (remaining <= settings.warningThresholdMinutes && !_warningShown) {
+            _showWarningOverlay(Math.ceil(remaining), 'allowance');
+        }
+
+        // Update an optional countdown badge if the element exists
+        const countdownEl = document.getElementById('kid-time-remaining');
+        if (countdownEl) {
+            const rem = Math.max(0, Math.ceil(remaining));
+            countdownEl.textContent = rem < 60 ? `${rem}m left` : `${Math.floor(rem/60)}h${rem%60?rem%60+'m':''} left`;
+        }
+
+    } catch (e) {
+        console.warn('[TimeEnforcer] Check failed:', e.message);
+    }
+}
+
+function _showWarningOverlay(minsLeft, reason) {
+    if (_warningShown) return;
+    _warningShown = true;
+
+    // Remove any existing warning
+    const existing = document.getElementById('cubby-time-warning');
+    if (existing) existing.remove();
+
+    const label  = reason === 'bedtime' ? `Bedtime in ${minsLeft} minute${minsLeft !== 1 ? 's' : ''}!` : `Only ${minsLeft} minute${minsLeft !== 1 ? 's' : ''} left today!`;
+    const sublabel = reason === 'bedtime'
+        ? "It's almost time to put down the screen. Start wrapping up! 🌙"
+        : "Your daily screen time is almost up. Start finishing what you're doing! ⏰";
+
+    const overlay = document.createElement('div');
+    overlay.id = 'cubby-time-warning';
+    overlay.style.cssText = `
+        position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+        z-index:9999; min-width:320px; max-width:90vw;
+        background:linear-gradient(135deg,#f59e0b,#ef4444);
+        color:white; border-radius:24px; padding:20px 28px;
+        box-shadow:0 20px 60px rgba(239,68,68,0.4);
+        font-family:'Nunito',sans-serif;
+        animation:slideUpWarn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    `;
+
+    // Add keyframe if not present
+    if (!document.getElementById('cubby-warn-style')) {
+        const style = document.createElement('style');
+        style.id = 'cubby-warn-style';
+        style.textContent = `
+            @keyframes slideUpWarn {
+                from { transform:translateX(-50%) translateY(120%); opacity:0; }
+                to   { transform:translateX(-50%) translateY(0);    opacity:1; }
+            }
+            @keyframes shakeWarn {
+                0%,100%{transform:translateX(-50%) rotate(0deg)}
+                20%{transform:translateX(-50%) rotate(-3deg)}
+                40%{transform:translateX(-50%) rotate(3deg)}
+                60%{transform:translateX(-50%) rotate(-2deg)}
+                80%{transform:translateX(-50%) rotate(2deg)}
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    overlay.innerHTML = `
+        <div style="display:flex;align-items:flex-start;gap:16px;">
+            <div style="font-size:2.5rem;line-height:1;">${reason === 'bedtime' ? '🌙' : '⏰'}</div>
+            <div style="flex:1;">
+                <p style="font-size:1.1rem;font-weight:900;margin:0 0 4px;">${label}</p>
+                <p style="font-size:0.85rem;font-weight:700;opacity:0.9;margin:0;">${sublabel}</p>
+            </div>
+            <button onclick="document.getElementById('cubby-time-warning').remove()"
+                style="background:rgba(255,255,255,0.2);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Auto-dismiss after 30 seconds
+    setTimeout(() => { overlay.remove(); }, 30000);
+
+    // Shake after 2 seconds for emphasis
+    setTimeout(() => { overlay.style.animation = 'shakeWarn 0.6s ease'; }, 2000);
+}
+
+async function _triggerLockout(reason, detail) {
+    if (_lockoutTriggered) return;
+    _lockoutTriggered = true;
+
+    // Flush screen time before leaving
+    await flushScreenTime();
+
+    const session = _getChildSession();
+    if (session?.$id) {
+        DataService.updateChildPrefs(session.$id, { isOnline: false }).catch(() => {});
+    }
+
+    // Redirect to Time's Up page
+    const params = new URLSearchParams({ reason, detail: String(detail) });
+    window.location.href = `../kid/timesup.html?${params.toString()}`;
+}
 
 /**
  * playMemoryGame()

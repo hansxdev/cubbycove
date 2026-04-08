@@ -1483,3 +1483,491 @@ window.saveParentProfile = async function () {
         }
     }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB SWITCHER
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _activeTab = 'dashboard';
+
+window.switchTab = function (tabName) {
+    _activeTab = tabName;
+
+    // Update nav pills
+    ['dashboard', 'activity', 'reports'].forEach(t => {
+        const navEl = document.getElementById(`nav-${t}`);
+        const panelEl = document.getElementById(`tab-${t}`);
+        if (navEl) navEl.classList.toggle('active', t === tabName);
+        if (navEl) navEl.classList.toggle('text-gray-500', t !== tabName);
+        if (navEl) navEl.classList.toggle('hover:bg-white/50', t !== tabName);
+        if (panelEl) panelEl.classList.toggle('active', t === tabName);
+    });
+
+    // Update heading
+    const headings = { dashboard: 'Child Profiles', activity: 'Activity Log', reports: 'Reports & Insights' };
+    const headEl = document.getElementById('page-heading');
+    if (headEl) headEl.textContent = headings[tabName] || 'Dashboard';
+
+    // Lazy-load the tab content
+    if (tabName === 'activity') renderFullActivityLog();
+    if (tabName === 'reports') renderReports();
+
+    return false; // prevent anchor jump
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ACTIVITY LOG — Unified Smart Feed
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _cachedFeed = [];
+let _currentFilter = 'all';
+
+async function renderFullActivityLog() {
+    const container = document.getElementById('activity-feed-container');
+    if (!container || !_selectedChildId) {
+        if (container) container.innerHTML = '<div class="text-center py-16 text-gray-400 font-bold">Select a child to view their activity log.</div>';
+        return;
+    }
+
+    container.innerHTML = '<div class="flex items-center justify-center py-16 text-gray-400 font-bold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading activity feed...</div>';
+
+    try {
+        _cachedFeed = await DataService.getUnifiedActivityFeed(_selectedChildId, 100);
+        renderFeedWithFilter(_currentFilter);
+    } catch (e) {
+        console.error('renderFullActivityLog error:', e);
+        container.innerHTML = '<div class="text-center py-10 text-red-400 font-bold">Could not load activity log.</div>';
+    }
+}
+
+window.filterActivityLog = function (filter) {
+    _currentFilter = filter;
+    document.querySelectorAll('.log-filter-btn').forEach(btn => {
+        btn.classList.remove('active', 'bg-[#28C7AE]', 'text-white');
+        if (!btn.classList.contains('bg-red-100') && !btn.classList.contains('bg-blue-100') &&
+            !btn.classList.contains('bg-green-100') && !btn.classList.contains('bg-purple-100')) {
+            btn.classList.add('bg-gray-100', 'text-gray-500');
+        }
+    });
+    const active = event?.target?.closest('.log-filter-btn');
+    if (active) { active.classList.add('active'); }
+    renderFeedWithFilter(filter);
+};
+
+function renderFeedWithFilter(filter) {
+    const container = document.getElementById('activity-feed-container');
+    if (!container) return;
+
+    const filtered = filter === 'all' ? _cachedFeed : _cachedFeed.filter(item => item.feedCategory === filter);
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<div class="flex flex-col items-center justify-center py-16 text-gray-400">
+            <i class="fa-solid fa-inbox text-5xl mb-4 opacity-30"></i>
+            <p class="font-extrabold text-lg">No ${filter === 'all' ? '' : filter + ' '}activity found</p>
+            <p class="text-sm mt-1">Activity will appear here as your child uses CubbyCove.</p>
+        </div>`;
+        return;
+    }
+
+    const categoryConfig = {
+        threat:   { icon: 'fa-shield-exclamation', color: 'text-red-500',    bg: 'bg-red-50',    border: 'border-red-200',   label: 'Safety Alert',  cardClass: 'feed-card-threat'  },
+        activity: { icon: 'fa-play',               color: 'text-blue-500',   bg: 'bg-blue-50',   border: 'border-blue-200',  label: 'Activity',      cardClass: 'feed-card-activity'},
+        game:     { icon: 'fa-gamepad',            color: 'text-purple-500', bg: 'bg-purple-50', border: 'border-purple-200',label: 'Game',          cardClass: 'feed-card-game'   },
+        social:   { icon: 'fa-users',              color: 'text-green-500',  bg: 'bg-green-50',  border: 'border-green-200', label: 'Social',        cardClass: 'feed-card-social' },
+    };
+
+    const html = filtered.map(item => {
+        const cfg = categoryConfig[item.feedCategory] || categoryConfig.activity;
+        const timeStr = timeAgo(item.timestamp);
+        const fullTime = new Date(item.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return `
+        <div class="feed-card ${cfg.cardClass} rounded-2xl p-4 border border-gray-100 flex items-start gap-4 hover:shadow-sm transition-all group">
+            <div class="w-10 h-10 ${cfg.bg} ${cfg.color} rounded-[14px] flex items-center justify-center shrink-0 border border-white shadow-sm mt-0.5">
+                <i class="fa-solid ${cfg.icon} text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-bold text-gray-800 text-sm leading-snug">${escHtml(item.action || 'Activity recorded')}</p>
+                <div class="flex items-center gap-3 mt-1.5 flex-wrap">
+                    <span class="text-[10px] font-black uppercase tracking-wider ${cfg.color} ${cfg.bg} px-2 py-0.5 rounded-md">${cfg.label}</span>
+                    <span class="text-[11px] font-bold text-gray-400" title="${fullTime}"><i class="fa-regular fa-clock mr-1 opacity-60"></i>${timeStr}</span>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REPORTS — Charts & Hero Summary
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _timeBudgetChart = null;
+let _categoryChart   = null;
+let _weeklyChart     = null;
+let _heatmapChart    = null;
+
+async function renderReports() {
+    if (!_selectedChildId) return;
+
+    const child = (window._currentChildren || []).find(c => c.$id === _selectedChildId);
+    const childName = child?.name || 'Your child';
+
+    // Fetch data in parallel
+    const [summary, timeSettings] = await Promise.all([
+        DataService.getScreenTimeSummary(_selectedChildId).catch(() => ({
+            totalMinutesToday: 0, byCategory: {}, byDay: {}, topContent: [], byHour: Array(24).fill(0), totalActivities: 0
+        })),
+        DataService.getChildTimeSettings(_selectedChildId).catch(() => ({ dailyAllowanceMinutes: 60 }))
+    ]);
+
+    // ── Hero Summary Text ────────────────────────────────────────────────────
+    _buildHeroSummary(childName, summary, timeSettings);
+
+    // ── Time Budget Ring ─────────────────────────────────────────────────────
+    const used   = Math.round(summary.totalMinutesToday);
+    const budget = timeSettings.dailyAllowanceMinutes || 60;
+    const remaining = Math.max(0, budget - used);
+    const usedPct = Math.min(100, Math.round((used / budget) * 100));
+    const ringColor = usedPct >= 90 ? '#f43f5e' : usedPct >= 70 ? '#f59e0b' : '#28C7AE';
+
+    document.getElementById('ring-used').textContent    = used < 60 ? `${used}m` : `${Math.floor(used/60)}h${used%60 ? (used%60)+'m' : ''}`;
+    document.getElementById('ring-total').textContent   = `of ${budget}m`;
+    document.getElementById('ring-remaining').textContent = remaining < 60 ? `${remaining}m` : `${Math.floor(remaining/60)}h${remaining%60 ? (remaining%60)+'m' : ''}`;
+    document.getElementById('ring-pct').textContent     = `${usedPct}%`;
+
+    const budgetCanvas = document.getElementById('timeBudgetChart');
+    if (budgetCanvas) {
+        if (_timeBudgetChart) _timeBudgetChart.destroy();
+        _timeBudgetChart = new Chart(budgetCanvas, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [used, Math.max(0, budget - used)],
+                    backgroundColor: [ringColor, '#f0fdf4'],
+                    borderWidth: 0,
+                    circumference: 360,
+                }]
+            },
+            options: {
+                cutout: '75%',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                animation: { animateRotate: true, duration: 800 }
+            }
+        });
+    }
+
+    // ── Category Pie Chart ───────────────────────────────────────────────────
+    const catColors = { games: '#8b5cf6', entertainment: '#f59e0b', communication: '#10b981', general: '#3b82f6', learning: '#f43f5e' };
+    const catEntries = Object.entries(summary.byCategory);
+    const catCanvas = document.getElementById('categoryChart');
+    if (catCanvas) {
+        if (_categoryChart) _categoryChart.destroy();
+        if (catEntries.length === 0) {
+            catCanvas.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 font-bold text-sm">No activity today</div>';
+        } else {
+            _categoryChart = new Chart(catCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: catEntries.map(([k]) => k.charAt(0).toUpperCase() + k.slice(1)),
+                    datasets: [{ data: catEntries.map(([,v]) => Math.round(v)), backgroundColor: catEntries.map(([k]) => catColors[k] || '#94a3b8'), borderWidth: 2, borderColor: '#fff' }]
+                },
+                options: { cutout: '60%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} min` } } } }
+            });
+
+            // Legend
+            const legendEl = document.getElementById('category-legend');
+            if (legendEl) {
+                legendEl.innerHTML = catEntries.map(([k, v]) => `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full" style="background:${catColors[k]||'#94a3b8'}"></div>
+                            <span class="text-xs font-bold text-gray-600 capitalize">${k}</span>
+                        </div>
+                        <span class="text-xs font-extrabold text-gray-800">${Math.round(v)}m</span>
+                    </div>`).join('');
+            }
+        }
+    }
+
+    // ── Weekly Bar Chart ─────────────────────────────────────────────────────
+    const weeklyCanvas = document.getElementById('weeklyChart');
+    if (weeklyCanvas) {
+        if (_weeklyChart) _weeklyChart.destroy();
+        const dayLabels = Object.keys(summary.byDay);
+        const dayValues = Object.values(summary.byDay).map(v => Math.round(v));
+        _weeklyChart = new Chart(weeklyCanvas, {
+            type: 'bar',
+            data: {
+                labels: dayLabels,
+                datasets: [{
+                    data: dayValues,
+                    backgroundColor: dayValues.map((v, i) => i === dayLabels.length - 1 ? '#28C7AE' : 'rgba(139,92,246,0.3)'),
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} min` } } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f0f0f0', drawBorder: false }, ticks: { font: { size: 10, weight: 'bold' }, color: '#9ca3af' } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' }, color: '#9ca3af' } }
+                }
+            }
+        });
+    }
+
+    // ── Heatmap (Hour Distribution) ──────────────────────────────────────────
+    const heatCanvas = document.getElementById('heatmapChart');
+    if (heatCanvas) {
+        if (_heatmapChart) _heatmapChart.destroy();
+        const hourLabels = Array.from({ length: 24 }, (_, i) => {
+            if (i === 0) return '12a';
+            if (i === 12) return '12p';
+            return i < 12 ? `${i}a` : `${i-12}p`;
+        });
+        const heatMax = Math.max(...summary.byHour, 1);
+        _heatmapChart = new Chart(heatCanvas, {
+            type: 'bar',
+            data: {
+                labels: hourLabels,
+                datasets: [{
+                    data: summary.byHour,
+                    backgroundColor: summary.byHour.map(v => {
+                        const intensity = v / heatMax;
+                        if (intensity > 0.7) return '#8b5cf6';
+                        if (intensity > 0.4) return '#a78bfa';
+                        if (intensity > 0.1) return '#c4b5fd';
+                        return '#ede9fe';
+                    }),
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { display: false, beginAtZero: true },
+                    x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' }, color: '#9ca3af', maxTicksLimit: 12 } }
+                }
+            }
+        });
+    }
+
+    // ── Top Content ──────────────────────────────────────────────────────────
+    const topEl = document.getElementById('top-content-list');
+    if (topEl) {
+        if (summary.topContent.length === 0) {
+            topEl.innerHTML = '<p class="text-sm text-gray-400 font-bold text-center py-4">No content watched this week.</p>';
+        } else {
+            topEl.innerHTML = summary.topContent.map((item, i) => `
+                <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl hover:bg-white transition-colors">
+                    <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-purple-400 to-blue-500 text-white text-xs font-black flex items-center justify-center shrink-0">${i+1}</div>
+                    <p class="flex-1 text-xs font-bold text-gray-700 truncate">${escHtml(item.action)}</p>
+                    <span class="shrink-0 text-[10px] font-extrabold text-gray-400 bg-white px-2 py-0.5 rounded-lg border border-gray-100">${item.count}x</span>
+                </div>`).join('');
+        }
+    }
+
+    // ── Safety Scorecard ─────────────────────────────────────────────────────
+    await _renderSafetyScorecard();
+}
+
+async function _renderSafetyScorecard() {
+    if (!_selectedChildId) return;
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+
+    try {
+        const { databases, DB_ID, COLLECTIONS } = AppwriteService;
+        const { Query } = Appwrite;
+        const threats = await databases.listDocuments(DB_ID, COLLECTIONS.THREAT_LOGS, [
+            Query.equal('childId', _selectedChildId),
+            Query.greaterThanEqual('$createdAt', weekAgo.toISOString()),
+            Query.limit(50)
+        ]).catch(() => ({ documents: [] }));
+
+        const total    = threats.documents.length;
+        const resolved = threats.documents.filter(t => t.resolved || t.status === 'resolved').length;
+        const pending  = total - resolved;
+
+        let grade = 'A+';
+        if (total > 10) grade = 'D';
+        else if (total > 5) grade = 'C';
+        else if (total > 2) grade = 'B';
+        else if (total > 0) grade = 'B+';
+
+        document.getElementById('sc-total-threats').textContent = total;
+        document.getElementById('sc-resolved').textContent      = resolved;
+        document.getElementById('sc-pending').textContent       = pending;
+        document.getElementById('sc-grade').textContent         = grade;
+    } catch (e) {
+        console.warn('Safety scorecard error:', e.message);
+    }
+}
+
+function _buildHeroSummary(name, summary, timeSettings) {
+    const textEl = document.getElementById('hero-summary-text');
+    const subEl  = document.getElementById('hero-summary-sub');
+    if (!textEl || !subEl) return;
+
+    const used   = Math.round(summary.totalMinutesToday);
+    const budget = timeSettings.dailyAllowanceMinutes || 60;
+    const usedPct = Math.min(100, Math.round((used / budget) * 100));
+    const topCat = Object.entries(summary.byCategory).sort((a,b) => b[1]-a[1])[0];
+    const topCatName = topCat ? topCat[0].charAt(0).toUpperCase() + topCat[0].slice(1) : null;
+    const weeklyTotal = Object.values(summary.byDay).reduce((s,v) => s+v, 0);
+
+    // Build dynamic sentence
+    let headline = '';
+    let sub = '';
+
+    if (used === 0) {
+        headline = `${name} hasn't logged in yet today. ✨`;
+        sub = weeklyTotal > 0
+            ? `This week they spent ${Math.round(weeklyTotal)} minutes on CubbyCove in total.`
+            : 'No activity recorded this week.';
+    } else if (usedPct >= 90) {
+        headline = `${name} is almost at today's time limit! ⏰`;
+        sub = `They've used ${used} of ${budget} minutes today${topCatName ? `, mostly in ${topCatName}` : ''}.`;
+    } else if (usedPct >= 50) {
+        headline = `${name} is having an active day on CubbyCove. 🎉`;
+        sub = `${used} minutes used so far today${topCatName ? ` — mostly ${topCatName}` : ''}. ${budget - used} minutes remaining.`;
+    } else {
+        headline = `${name} had a light session today — great balance! 🌟`;
+        sub = `Only ${used} minutes used of their ${budget}-minute daily budget.`;
+    }
+
+    if (summary.totalActivities > 20) {
+        sub += ' Very active this week!';
+    }
+
+    textEl.textContent = headline;
+    subEl.textContent  = sub;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TIME SETTINGS — Save & Load from Edit Child Modal
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function loadChildTimeSettingsIntoModal(childId) {
+    try {
+        const settings = await DataService.getChildTimeSettings(childId);
+        const allowanceEl = document.getElementById('editDailyAllowance');
+        const bedtimeEl   = document.getElementById('editBedtime');
+        const warnEl      = document.getElementById('editWarningThreshold');
+
+        if (allowanceEl) allowanceEl.value = settings.dailyAllowanceMinutes ?? 60;
+        if (bedtimeEl)   bedtimeEl.value   = settings.bedtime ?? '';
+        if (warnEl)      warnEl.value      = settings.warningThresholdMinutes ?? 5;
+    } catch (e) {
+        console.warn('loadChildTimeSettingsIntoModal error:', e.message);
+    }
+}
+
+window.saveChildTimeSettings = async function () {
+    if (!_editingChildId) return;
+    const btn = document.getElementById('saveTimeSettingsBtn');
+    const orig = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...'; }
+
+    try {
+        const settings = {
+            dailyAllowanceMinutes: parseInt(document.getElementById('editDailyAllowance')?.value || '60'),
+            bedtime:               document.getElementById('editBedtime')?.value || '',
+            warningThresholdMinutes: parseInt(document.getElementById('editWarningThreshold')?.value || '5'),
+            allowChat:             document.getElementById('editAllowChat')?.checked ?? true,
+            allowGames:            document.getElementById('editAllowGames')?.checked ?? true,
+        };
+
+        await DataService.updateChildTimeSettings(_editingChildId, settings);
+
+        // Refresh cache
+        const user = await DataService.getCurrentUser();
+        if (user) await renderKidsAndStats(user);
+
+        if (btn) { btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>Saved!'; }
+        setTimeout(() => { if (btn) { btn.innerHTML = orig; btn.disabled = false; } }, 2000);
+    } catch (e) {
+        alert('Failed to save time settings: ' + e.message);
+        if (btn) { btn.innerHTML = orig; btn.disabled = false; }
+    }
+};
+
+// Patch openEditChildModal to also load time settings
+const _origOpenEditChildModal = window.openEditChildModal || openEditChildModal;
+window.openEditChildModal = function (childId, event) {
+    if (event) event.stopPropagation();
+    _origOpenEditChildModal(childId, event);
+    loadChildTimeSettingsIntoModal(childId);
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONNECT selectChild TO ACTIVE TAB RE-RENDER
+// ─────────────────────────────────────────────────────────────────────────────
+
+const _origSelectChild = window.selectChild;
+window.selectChild = function (childId) {
+    _origSelectChild(childId);
+    // Re-render the active tab if it's activity or reports
+    if (_activeTab === 'activity') renderFullActivityLog();
+    if (_activeTab === 'reports') renderReports();
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BROWSER PUSH NOTIFICATIONS — Safety Threats
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _lastKnownThreatCount = 0;
+
+async function checkForNewThreats() {
+    if (!_selectedChildId) return;
+    try {
+        const { databases, DB_ID, COLLECTIONS } = AppwriteService;
+        const { Query } = Appwrite;
+        // Only look at threats from the last 2 minutes (fresh threats)
+        const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+        const fresh = await databases.listDocuments(DB_ID, COLLECTIONS.THREAT_LOGS, [
+            Query.equal('childId', _selectedChildId),
+            Query.greaterThanEqual('$createdAt', twoMinsAgo),
+            Query.limit(5)
+        ]).catch(() => ({ documents: [] }));
+
+        if (fresh.documents.length > _lastKnownThreatCount) {
+            _lastKnownThreatCount = fresh.documents.length;
+            const child = (window._currentChildren || []).find(c => c.$id === _selectedChildId);
+            _sendBrowserNotification(
+                '🚨 Safety Alert — CubbyCove',
+                `${child?.name || 'Your child'} triggered a safety alert. Tap to review.`
+            );
+        }
+    } catch (e) { /* silent */ }
+}
+
+function _sendBrowserNotification(title, body) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') {
+        new Notification(title, { body, icon: '../images/closedlogo.png' });
+    } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(perm => {
+            if (perm === 'granted') new Notification(title, { body, icon: '../images/closedlogo.png' });
+        });
+    }
+}
+
+// Request notification permission on load and hook into existing poll
+document.addEventListener('DOMContentLoaded', () => {
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+    // Piggyback threat check onto the existing 60s SmartPoll
+    const origLoadDashboard = window.loadDashboardData;
+    if (origLoadDashboard) {
+        window.loadDashboardData = async function () {
+            await origLoadDashboard();
+            checkForNewThreats();
+        };
+    }
+});

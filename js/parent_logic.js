@@ -462,8 +462,19 @@ async function renderKidsAndStats(user) {
         }
     }
 
+    const addBtnHtml = `
+        <a href="register_child.html" class="flex-shrink-0 w-12 h-12 rounded-[1rem] bg-white/40 border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:text-[#28C7AE] hover:border-[#28C7AE] hover:bg-white transition-all cursor-pointer shadow-sm group mx-2 my-auto">
+            <i class="fa-solid fa-plus text-lg group-hover:scale-110 transition-transform"></i>
+        </a>
+    `;
+
     if (!children || children.length === 0) {
-        if (kidsListEl) kidsListEl.innerHTML = '<div class="text-center py-4 text-xs font-semibold text-gray-500">No children added yet.</div>';
+        if (kidsListEl) {
+            kidsListEl.innerHTML = `
+                <div class="text-center py-4 text-xs font-semibold text-gray-500 flex items-center">No children added yet.</div>
+                ${addBtnHtml}
+            `;
+        }
         return;
     }
 

@@ -137,8 +137,8 @@ function initSidebar() {
         }
 
         if (topNav) {
-            topNav.classList.remove('lg:left-[18.25rem]');
-            topNav.classList.add('lg:left-[6.75rem]');
+            topNav.classList.remove('lg:left-[6.75rem]');
+            topNav.classList.add('lg:left-[18.25rem]');
         }
 
         setExpandedStyles();

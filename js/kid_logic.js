@@ -1019,14 +1019,7 @@ const GAMES_CATALOG = [
         thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2FAddicting%2520Games.png&w=1920&q=100',
         color: '#a5f3fc', border: '#22d3ee', shadow: '#0e7490'
     },
-    {
-        id: 'super-frog',
-        title: 'Super Frog',
-        category: 'Adventure',
-        embedUrl: 'https://www.addictinggames.com/embed/html5-games/10000156',
-        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fsuperfrog_gamethumb.jpg&w=1920&q=100',
-        color: '#86efac', border: '#22c55e', shadow: '#15803d'
-    },
+
     {
         id: 'playgeography',
         title: 'PlayGeography',

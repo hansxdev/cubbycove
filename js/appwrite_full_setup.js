@@ -4,7 +4,13 @@ const PROJECT_ID = '69b554060007d12c46ee';
 const DB_ID = '69b5543d0007695488c5';
 // ⚠️  ROTATE THIS KEY: Go to Appwrite Console → Settings → API Keys, delete the old key,
 //     create a new one, paste it below ONLY when running this script, then clear it again.
-const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f77e0f4f6f3ce00c62ba74ed4505883be263c42a35717bcf7a2a13edddd94e650ad41482f7f34bb86972d28c5adeaf51987733a61fd3a6da7a79d83c74f441e88599dd19a908239d6db092f562cb5a97e7710dedccc40bd9a4e70fc0d7a9e4a8027e0fa6164a';
+// ✅ SECURITY: Load the API key from an environment variable, never hardcode it.
+// Set APPWRITE_API_KEY in your shell before running: $env:APPWRITE_API_KEY="standard_..."
+const API_KEY = process.env.APPWRITE_API_KEY;
+if (!API_KEY) {
+    console.error('❌ CRITICAL: APPWRITE_API_KEY environment variable is not set. Aborting.');
+    process.exit(1);
+}
 
 (async () => {
     console.log("🚀 Starting Appwrite Migration Initialization via Node.js CLI...");
@@ -94,7 +100,9 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { key: 'username_unique', type: 'unique', attributes: ['username'] }
             ],
             permissions: [
-                Permission.read(Role.any()),
+                // ✅ SECURITY: Children's data (incl. passwords) must NEVER be publicly readable.
+                // Only authenticated users (parents, staff) can read child profiles.
+                Permission.read(Role.users()),
                 Permission.create(Role.users()),
                 Permission.update(Role.users()),
                 Permission.delete(Role.users()),
@@ -151,7 +159,8 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
             ],
             permissions: [
                 Permission.read(Role.users()),
-                Permission.create(Role.any()),
+                // ✅ SECURITY: Only authenticated users (kids, parents, staff) should report threats.
+                Permission.create(Role.users()),
                 Permission.update(Role.users()),
                 Permission.delete(Role.users()),
             ]
@@ -191,9 +200,11 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { key: 'toChild', type: 'key', attributes: ['toChildId'] }
             ],
             permissions: [
-                Permission.read(Role.any()),
-                Permission.create(Role.any()),
-                Permission.update(Role.any()),
+                // ✅ SECURITY: Buddy social graph should not be fully public.
+                // Authenticated users can read/create/update their own buddy relationships.
+                Permission.read(Role.users()),
+                Permission.create(Role.users()),
+                Permission.update(Role.users()),
             ]
         },
         // ── 7. PARENT NOTIFICATIONS ──
@@ -215,7 +226,8 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
             permissions: [
                 Permission.read(Role.users()),
                 Permission.update(Role.users()),
-                Permission.create(Role.any()),
+                // ✅ SECURITY: Only authenticated system components or users should create notifications.
+                Permission.create(Role.users()),
             ]
         },
         // ── 8. CHAT MESSAGES ──
@@ -233,8 +245,12 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { key: 'convo_idx', type: 'key', attributes: ['conversationId'] }
             ],
             permissions: [
-                Permission.read(Role.any()),
-                Permission.create(Role.any()),
+                // ✅ SECURITY: Chat messages must NOT be publicly readable — this is a child safety requirement.
+                // Only authenticated users (parents monitoring, authenticated kids) can access chat.
+                Permission.read(Role.users()),
+                // Guests need create so the unauthenticated kid flow can post messages.
+                // Appwrite Anonymous Sessions should be used here once the kid auth refactor lands.
+                Permission.create(Role.users()),
             ]
         },
         // ── 9. KID WATCH HISTORY ──
@@ -251,10 +267,11 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { type: 'string', key: 'watchedAt', required: true, size: 65535 }
             ],
             permissions: [
-                Permission.read(Role.any()),
-                Permission.create(Role.any()),
-                Permission.update(Role.any()),
-                Permission.delete(Role.any()),
+                // ✅ SECURITY: Watch history is private per-child data.
+                Permission.read(Role.users()),
+                Permission.create(Role.users()),
+                Permission.update(Role.users()),
+                Permission.delete(Role.users()),
             ]
         },
         // ── 10. KID FAVORITES ──
@@ -271,10 +288,11 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { type: 'string', key: 'addedAt', required: true, size: 65535 }
             ],
             permissions: [
-                Permission.read(Role.any()),
-                Permission.create(Role.any()),
-                Permission.update(Role.any()),
-                Permission.delete(Role.any()),
+                // ✅ SECURITY: Favorites are private per-child data.
+                Permission.read(Role.users()),
+                Permission.create(Role.users()),
+                Permission.update(Role.users()),
+                Permission.delete(Role.users()),
             ]
         },
         // ── 11. PATHS ──
@@ -314,8 +332,9 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { key: 'rewardId_idx', type: 'unique', attributes: ['rewardId'] }
             ],
             permissions: [
-                Permission.read(Role.any()),
-                Permission.create(Role.any()),
+                // ✅ SECURITY: Reward records should not be public — prevents reward manipulation research.
+                Permission.read(Role.users()),
+                Permission.create(Role.users()),
             ]
         },
         // ── 13. KID PATH STATUS ──
@@ -330,9 +349,10 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { type: 'string', key: 'updatedAt', required: true, size: 50 }
             ],
             permissions: [
-                Permission.read(Role.any()),
-                Permission.create(Role.any()),
-                Permission.update(Role.any()),
+                // ✅ SECURITY: Path progress is private per-child data.
+                Permission.read(Role.users()),
+                Permission.create(Role.users()),
+                Permission.update(Role.users()),
             ]
         },
         // ── 14. LOGIN REQUESTS ──
@@ -351,9 +371,12 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { type: 'string', key: 'parentId', required: false, size: 50 }
             ],
             permissions: [
-                Permission.read(Role.any()),
-                Permission.create(Role.any()),
-                Permission.update(Role.any()),
+                // ✅ SECURITY: Login requests must be readable/creatable by guests
+                // (kids are unauthenticated) but updates MUST be authenticated-only
+                // (only the parent can approve/deny — never a guest).
+                Permission.read(Role.any()),   // Kid polls the status of their own request
+                Permission.create(Role.any()), // Kid creates the initial login request
+                Permission.update(Role.users()), // ✅ FIXED: Only authenticated parents can approve/deny
             ]
         },
         // ── 15. PENDING STAFF ──
@@ -373,8 +396,10 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { key: 'email_idx', type: 'key', attributes: ['email'] }  // 'key' (not 'unique') allows multiple docs per email across re-claims
             ],
             permissions: [
-                Permission.read(Role.any()),     // claim page reads without auth
-                Permission.create(Role.users()), // ✅ FIXED: logged-in admins can create pending_staff docs
+                // ✅ SECURITY: Claim page reads require guessing the ID, but ideally this would be more restricted.
+                // Keeping as Role.any() for the claim-flow UI to work before login.
+                Permission.read(Role.any()),     
+                Permission.create(Role.users()),
                 Permission.update(Role.any()),   // claim page updates isClaimed flag without auth
             ]
         },
@@ -391,9 +416,10 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { type: 'string', key: 'timestamp', required: false, size: 50 }
             ],
             permissions: [
-                Permission.read(Role.any()),
-                Permission.create(Role.any()),
-                Permission.update(Role.any()),
+                // ✅ SECURITY: Screen time data is private — only parents/staff should see it.
+                Permission.read(Role.users()),
+                Permission.create(Role.users()),
+                Permission.update(Role.users()),
             ]
         },
         // ── 17. ACTIVITY LOGS ──
@@ -412,10 +438,11 @@ const API_KEY = 'standard_ad620ee0a91bc374e9becce9eeb937981cdae566673f8176ba12f7
                 { key: 'timestamp_idx', type: 'key', attributes: ['timestamp'] }
             ],
             permissions: [
-                Permission.read(Role.any()),
-                Permission.create(Role.any()),
-                Permission.update(Role.any()),
-                Permission.delete(Role.any()),
+                // ✅ SECURITY: Activity logs are sensitive child behavioral data — private.
+                Permission.read(Role.users()),
+                Permission.create(Role.users()),
+                Permission.update(Role.users()),
+                Permission.delete(Role.users()),
             ]
         }
     ];

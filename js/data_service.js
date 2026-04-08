@@ -449,9 +449,10 @@ const DataService = {
 
         // ── 3. Verify password ───────────────────────────────────────────────────
         // Children have a `password` field (plain or hashed) stored on creation.
-        // We perform an exact match here (the field is set by the parent when adding the child).
+        // We perform a secure hash comparison here.
         const storedPassword = child.password || '';
-        if (!storedPassword || storedPassword !== password) {
+        const isPasswordCorrect = await SecurityUtils.verifyPassword(password, storedPassword);
+        if (!isPasswordCorrect) {
             throw new Error(GENERIC_ERROR);
         }
 
@@ -588,14 +589,30 @@ const DataService = {
      * NOW ASYNC — fetches child prefs from DB so profile persists across logins.
      */
     kidLoginFromApproved: async function (approvedRequest) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
+
+        // ✅ SECURITY: The 'fake' sessionStorage token is insecure.
+        // We now create an official Appwrite Anonymous Session for the kid.
+        // The kid doesn't have an email/password in the Appwrite Auth system,
+        // but this grants them a real JWT token so Cloud Functions (Gemini) can
+        // verify them, and Appwrite permissions (Role.users()) will recognize them.
+        try {
+            await account.createAnonymousSession();
+        } catch (e) {
+            console.warn('[Kid Login] Anonymous session creation failed or exists:', e.message);
+        }
 
         // Fetch the full child document to hydrate prefs (avatarImage, bio, etc.)
         let childDoc = null;
         try {
+            // Note: Since we haven't given the child's anonymous Appwrite account
+            // explicit read access to this specific child document yet (that would require
+            // a Cloud Function or Appwrite Teams), we might hit a read error if Role.users()
+            // is not enough (which it shouldn't be, if we locked it down correctly).
+            // For now, if we get 401, we rely on the data stamped on the approvedRequest.
             childDoc = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, approvedRequest.childId);
         } catch (e) {
-            console.warn('[Kid Login] Could not fetch child prefs from DB (non-fatal):', e.message);
+            console.warn('[Kid Login] Could not fetch child prefs from DB (expected if locked down):', e.message);
         }
 
         const childSession = {
@@ -623,7 +640,7 @@ const DataService = {
         sessionStorage.setItem('cubby_child_session', JSON.stringify(childSession));
         // Clean up the cached password
         sessionStorage.removeItem('cubby_login_req_pass_' + approvedRequest.$id);
-        console.log('✅ [Kid] Session stored with prefs for:', childSession.username);
+        console.log('✅ [Kid] Anonymous Auth Session established for:', childSession.username);
         return childSession;
     },
 
@@ -1449,13 +1466,15 @@ const DataService = {
 
             // --- Step 2: Create the child document ---
             // Attributes required by the Appwrite children collection schema
+            // ✅ SECURITY: Hash the password before storing it; never store plaintext.
             const childId = ID.unique();
+            const childHashedPassword = await SecurityUtils.hashPassword(childData.password);
             const newChild = {
                 parentId: resolvedParentId,
                 parentEmail: parentEmail,
                 name: childData.name,
                 username: childData.username,
-                password: childData.password,
+                password: childHashedPassword,
                 status: childData.status || 'active', // required field in schema
                 avatar: childData.avatar || 'Felix',
                 allowChat: childData.allowChat !== undefined ? childData.allowChat : false,
@@ -1571,6 +1590,11 @@ const DataService = {
     updateChild: async function (childId, updateData) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         try {
+            // ✅ SECURITY: Hash the password if it is being updated
+            if (updateData.password) {
+                 updateData.password = await SecurityUtils.hashPassword(updateData.password);
+            }
+
             const doc = await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, updateData);
             console.log("✅ [Appwrite] Child profile updated:", doc.$id);
             return doc;

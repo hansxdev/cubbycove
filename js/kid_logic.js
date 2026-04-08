@@ -1027,6 +1027,102 @@ const GAMES_CATALOG = [
         thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fsuperfrog_gamethumb.jpg&w=1920&q=100',
         color: '#86efac', border: '#22c55e', shadow: '#15803d'
     },
+    {
+        id: 'playgeography',
+        title: 'PlayGeography',
+        category: 'Educational',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/23772',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fcapitals-of-south-america.jpg&w=1920&q=100',
+        color: '#fde68a', border: '#fbbf24', shadow: '#b45309'
+    },
+    {
+        id: 'candy-stacker',
+        title: 'Candy Stacker',
+        category: 'Puzzle',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/24593',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fcandy%2520sta%2520ker.jpg&w=1920&q=100',
+        color: '#fecaca', border: '#f87171', shadow: '#b91c1c'
+    },
+    {
+        id: 'spot-difference',
+        title: 'Spot the difference',
+        category: 'Puzzle',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/24999',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fimage_2025-05-09_125439173.png&w=1920&q=100',
+        color: '#bbf7d0', border: '#4ade80', shadow: '#15803d'
+    },
+    {
+        id: 'slidefit',
+        title: 'Slidefit',
+        category: 'Puzzle',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/25084',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fslidefitgame.jpg&w=1920&q=100',
+        color: '#a5f3fc', border: '#22d3ee', shadow: '#0e7490'
+    },
+    {
+        id: 'super-shuriken',
+        title: 'Super Shuriken',
+        category: 'Action',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/24628',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fsupershuriken.jpg&w=1920&q=100',
+        color: '#c084fc', border: '#a855f7', shadow: '#7e22ce'
+    },
+    {
+        id: 'echolocation-shooter',
+        title: 'Echolocation Shooter',
+        category: 'Action',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/10000764',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2FCoverImage_720X468.jpg&w=1920&q=100',
+        color: '#93c5fd', border: '#3b82f6', shadow: '#1d4ed8'
+    },
+    {
+        id: 'gumball-machine',
+        title: 'The Gumball Machine',
+        category: 'Arcade',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/10000784',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Faddicting%2520games%2520thumbnail%2520%25282%2529.png&w=1920&q=100',
+        color: '#fbcfe8', border: '#f472b6', shadow: '#be185d'
+    },
+    {
+        id: 'high-hills',
+        title: 'High Hills',
+        category: 'Racing',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/23644',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fhighhillsscreen.jpg&w=1920&q=100',
+        color: '#86efac', border: '#22c55e', shadow: '#15803d'
+    },
+    {
+        id: 'jump-bunny-jump',
+        title: 'Jump Bunny Jump',
+        category: 'Action',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/25059',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fimage_2026-03-23_103110235.png&w=1920&q=100',
+        color: '#fde68a', border: '#fbbf24', shadow: '#b45309'
+    },
+    {
+        id: 'brosky',
+        title: 'Brosky',
+        category: 'Action',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/10000779',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fthumbnail_18.png&w=1920&q=100',
+        color: '#c084fc', border: '#a855f7', shadow: '#7e22ce'
+    },
+    {
+        id: 'kids-color-book',
+        title: 'Kids Color Book',
+        category: 'Educational',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/24951',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fimage_2025-07-24_132823257.png&w=1920&q=100',
+        color: '#fecaca', border: '#f87171', shadow: '#b91c1c'
+    },
+    {
+        id: 'bubbits',
+        title: 'Bubbits',
+        category: 'Puzzle',
+        embedUrl: 'https://www.addictinggames.com/embed/html5-games/10000775',
+        thumb: 'https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fbubbits_720x468.jpg&w=1920&q=100',
+        color: '#a5f3fc', border: '#22d3ee', shadow: '#0e7490'
+    }
 ];
 
 /**

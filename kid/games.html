@@ -191,18 +191,33 @@
         <div class="p-6 pb-2">
             <div class="relative w-full rounded-[2rem] overflow-hidden shadow-xl group cursor-pointer border-[6px] border-[#4ade80] bg-[#86efac] p-2 aspect-auto md:aspect-[21/9]">
                 <div class="w-full h-full relative rounded-[1.5rem] overflow-hidden">
-                    <img src="../images/space_explorer_banner.png"
-                        class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                    <div class="w-full h-full hero-slider absolute inset-0">
+                        <div class="slide absolute inset-0 transition-opacity duration-1000 opacity-100">
+                            <img src="https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fcapitals-of-south-america.jpg&w=1920&q=100" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                        </div>
+                        <div class="slide absolute inset-0 transition-opacity duration-1000 opacity-0">
+                            <img src="https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fcandy%2520sta%2520ker.jpg&w=1920&q=100" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                        </div>
+                        <div class="slide absolute inset-0 transition-opacity duration-1000 opacity-0">
+                            <img src="https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fslidefitgame.jpg&w=1920&q=100" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                        </div>
+                        <div class="slide absolute inset-0 transition-opacity duration-1000 opacity-0">
+                            <img src="https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fsupershuriken.jpg&w=1920&q=100" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                        </div>
+                        <div class="slide absolute inset-0 transition-opacity duration-1000 opacity-0">
+                            <img src="https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2FCoverImage_720X468.jpg&w=1920&q=100" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                        </div>
+                    </div>
                     
                     <!-- Gradient overlay to ensure text is readable if it overlaps -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-blue-900/40 to-transparent"></div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-blue-900/40 to-transparent z-10"></div>
                     
                     <div class="absolute top-0 left-0 p-8 md:p-12 text-white flex flex-col justify-center h-full max-w-xl">
-                        <span class="bg-cubby-yellow text-gray-900 text-xs font-black px-4 py-1.5 rounded-full mb-4 w-fit uppercase tracking-widest shadow-sm">FEATURED</span>
-                        <h2 class="text-4xl md:text-5xl font-black mb-3 drop-shadow-lg text-white">Space Explorer 3000</h2>
-                        <p class="text-white/90 text-sm md:text-lg mb-6 font-bold drop-shadow-md">Blast off into a galaxy of fun! Learn about planets while dodging asteroids.</p>
+                        <span class="bg-cubby-yellow text-gray-900 text-xs font-black px-4 py-1.5 rounded-full mb-4 w-fit uppercase tracking-widest shadow-sm z-20 relative">FEATURED</span>
+                        <h2 class="text-4xl md:text-5xl font-black mb-3 drop-shadow-lg text-white z-20 relative">New Amazing Games!</h2>
+                        <p class="text-white/90 text-sm md:text-lg mb-6 font-bold drop-shadow-md z-20 relative">Play our brand new selection of games!</p>
                         
-                        <button onclick="playMemoryGame()" class="bg-[#9333ea] hover:bg-[#7e22ce] border-4 border-[#6b21a8] text-white font-black text-lg px-8 py-3 rounded-2xl shadow-[0_6px_0_#581c87] active:translate-y-2 active:shadow-none transition-all flex items-center gap-3 w-fit">
+                        <button onclick="playMemoryGame()" style="position:relative; z-index:20;" class="bg-[#9333ea] hover:bg-[#7e22ce] border-4 border-[#6b21a8] text-white font-black text-lg px-8 py-3 rounded-2xl shadow-[0_6px_0_#581c87] active:translate-y-2 active:shadow-none transition-all flex items-center gap-3 w-fit">
                             <i class="fa-solid fa-play"></i> Play Now
                         </button>
                     </div>

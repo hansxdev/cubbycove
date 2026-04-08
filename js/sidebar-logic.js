@@ -6,7 +6,13 @@ function initSidebar() {
     const topNav = document.getElementById('top-nav');
     const body = document.body;
 
-    if (!menuBtn || !sidebar) return;
+    if (!sidebar) return;
+
+    // Hide hamburger menu button on desktop since we're using hover logic now
+    if (menuBtn) {
+        menuBtn.classList.remove('lg:flex', 'lg:bg-white/40', 'lg:backdrop-blur-md', 'lg:w-11', 'lg:h-11', 'lg:items-center', 'lg:justify-center', 'lg:border', 'lg:border-white/50', 'lg:shadow-sm', 'lg:text-indigo-900/60', 'lg:hover:text-indigo-900', 'lg:hover:bg-white/60', 'lg:hover:scale-105');
+        menuBtn.classList.add('lg:hidden');
+    }
 
     // Initialize Logo Paths
     const logoLong = document.getElementById('logo-long');
@@ -25,7 +31,6 @@ function initSidebar() {
     function updateLogo(isClosed) {
         const logoLong = document.getElementById('logo-long');
         const logoClosed = document.getElementById('logo-closed');
-        const logoContainer = document.getElementById('logo-container');
 
         if (logoLong && logoClosed) {
             if (isClosed) {
@@ -71,108 +76,120 @@ function initSidebar() {
         status.forEach(el => el.classList.remove('opacity-0', 'w-0'));
     }
 
-    function toggleMenu() {
-        const isDesktop = window.innerWidth >= 1024;
+    function collapseDesktop() {
+        if (!sidebar.classList.contains('w-[17.5rem]') && !sidebar.classList.contains('w-full')) return;
 
-        if (isDesktop) {
-            // Desktop: Toggle Width (Mini vs Full)
-            const isFullWidth = sidebar.classList.contains('w-[17.5rem]');
+        sidebar.classList.remove('w-[17.5rem]');
+        sidebar.classList.add('w-[6rem]');
 
-            if (isFullWidth) {
-                // COLLAPSE
-                sidebar.classList.remove('w-[17.5rem]');
-                sidebar.classList.add('w-[6rem]');
+        if (mainContent) {
+            mainContent.classList.remove('lg:ml-[17.5rem]', 'lg:ml-64');
+            mainContent.classList.add('lg:ml-[6rem]');
+            // Crucial: remove position absolute overlapping so it pushes
+            mainContent.classList.remove('absolute', 'w-full'); 
+        }
 
-                if (mainContent) {
-                    mainContent.classList.remove('lg:ml-[17.5rem]', 'lg:ml-64');
-                    mainContent.classList.add('lg:ml-[6rem]');
-                }
+        if (topNav) {
+            topNav.classList.remove('lg:left-[18.25rem]');
+            topNav.classList.add('lg:left-[6.75rem]');
+        }
 
-                if (topNav) {
-                    topNav.classList.remove('lg:left-[18.25rem]');
-                    topNav.classList.add('lg:left-[6.75rem]');
-                }
+        // Animate Labels Out
+        sidebar.querySelectorAll('.sidebar-label').forEach(el => {
+            el.classList.add('w-0', 'opacity-0', 'translate-x-[-10px]', 'hidden');
+        });
 
-                // Animate Labels Out
-                sidebar.querySelectorAll('.sidebar-label').forEach(el => {
-                    el.classList.add('w-0', 'opacity-0', 'translate-x-[-10px]', 'hidden');
-                });
+        // Hide Headers & Promos (Collapse Height)
+        [...sidebar.querySelectorAll('.sidebar-header'), ...sidebar.querySelectorAll('.sidebar-promo')].forEach(el => {
+            el.classList.add('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0', 'overflow-hidden');
+        });
 
-                // Hide Headers & Promos (Collapse Height)
-                [...sidebar.querySelectorAll('.sidebar-header'), ...sidebar.querySelectorAll('.sidebar-promo')].forEach(el => {
-                    el.classList.add('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0', 'overflow-hidden');
-                });
+        sidebar.querySelectorAll('.sidebar-hide-mini').forEach(el => {
+            el.classList.add('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0', 'overflow-hidden');
+        });
 
-                sidebar.querySelectorAll('.sidebar-hide-mini').forEach(el => {
-                    el.classList.add('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0', 'overflow-hidden');
-                });
+        sidebar.querySelectorAll('.space-y-4').forEach(el => {
+            el.classList.remove('mx-6');
+            el.classList.add('mx-1.5');
+        });
 
-                sidebar.querySelectorAll('.space-y-4').forEach(el => {
-                    el.classList.remove('mx-6');
-                    el.classList.add('mx-1.5');
-                });
+        sidebar.querySelectorAll('.sidebar-link').forEach(el => {
+            el.classList.remove('gap-3', 'pr-4', 'pl-1.5');
+            el.classList.add('justify-center', 'px-0', 'aspect-square', 'w-[4.5rem]', 'mx-auto');
+        });
 
-                sidebar.querySelectorAll('.sidebar-link').forEach(el => {
-                    el.classList.remove('gap-3', 'pr-4', 'pl-1.5');
-                    el.classList.add('justify-center', 'px-0', 'aspect-square', 'w-[4.5rem]', 'mx-auto');
-                });
+        sidebar.querySelectorAll('.sidebar-status').forEach(el => el.classList.add('opacity-0', 'w-0'));
 
-                sidebar.querySelectorAll('.sidebar-status').forEach(el => el.classList.add('opacity-0', 'w-0'));
+        updateLogo(true);
+    }
 
-                updateLogo(true);
-            } else {
-                // EXPAND
-                sidebar.classList.remove('w-[6rem]');
-                sidebar.classList.add('w-[17.5rem]');
+    function expandDesktop() {
+        if (sidebar.classList.contains('w-[17.5rem]')) return;
 
-                if (mainContent) {
-                    mainContent.classList.remove('lg:ml-[6rem]');
-                    mainContent.classList.add('lg:ml-[17.5rem]');
-                }
+        sidebar.classList.remove('w-[6rem]');
+        sidebar.classList.add('w-[17.5rem]');
 
-                if (topNav) {
-                    topNav.classList.remove('lg:left-[6.75rem]');
-                    topNav.classList.add('lg:left-[18.25rem]');
-                }
+        // When expanding on hover, we don't want to push the main content, 
+        // we want the sidebar to float over. 
+        if (mainContent) {
+            mainContent.classList.remove('lg:ml-[17.5rem]');
+            mainContent.classList.add('lg:ml-[6rem]'); 
+        }
 
-                setExpandedStyles();
-                updateLogo(false);
-            }
+        if (topNav) {
+            topNav.classList.remove('lg:left-[18.25rem]');
+            topNav.classList.add('lg:left-[6.75rem]');
+        }
+
+        setExpandedStyles();
+        updateLogo(false);
+    }
+
+    function toggleMobileMenu() {
+        const isHidden = sidebar.classList.contains('-translate-x-full');
+        if (isHidden) {
+            // Open
+            sidebar.classList.remove('-translate-x-full');
+            if (overlay) overlay.classList.remove('hidden');
+            body.style.overflow = 'hidden';
+            setExpandedStyles();
+            updateLogo(false);
         } else {
-            // Mobile: Toggle overlay
-            const isHidden = sidebar.classList.contains('-translate-x-full');
-            if (isHidden) {
-                // Open
-                sidebar.classList.remove('-translate-x-full');
-                if (overlay) overlay.classList.remove('hidden');
-                body.style.overflow = 'hidden';
-            } else {
-                // Close
-                sidebar.classList.add('-translate-x-full');
-                if (overlay) overlay.classList.add('hidden');
-                body.style.overflow = 'auto';
-            }
+            // Close
+            sidebar.classList.add('-translate-x-full');
+            if (overlay) overlay.classList.add('hidden');
+            body.style.overflow = 'auto';
         }
     }
 
-    menuBtn.addEventListener('click', toggleMenu);
-    if (overlay) overlay.addEventListener('click', toggleMenu);
+    if (menuBtn) menuBtn.addEventListener('click', toggleMobileMenu);
+    if (overlay) overlay.addEventListener('click', toggleMobileMenu);
+
+    // Initial state on load
+    if (window.innerWidth >= 1024) {
+        // Run setTimeout slightly so it doesn't fight DOMContentLoaded weirdly, or just run sync
+        collapseDesktop();
+    }
+
+    // Hover listeners for desktop expanding/collapsing
+    sidebar.addEventListener('mouseenter', () => {
+        if (window.innerWidth >= 1024) {
+            expandDesktop();
+        }
+    });
+
+    sidebar.addEventListener('mouseleave', () => {
+        if (window.innerWidth >= 1024) {
+            collapseDesktop();
+        }
+    });
 
     // Resize Reset
     window.addEventListener('resize', () => {
         if (window.innerWidth >= 1024) {
-            // Desktop Reset: Ensure visible and full width
+            // Desktop Reset: Ensure visible and collapsed
             sidebar.classList.remove('-translate-x-full');
-
-            if (!sidebar.classList.contains('w-[17.5rem]') && !sidebar.classList.contains('w-[6rem]')) {
-                sidebar.classList.add('w-[17.5rem]');
-            }
-
-            // Always ensure the mini cleanup is run if someone dragged window from mobile to desktop
-            if (sidebar.classList.contains('w-[17.5rem]')) {
-                setExpandedStyles();
-                updateLogo(false);
-            }
+            collapseDesktop();
 
             if (overlay) overlay.classList.add('hidden');
             body.style.overflow = 'auto';
@@ -201,3 +218,4 @@ function initSidebar() {
 }
 
 document.addEventListener('DOMContentLoaded', initSidebar);
+

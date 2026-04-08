@@ -1227,32 +1227,33 @@ window.openGameModal = function (gameId) {
         <div id="game-modal-header" style="
             display: flex; align-items: center; justify-content: space-between;
             padding: 12px 20px;
-            background: rgba(255,255,255,0.08);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255,255,255,0.12);
+            background: #93c5fd; /* light blue */
+            border-bottom: 4px solid #60a5fa; /* claymorphic bottom border */
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
             flex-shrink: 0;
+            z-index: 10;
         ">
             <!-- Left: Title + category -->
             <div style="display:flex; align-items:center; gap:12px;">
                 <div style="
                     width:40px; height:40px; border-radius:50%;
-                    background:${game.color}30;
-                    border: 2px solid ${game.color};
+                    background:white;
+                    box-shadow: inset 0 -3px 0 rgba(0,0,0,0.1);
                     display:flex; align-items:center; justify-content:center;
                 ">
-                    <i class="fa-solid fa-gamepad" style="color:${game.color}; font-size:16px;"></i>
+                    <i class="fa-solid fa-gamepad" style="color:#3b82f6; font-size:16px;"></i>
                 </div>
                 <div>
-                    <p style="color:white; font-weight:900; font-size:16px; margin:0; line-height:1.2;">${game.title}</p>
-                    <p style="color:rgba(255,255,255,0.5); font-size:11px; font-weight:700; margin:0;">${game.category}</p>
+                    <p style="color:#1e3a8a; font-weight:900; font-size:18px; margin:0; line-height:1.2; text-shadow: 0 1px 0 rgba(255,255,255,0.5);">${game.title}</p>
+                    <p style="color:#1d4ed8; font-size:11px; font-weight:800; margin:0; text-transform:uppercase; letter-spacing:0.5px;">${game.category}</p>
                 </div>
             </div>
 
             <!-- Center: Play-time progress bar + countdown -->
             <div id="game-timer-ui" style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; max-width:320px; margin: 0 24px;">
                 <div style="display:flex; align-items:center; gap:8px; width:100%;">
-                    <i class="fa-solid fa-star" style="color:#fde047; font-size:13px;"></i>
-                    <div style="flex:1; height:8px; background:rgba(255,255,255,0.15); border-radius:99px; overflow:hidden;">
+                    <i class="fa-solid fa-star" style="color:#fde047; font-size:16px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));"></i>
+                    <div style="flex:1; height:12px; background:rgba(255,255,255,0.5); border-radius:99px; overflow:hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
                         <div id="game-progress-bar" style="
                             height:100%; width:0%;
                             background: linear-gradient(90deg, #fde047, #f59e0b);
@@ -1260,12 +1261,13 @@ window.openGameModal = function (gameId) {
                             transition: width 1s linear;
                         "></div>
                     </div>
-                    <span id="game-timer-label" style="color:rgba(255,255,255,0.7); font-size:11px; font-weight:800; white-space:nowrap;">0:00 / 3:00</span>
+                    <span id="game-timer-label" style="color:#1e3a8a; font-size:12px; font-weight:900; white-space:nowrap; background: rgba(255,255,255,0.4); padding: 2px 8px; border-radius: 10px;">0:00 / 3:00</span>
                 </div>
                 <div id="game-idle-badge" style="
-                    display:none; background:#f97316; color:white;
-                    font-size:10px; font-weight:900; padding:2px 10px;
+                    display:none; background:#ef4444; color:white;
+                    font-size:10px; font-weight:900; padding:4px 12px;
                     border-radius:99px; letter-spacing:0.5px;
+                    box-shadow: 0 3px 0 #b91c1c;
                 ">
                     <i class="fa-solid fa-pause"></i> Paused — Move to resume!
                 </div>
@@ -1275,22 +1277,24 @@ window.openGameModal = function (gameId) {
             <button id="game-close-btn"
                 onclick="closeGameModal()"
                 style="
-                    background: rgba(239,68,68,0.2);
-                    border: 2px solid rgba(239,68,68,0.5);
-                    color: #fca5a5;
+                    background: #fca5a5;
+                    border: 3px solid #fecaca;
+                    color: #7f1d1d;
                     font-weight: 900;
-                    font-size: 13px;
-                    padding: 8px 18px;
+                    font-size: 14px;
+                    padding: 8px 20px;
                     border-radius: 99px;
                     cursor: pointer;
                     display: flex; align-items: center; gap: 6px;
-                    transition: background 0.2s;
+                    box-shadow: 0 4px 0 #ef4444;
+                    transition: transform 0.1s, box-shadow 0.1s;
                     font-family: inherit;
                 "
-                onmouseover="this.style.background='rgba(239,68,68,0.4)'"
-                onmouseout="this.style.background='rgba(239,68,68,0.2)'"
+                onmousedown="this.style.boxShadow='none'; this.style.transform='translateY(4px)';"
+                onmouseup="this.style.boxShadow='0 4px 0 #ef4444'; this.style.transform='translateY(0)';"
+                onmouseleave="this.style.boxShadow='0 4px 0 #ef4444'; this.style.transform='translateY(0)';"
                 aria-label="Close Game">
-                <i class="fa-solid fa-times"></i> Close Game
+                <i class="fa-solid fa-times text-lg"></i> Close
             </button>
         </div>
 

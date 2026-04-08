@@ -401,6 +401,15 @@ const DataService = {
 
         const GENERIC_ERROR = 'Invalid credentials. Please check your username, parent\'s email, and password.';
 
+        // ✅ SECURITY: The children collection requires Role.users() to read.
+        // We must obtain an Appwrite Anonymous Session before querying it.
+        try {
+            const { account } = this._getServices();
+            await account.createAnonymousSession();
+        } catch (e) {
+            // Safe to ignore: user already has an active session
+        }
+
         // ── 1. Find child by username ────────────────────────────────────────────
         let child;
         try {

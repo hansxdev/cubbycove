@@ -448,6 +448,12 @@ function openVideoDetail(videoId) {
         playerContainer.innerHTML = `<video src="${escapeHtml(video.url)}" class="w-full h-full" controls preload="metadata"></video>`;
     }
 
+    // Init per-video subscriber chart
+    initVideoSubscribersChart(video);
+
+    modal.classList.remove('hidden');
+}
+
     // ═════════════════════════════════════════════════════════════════════════════
 //  OVERVIEW TAB
 // ═════════════════════════════════════════════════════════════════════════════
@@ -552,11 +558,6 @@ function renderOverviewCarousel(videos) {
             </div>
         `;
     }).join('');
-}
-    // Init per-video subscriber chart
-    initVideoSubscribersChart(video);
-
-    modal.classList.remove('hidden');
 }
 
 window.closeVideoDetail = function () {

@@ -716,17 +716,21 @@ async function renderSafetyAlerts() {
         const mainMsg = parts.slice(0, parts.length - 1).join('\n').trim();
 
         const html = `
-            <div class="bg-white rounded-2xl p-4 border border-purple-100 shadow-sm relative overflow-hidden group hover:border-cubby-purple/40 transition-colors">
-                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-cubby-purple rounded-l-2xl"></div>
-                <div class="flex items-start justify-between mb-1.5 ml-2">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-shield-cat text-cubby-purple text-sm"></i>
-                        <h4 class="text-[13px] font-bold text-cubby-purple">Safety Alert</h4>
+            <div class="bg-white/60 backdrop-blur-sm rounded-[20px] p-4 border border-white shadow-sm transition-all hover:bg-white hover:border-[#8A51FC]/30 group cursor-pointer" onclick="document.getElementById('guidance-flyout').classList.remove('translate-x-full'); document.getElementById('guidance-overlay').classList.remove('hidden');">
+                <div class="flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-[14px] bg-[#F3F0FF] text-[#8A51FC] border-[3px] border-white shadow-sm flex items-center justify-center shrink-0 mt-0.5 relative">
+                        <i class="fa-solid fa-shield-cat text-xs"></i>
+                        <div class="absolute -top-1 -right-1 w-3 h-3 bg-red-400 border-2 border-white rounded-full"></div>
                     </div>
-                    <span class="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded ml-2 whitespace-nowrap">${timeStr}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <h4 class="text-[14px] font-extrabold text-[#1C1D21]">Safety Alert</h4>
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${timeStr}</span>
+                        </div>
+                        <p class="text-[12px] text-gray-600 font-bold mb-2 leading-relaxed bg-white/50 p-2.5 rounded-xl border border-gray-100/50 whitespace-pre-wrap break-words">${escHtml(mainMsg)}</p>
+                        ${lastLine ? `<p class="text-[11px] font-extrabold text-[#8A51FC] mt-1.5 flex items-center gap-1"><i class="fa-solid fa-circle-info text-[9px]"></i> ${escHtml(lastLine)}</p>` : ''}
+                    </div>
                 </div>
-                <p class="text-[11px] text-gray-700 font-medium italic mb-2 ml-2 leading-relaxed bg-purple-50 p-2 rounded-lg border border-purple-100 whitespace-pre-wrap break-words">${escHtml(mainMsg)}</p>
-                ${lastLine ? `<p class="text-[11px] font-bold text-cubby-purple ml-2 mt-1">${escHtml(lastLine)}</p>` : ''}
             </div>
         `;
         listEl.insertAdjacentHTML('beforeend', html);
@@ -738,18 +742,30 @@ async function renderSafetyAlerts() {
         const excerpt = threat.messageContent || threat.messagePreview || 'Inappropriate content detected.';
         const resolved = threat.status === 'resolved';
 
+        const style = resolved 
+            ? { bg: '#EEF9EC', text: '#5EC74D', icon: 'fa-shield-check', border: 'hover:border-[#5EC74D]/30' }
+            : { bg: '#FFF1F2', text: '#FF456A', icon: 'fa-shield-exclamation', border: 'hover:border-[#FF456A]/30' };
+
         const html = `
-            <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative overflow-hidden group hover:border-[#FF456A]/50 transition-colors">
-                <div class="absolute left-0 top-0 bottom-0 w-1.5 ${resolved ? 'bg-green-400' : 'bg-red-400'}"></div>
-                <div class="flex items-start justify-between mb-1.5 ml-2">
-                    <h4 class="text-[13px] font-bold text-[#1C1D21]">Chat Moderation Alert</h4>
-                    <span class="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded ml-2 whitespace-nowrap">${timeStr}</span>
-                </div>
-                <p class="text-[11px] text-gray-400 font-medium italic mb-3 line-clamp-2 ml-2 leading-relaxed bg-gray-50 p-2 rounded-lg">"${escHtml(excerpt)}"</p>
-                <div class="flex justify-between items-center ml-2 border-t border-gray-50 pt-2">
-                    <span class="text-[9px] font-bold px-2 py-1 rounded-md ${resolved ? 'bg-green-50 text-green-600' : 'bg-[#FFF1F2] text-[#FF456A]'} uppercase tracking-wider">
-                        ${threat.status || 'pending'}
-                    </span>
+            <div class="bg-white/60 backdrop-blur-sm rounded-[20px] p-4 border border-white shadow-sm transition-all hover:bg-white ${style.border} group">
+                <div class="flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-[14px] border-[3px] border-white shadow-sm flex items-center justify-center shrink-0 mt-0.5"
+                         style="background: ${style.bg}; color: ${style.text};">
+                        <i class="fa-solid ${style.icon} text-xs"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <h4 class="text-[14px] font-extrabold text-[#1C1D21]">Chat Moderation</h4>
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${timeStr}</span>
+                        </div>
+                        <p class="text-[12px] text-gray-500 font-medium italic mb-3 leading-relaxed bg-white/50 p-2.5 rounded-xl border border-gray-100/50 line-clamp-2">"${escHtml(excerpt)}"</p>
+                        <div class="flex justify-start">
+                            <span class="text-[9px] font-extrabold px-2.5 py-1 rounded-[8px] border border-white shadow-sm uppercase tracking-wider"
+                                  style="background: ${style.bg}; color: ${style.text};">
+                                ${threat.status || 'pending'}
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;

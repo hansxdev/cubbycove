@@ -202,23 +202,23 @@
 
                             <!-- Learning & Achievements Row -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div class="glass-card p-6 flex items-center gap-6">
-                                    <div class="w-20 h-20 bg-orange-100/50 rounded-full flex flex-col items-center justify-center text-4xl shrink-0 border-4 border-white shadow-sm relative">
+                                <div class="glass-card p-6 flex items-start gap-6 h-[500px]">
+                                    <div class="w-20 h-20 bg-orange-100/50 rounded-full flex flex-col items-center justify-center text-4xl shrink-0 border-4 border-white shadow-sm relative mt-4">
                                         🪙
                                         <div class="absolute -right-1 -top-1 w-6 h-6 bg-yellow-400 rounded-full border-2 border-white flex items-center justify-center">
                                             <i class="fa-solid fa-bolt text-white text-[10px]"></i>
                                         </div>
                                     </div>
-                                    <div class="flex-1">
-                                        <h3 class="text-lg font-extrabold text-gray-800 mb-1">Rewards</h3>
-                                        <div id="rewards-progress-container">
+                                    <div class="flex-1 flex flex-col h-full overflow-hidden">
+                                        <h3 class="text-lg font-extrabold text-gray-800 mb-1 shrink-0">Rewards</h3>
+                                        <div id="rewards-progress-container" class="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2">
                                             <p class="text-sm font-bold text-gray-400">Loading...</p>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="glass-card p-6 flex flex-col">
-                                    <h3 class="text-md font-extrabold text-gray-800 mb-4">Recent Activity</h3>
-                                    <div class="space-y-3 flex-1 overflow-y-auto relative" id="activity-list" style="min-height:80px">
+                                <div class="glass-card p-6 flex flex-col h-[500px]">
+                                    <h3 class="text-md font-extrabold text-gray-800 mb-4 shrink-0">Recent Activity</h3>
+                                    <div class="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2 relative" id="activity-list">
                                         <div class="absolute inset-0 flex items-center justify-center text-sm text-gray-400 font-medium">Loading...</div>
                                     </div>
                                 </div>
@@ -227,12 +227,12 @@
 
                         <!-- Right Column (4) -->
                         <div class="lg:col-span-4 flex flex-col gap-8">
-                            <div class="glass-card p-8 flex-1 flex flex-col">
-                                <h3 class="text-xl font-extrabold text-gray-800 mb-6">Safety &amp; Alerts</h3>
-                                <div id="safety-list" class="flex-1 overflow-y-auto space-y-3 custom-scrollbar" style="min-height:80px">
+                            <div class="glass-card p-8 flex-1 flex flex-col h-[500px]">
+                                <h3 class="text-xl font-extrabold text-gray-800 mb-6 shrink-0">Safety &amp; Alerts</h3>
+                                <div id="safety-list" class="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2 pb-2">
                                     <div class="flex items-center justify-center py-8 text-gray-400 font-bold text-sm">Loading...</div>
                                 </div>
-                                <div class="mt-auto pt-6 text-center">
+                                <div class="mt-auto pt-6 text-center shrink-0">
                                     <button onclick="switchTab('activity')" class="text-sm font-extrabold text-gray-400 hover:text-[#28C7AE] transition-colors">View Full Activity Log →</button>
                                 </div>
                             </div>

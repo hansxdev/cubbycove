@@ -600,6 +600,8 @@ window.selectChild = function (childId) {
     changeTimeMode(currentScreenTimeMode);
 };
 
+window._activityState = { data: [], page: 1, limit: 5 };
+
 async function renderActivityLogs() {
     const listEl = document.getElementById('activity-list');
     if (!listEl || !_selectedChildId) return;
@@ -607,10 +609,9 @@ async function renderActivityLogs() {
     // Show a loading state while fetching
     listEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center h-full"><i class="fa-solid fa-spinner fa-spin text-xl text-gray-300"></i></div>';
 
-    // Fetch from the dedicated activity_logs collection
     let logs = [];
     try {
-        logs = await DataService.getActivityLogs(_selectedChildId, 30, 'week');
+        logs = await DataService.getActivityLogs(_selectedChildId, 50, 'week');
     } catch (e) {
         console.warn('[ActivityLogs] fetch error:', e.message);
     }
@@ -620,13 +621,28 @@ async function renderActivityLogs() {
         return;
     }
 
-    // Sort by descending timestamp (already ordered by DB, but ensure it)
+    // Sort by descending timestamp
     logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    logs = logs.slice(0, 20); // show top 20
+    window._activityState.data = logs;
+    window._activityState.page = 1;
+    _renderActivityPage();
+}
 
-    listEl.innerHTML = '<div class="absolute left-6 top-2 bottom-4 w-px bg-gray-100"></div>'; // Reset with vertical line
+window.changeActivityPage = function(delta) {
+    window._activityState.page += delta;
+    _renderActivityPage();
+};
 
-    // Helper: pick icon + colors based on activity type
+function _renderActivityPage() {
+    const listEl = document.getElementById('activity-list');
+    if (!listEl) return;
+    
+    const { data, page, limit } = window._activityState;
+    const totalPages = Math.ceil(data.length / limit) || 1;
+    const slice = data.slice((page - 1) * limit, page * limit);
+
+    let html = '<div class="absolute left-6 top-2 bottom-12 w-px bg-gray-100"></div><div class="space-y-3 pb-2">';
+
     const _typeStyle = (type) => {
         switch ((type || '').toLowerCase()) {
             case 'play':           return { bg: '#EEF4FF', text: '#5B8DEF', icon: 'fa-gamepad' };
@@ -640,12 +656,12 @@ async function renderActivityLogs() {
         }
     };
 
-    logs.forEach(log => {
+    slice.forEach(log => {
         const ts = log.timestamp || log.$createdAt;
         const timeAgoStr = ts ? timeAgo(ts) : '';
         const timeOfDay = ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
         const style = _typeStyle(log.type);
-        const html = `
+        html += `
             <div class="flex gap-4 relative items-start">
                 <div class="w-10 h-10 rounded-[14px] border-[3px] border-white shadow-sm z-10 flex-shrink-0 flex items-center justify-center mt-0.5 ml-1"
                      style="background:${style.bg}; color:${style.text};">
@@ -660,9 +676,24 @@ async function renderActivityLogs() {
                 </div>
             </div>
         `;
-        listEl.insertAdjacentHTML('beforeend', html);
     });
+    
+    html += '</div>';
+
+    if (totalPages > 1) {
+        html += `
+            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 sticky bottom-0 bg-white/90 backdrop-blur-sm z-20 pb-2">
+                <button onclick="changeActivityPage(-1)" ${page <= 1 ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-[#28C7AE] transition-colors"'}><i class="fa-solid fa-chevron-left mr-1.5"></i>Prev</button>
+                <span class="text-[9px] font-black pointer-events-none text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded-md">Page ${page} / ${totalPages}</span>
+                <button onclick="changeActivityPage(1)" ${page >= totalPages ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-[#28C7AE] transition-colors"'}>Next<i class="fa-solid fa-chevron-right ml-1.5"></i></button>
+            </div>
+        `;
+    }
+
+    listEl.innerHTML = html;
 }
+
+window._safetyState = { data: [], page: 1, limit: 3 };
 
 async function renderSafetyAlerts() {
     const listEl = document.getElementById('safety-list');
@@ -705,73 +736,110 @@ async function renderSafetyAlerts() {
         return;
     }
 
-    listEl.innerHTML = '';
-
-    // ── Purple safety_alert notifications ─────────────────────────────────────
-    childSafetyNotifs.slice(0, 5).forEach(notif => {
-        const timeStr = timeAgo(notif.createdAt);
-        // Split the message to find the note (last line after \n\n)
-        const parts = (notif.message || '').split('\n');
-        const lastLine = parts[parts.length - 1] || '';
-        const mainMsg = parts.slice(0, parts.length - 1).join('\n').trim();
-
-        const html = `
-            <div class="bg-white/60 backdrop-blur-sm rounded-[20px] p-4 border border-white shadow-sm transition-all hover:bg-white hover:border-[#8A51FC]/30 group cursor-pointer" onclick="document.getElementById('guidance-flyout').classList.remove('translate-x-full'); document.getElementById('guidance-overlay').classList.remove('hidden');">
-                <div class="flex items-start gap-4">
-                    <div class="w-10 h-10 rounded-[14px] bg-[#F3F0FF] text-[#8A51FC] border-[3px] border-white shadow-sm flex items-center justify-center shrink-0 mt-0.5 relative">
-                        <i class="fa-solid fa-shield-cat text-xs"></i>
-                        <div class="absolute -top-1 -right-1 w-3 h-3 bg-red-400 border-2 border-white rounded-full"></div>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between mb-1.5">
-                            <h4 class="text-[14px] font-extrabold text-[#1C1D21]">Safety Alert</h4>
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${timeStr}</span>
-                        </div>
-                        <p class="text-[12px] text-gray-600 font-bold mb-2 leading-relaxed bg-white/50 p-2.5 rounded-xl border border-gray-100/50 whitespace-pre-wrap break-words">${escHtml(mainMsg)}</p>
-                        ${lastLine ? `<p class="text-[11px] font-extrabold text-[#8A51FC] mt-1.5 flex items-center gap-1"><i class="fa-solid fa-circle-info text-[9px]"></i> ${escHtml(lastLine)}</p>` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-        listEl.insertAdjacentHTML('beforeend', html);
-    });
-
-    // ── Legacy threat log alerts ───────────────────────────────────────────────
-    childThreats.slice(0, 10).forEach(threat => {
-        const timeStr = timeAgo(threat.$createdAt);
-        const excerpt = threat.messageContent || threat.messagePreview || 'Inappropriate content detected.';
-        const resolved = threat.status === 'resolved';
-
-        const style = resolved 
-            ? { bg: '#EEF9EC', text: '#5EC74D', icon: 'fa-shield-check', border: 'hover:border-[#5EC74D]/30' }
-            : { bg: '#FFF1F2', text: '#FF456A', icon: 'fa-shield-exclamation', border: 'hover:border-[#FF456A]/30' };
-
-        const html = `
-            <div class="bg-white/60 backdrop-blur-sm rounded-[20px] p-4 border border-white shadow-sm transition-all hover:bg-white ${style.border} group">
-                <div class="flex items-start gap-4">
-                    <div class="w-10 h-10 rounded-[14px] border-[3px] border-white shadow-sm flex items-center justify-center shrink-0 mt-0.5"
-                         style="background: ${style.bg}; color: ${style.text};">
-                        <i class="fa-solid ${style.icon} text-xs"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between mb-1.5">
-                            <h4 class="text-[14px] font-extrabold text-[#1C1D21]">Chat Moderation</h4>
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${timeStr}</span>
-                        </div>
-                        <p class="text-[12px] text-gray-500 font-medium italic mb-3 leading-relaxed bg-white/50 p-2.5 rounded-xl border border-gray-100/50 line-clamp-2">"${escHtml(excerpt)}"</p>
-                        <div class="flex justify-start">
-                            <span class="text-[9px] font-extrabold px-2.5 py-1 rounded-[8px] border border-white shadow-sm uppercase tracking-wider"
-                                  style="background: ${style.bg}; color: ${style.text};">
-                                ${threat.status || 'pending'}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        listEl.insertAdjacentHTML('beforeend', html);
-    });
+    const combined = [
+        ...childSafetyNotifs.map(n => ({ kind: 'notif', data: n, ts: n.createdAt })),
+        ...childThreats.map(t => ({ kind: 'threat', data: t, ts: t.$createdAt }))
+    ];
+    combined.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+    
+    window._safetyState.data = combined;
+    window._safetyState.page = 1;
+    _renderSafetyPage();
 }
+
+window.changeSafetyPage = function(delta) {
+    window._safetyState.page += delta;
+    _renderSafetyPage();
+};
+
+function _renderSafetyPage() {
+    const listEl = document.getElementById('safety-list');
+    if (!listEl) return;
+    
+    const { data, page, limit } = window._safetyState;
+    const totalPages = Math.ceil(data.length / limit) || 1;
+    const slice = data.slice((page - 1) * limit, page * limit);
+    
+    let html = '<div class="space-y-3 pb-2">';
+    
+    slice.forEach(item => {
+        if (item.kind === 'notif') {
+            const notif = item.data;
+            const timeStr = timeAgo(notif.createdAt);
+            const parts = (notif.message || '').split('\n');
+            const lastLine = parts[parts.length - 1] || '';
+            const mainMsg = parts.slice(0, parts.length - 1).join('\n').trim();
+
+            html += `
+                <div class="bg-white/60 backdrop-blur-sm rounded-[20px] p-4 border border-white shadow-sm transition-all hover:bg-white hover:border-[#8A51FC]/30 group cursor-pointer" onclick="document.getElementById('guidance-flyout').classList.remove('translate-x-full'); document.getElementById('guidance-overlay').classList.remove('hidden');">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-[14px] bg-[#F3F0FF] text-[#8A51FC] border-[3px] border-white shadow-sm flex items-center justify-center shrink-0 mt-0.5 relative">
+                            <i class="fa-solid fa-shield-cat text-xs"></i>
+                            <div class="absolute -top-1 -right-1 w-3 h-3 bg-red-400 border-2 border-white rounded-full"></div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <h4 class="text-[14px] font-extrabold text-[#1C1D21]">Safety Alert</h4>
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${timeStr}</span>
+                            </div>
+                            <p class="text-[12px] text-gray-600 font-bold mb-2 leading-relaxed bg-white/50 p-2.5 rounded-xl border border-gray-100/50 whitespace-pre-wrap break-words">${escHtml(mainMsg)}</p>
+                            ${lastLine ? `<p class="text-[11px] font-extrabold text-[#8A51FC] mt-1.5 flex items-center gap-1"><i class="fa-solid fa-circle-info text-[9px]"></i> ${escHtml(lastLine)}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            const threat = item.data;
+            const timeStr = timeAgo(threat.$createdAt);
+            const excerpt = threat.messageContent || threat.messagePreview || 'Inappropriate content detected.';
+            const resolved = threat.status === 'resolved';
+
+            const style = resolved 
+                ? { bg: '#EEF9EC', text: '#5EC74D', icon: 'fa-shield-check', border: 'hover:border-[#5EC74D]/30' }
+                : { bg: '#FFF1F2', text: '#FF456A', icon: 'fa-shield-exclamation', border: 'hover:border-[#FF456A]/30' };
+
+            html += `
+                <div class="bg-white/60 backdrop-blur-sm rounded-[20px] p-4 border border-white shadow-sm transition-all hover:bg-white ${style.border} group">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-[14px] border-[3px] border-white shadow-sm flex items-center justify-center shrink-0 mt-0.5"
+                             style="background: ${style.bg}; color: ${style.text};">
+                            <i class="fa-solid ${style.icon} text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <h4 class="text-[14px] font-extrabold text-[#1C1D21]">Chat Moderation</h4>
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${timeStr}</span>
+                            </div>
+                            <p class="text-[12px] text-gray-500 font-medium italic mb-3 leading-relaxed bg-white/50 p-2.5 rounded-xl border border-gray-100/50 line-clamp-2">"${escHtml(excerpt)}"</p>
+                            <div class="flex justify-start">
+                                <span class="text-[9px] font-extrabold px-2.5 py-1 rounded-[8px] border border-white shadow-sm uppercase tracking-wider"
+                                      style="background: ${style.bg}; color: ${style.text};">
+                                    ${threat.status || 'pending'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    html += '</div>';
+
+    if (totalPages > 1) {
+        html += `
+            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 sticky bottom-0 bg-white/90 backdrop-blur-sm z-20 pb-2">
+                <button onclick="changeSafetyPage(-1)" ${page <= 1 ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-[#28C7AE] transition-colors"'}><i class="fa-solid fa-chevron-left mr-1.5"></i>Prev</button>
+                <span class="text-[9px] font-black pointer-events-none text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded-md">Page ${page} / ${totalPages}</span>
+                <button onclick="changeSafetyPage(1)" ${page >= totalPages ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-[#28C7AE] transition-colors"'}>Next<i class="fa-solid fa-chevron-right ml-1.5"></i></button>
+            </div>
+        `;
+    }
+
+    listEl.innerHTML = html;
+}
+
+window._rewardsState = { pathsHtml: '', rewards: [], page: 1, limit: 4 };
 
 async function renderRewardsAndPaths() {
     const container = document.getElementById('rewards-progress-container');
@@ -798,11 +866,9 @@ async function renderRewardsAndPaths() {
             return;
         }
 
-        let html = '<div class="space-y-6">';
-
-        // ── 1. Active Learning Paths Status ─────────────────────────────────────
+        let pathsHtml = '';
         if (pathStatuses.length > 0) {
-            html += `<div>
+            pathsHtml += `<div>
                 <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                     <i class="fa-solid fa-route text-cubby-purple"></i> Path Progress
                 </h4>
@@ -817,7 +883,7 @@ async function renderRewardsAndPaths() {
                 const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
                 const isCompleted = status.currentStatus === 'completed' || percent >= 100;
 
-                html += `
+                pathsHtml += `
                     <div class="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 shadow-sm">
                         <div class="flex items-center justify-between mb-2">
                             <h5 class="text-[13px] font-bold text-gray-800 truncate pr-2">${escHtml(path.title)}</h5>
@@ -834,43 +900,78 @@ async function renderRewardsAndPaths() {
                         </div>
                     </div>`;
             });
-            html += `</div></div>`;
+            pathsHtml += `</div></div>`;
         }
 
-        // ── 2. Recent Rewards Timeline ──────────────────────────────────────────
-        if (rewards.length > 0) {
-            html += `<div>
-                <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-bolt text-orange-400"></i> Recent Achievements
-                </h4>
-                <div class="space-y-2">`;
-            
-            rewards.slice(0, 10).forEach(reward => {
-                const timeStr = timeAgo(reward.earnedAt);
-                const isPathBonus = reward.rewardType === 'path_bonus';
-                
-                html += `
-                    <div class="flex items-center gap-3 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm group hover:border-orange-200 transition-colors">
-                        <div class="w-8 h-8 rounded-xl ${isPathBonus ? 'bg-purple-50 text-cubby-purple' : 'bg-orange-50 text-orange-500'} flex items-center justify-center shrink-0">
-                            <i class="fa-solid ${isPathBonus ? 'fa-trophy' : 'fa-star'} text-[10px]"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[11px] font-bold text-gray-800 truncate">${isPathBonus ? 'Learning Path Complete!' : 'Video Watch Reward'}</p>
-                            <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">${timeStr}</p>
-                        </div>
-                        <div class="text-[11px] font-black text-orange-500">+${reward.points}</div>
-                    </div>`;
-            });
-            html += `</div></div>`;
-        }
-
-        html += '</div>';
-        container.innerHTML = html;
+        window._rewardsState.pathsHtml = pathsHtml;
+        window._rewardsState.rewards = rewards.sort((a,b) => new Date(b.earnedAt) - new Date(a.earnedAt));
+        window._rewardsState.page = 1;
+        
+        _renderRewardsPage();
 
     } catch (e) {
         console.error('renderRewardsAndPaths error:', e);
         container.innerHTML = '<div class="text-center py-10 text-red-400 font-bold">Error loading progress data.</div>';
     }
+}
+
+window.changeRewardsPage = function(delta) {
+    window._rewardsState.page += delta;
+    _renderRewardsPage();
+};
+
+function _renderRewardsPage() {
+    const container = document.getElementById('rewards-progress-container');
+    if (!container) return;
+    
+    let html = '<div class="space-y-6">';
+    html += window._rewardsState.pathsHtml;
+
+    const { rewards, page, limit } = window._rewardsState;
+    
+    if (rewards.length > 0) {
+        html += `<div>
+            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-orange-400"></i> Recent Achievements
+            </h4>
+            <div class="space-y-2 pb-2">`;
+        
+        const totalPages = Math.ceil(rewards.length / limit) || 1;
+        const slice = rewards.slice((page - 1) * limit, page * limit);
+
+        slice.forEach(reward => {
+            const timeStr = timeAgo(reward.earnedAt);
+            const isPathBonus = reward.rewardType === 'path_bonus';
+            
+            html += `
+                <div class="flex items-center gap-3 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm group hover:border-orange-200 transition-colors">
+                    <div class="w-8 h-8 rounded-xl ${isPathBonus ? 'bg-purple-50 text-cubby-purple' : 'bg-orange-50 text-orange-500'} flex items-center justify-center shrink-0">
+                        <i class="fa-solid ${isPathBonus ? 'fa-trophy' : 'fa-star'} text-[10px]"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[11px] font-bold text-gray-800 truncate">${isPathBonus ? 'Learning Path Complete!' : 'Video Watch Reward'}</p>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">${timeStr}</p>
+                    </div>
+                    <div class="text-[11px] font-black text-orange-500">+${reward.points}</div>
+                </div>`;
+        });
+        html += `</div>`;
+        
+        if (totalPages > 1) {
+            html += `
+                <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                    <button onclick="changeRewardsPage(-1)" ${page <= 1 ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-orange-500 transition-colors"'}><i class="fa-solid fa-chevron-left mr-1.5"></i>Prev</button>
+                    <span class="text-[9px] font-black pointer-events-none text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded-md">Page ${page} / ${totalPages}</span>
+                    <button onclick="changeRewardsPage(1)" ${page >= totalPages ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-orange-500 transition-colors"'}>Next<i class="fa-solid fa-chevron-right ml-1.5"></i></button>
+                </div>
+            `;
+        }
+        
+        html += `</div>`;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
 }
 
 function escHtml(str) {

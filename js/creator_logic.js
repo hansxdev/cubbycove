@@ -1131,7 +1131,6 @@ window.saveLearningPath = async function() {
             type,
             bonusPoints: bonus,
             videoIds: selectedPathVideos.map(v => v.$id),
-            creatorId: currentUser.$id,
             creatorEmail: currentUser.email
         };
 

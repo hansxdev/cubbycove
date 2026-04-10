@@ -2495,6 +2495,72 @@ const DataService = {
             console.warn('getUnifiedActivityFeed error:', e.message);
             return [];
         }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // LEARNING PATHS CRUD
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Fetch all learning paths (readable by any, filtered further by caller).
+     */
+    getPaths: async function () {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const res = await databases.listDocuments(DB_ID, 'paths', [
+                Query.orderDesc('$createdAt'),
+                Query.limit(100)
+            ]);
+            return res.documents;
+        } catch (e) {
+            console.error('getPaths error:', e);
+            return [];
+        }
+    },
+
+    /**
+     * Create a new learning path.
+     * @param {Object} pathData - { title, description, type, bonusPoints, videoIds, creatorEmail }
+     */
+    addPath: async function (pathData) {
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+        return await databases.createDocument(DB_ID, 'paths', ID.unique(), {
+            title: pathData.title,
+            description: pathData.description || '',
+            type: pathData.type || 'sequential',
+            bonusPoints: pathData.bonusPoints || 0,
+            videoIds: pathData.videoIds || [],
+            creatorEmail: pathData.creatorEmail,
+            createdAt: new Date().toISOString()
+        });
+    },
+
+    /**
+     * Update an existing learning path.
+     * @param {string} pathId
+     * @param {Object} pathData
+     */
+    updatePath: async function (pathId, pathData) {
+        const { databases, DB_ID } = this._getServices();
+        return await databases.updateDocument(DB_ID, 'paths', pathId, {
+            title: pathData.title,
+            description: pathData.description || '',
+            type: pathData.type || 'sequential',
+            bonusPoints: pathData.bonusPoints || 0,
+            videoIds: pathData.videoIds || [],
+            creatorEmail: pathData.creatorEmail
+        });
+    },
+
+    /**
+     * Delete a learning path by ID.
+     * @param {string} pathId
+     */
+    deletePath: async function (pathId) {
+        const { databases, DB_ID } = this._getServices();
+        return await databases.deleteDocument(DB_ID, 'paths', pathId);
     }
 };
 

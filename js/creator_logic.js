@@ -1032,7 +1032,7 @@ async function renderAvailableVideos() {
         return `
             <div class="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-100 hover:border-purple-200 transition-colors cursor-pointer"
                  onclick="toggleVideoInPath('${v.$id}')">
-                <div class="w-16 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                <div class="relative w-16 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                     ${getVideoThumbnail(v.url)}
                 </div>
                 <div class="flex-1 min-w-0">
@@ -1079,7 +1079,7 @@ function renderSelectedVideos() {
     container.innerHTML = selectedPathVideos.map((v, idx) => `
         <div class="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm border border-gray-100 group">
             <span class="text-xs font-black text-gray-300 w-4">${idx + 1}</span>
-            <div class="w-20 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+            <div class="relative w-20 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                 ${getVideoThumbnail(v.url)}
             </div>
             <div class="flex-1 min-w-0">

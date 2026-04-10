@@ -1497,8 +1497,22 @@ window.openGameModal = function (gameId) {
     document.body.appendChild(modal);
     document.body.style.overflow = 'hidden';
 
+    // Log the game session start in the activity log for the parent dashboard
+    const session = _getChildSession();
+    if (session?.$id) {
+        DataService.logActivity(
+            session.$id,
+            'play',
+            `Played a game: ${game.title}`,
+            { gameId: game.id, category: game.category }
+        ).catch(() => {});
+        // Log 1 min of screen time under 'games' category immediately to register the visit
+        DataService.logScreenTime(session.$id, 1, 'games', game.title).catch(() => {});
+    }
+
     // Start the anti-cheat playtime tracker
     _startGameRewardTracking(game);
+
 };
 
 /**
@@ -1678,6 +1692,21 @@ async function _claimGameReward() {
             freshSession.totalPoints = (freshSession.totalPoints || 0) + GAME_POINTS;
             sessionStorage.setItem('cubby_child_session', JSON.stringify(freshSession));
         }
+
+        // Log a game reward activity so the parent dashboard Activity tab shows it
+        const gameName = (() => {
+            const cat = GAMES_CATALOG.find(g => g.id === _currentGameId);
+            return cat ? cat.title : (_currentGameId || 'a game');
+        })();
+        DataService.logActivity(
+            session.$id,
+            'game_reward',
+            `Earned ${GAME_POINTS} stars for playing ${gameName} for 3 minutes!`,
+            { gameId: _currentGameId, points: GAME_POINTS }
+        ).catch(() => {});
+
+        // Log the actual 3 minutes of game screen time now that the threshold was reached
+        DataService.logScreenTime(session.$id, 3, 'games', gameName).catch(() => {});
 
         // Update the header star counter
         const pointsVal = document.getElementById('header-total-points');

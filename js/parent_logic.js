@@ -600,48 +600,62 @@ window.selectChild = function (childId) {
     changeTimeMode(currentScreenTimeMode);
 };
 
-function renderActivityLogs() {
+async function renderActivityLogs() {
     const listEl = document.getElementById('activity-list');
-    const children = window._currentChildren || [];
-    const activeChild = children.find(c => c.$id === _selectedChildId);
+    if (!listEl || !_selectedChildId) return;
 
-    if (!activeChild || !activeChild.activityLogs || listEl === null) {
-        if (listEl) listEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center h-full text-sm text-gray-400 font-medium pb-10">No recent activity.</div>';
-        return;
+    // Show a loading state while fetching
+    listEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center h-full"><i class="fa-solid fa-spinner fa-spin text-xl text-gray-300"></i></div>';
+
+    // Fetch from the dedicated activity_logs collection
+    let logs = [];
+    try {
+        logs = await DataService.getActivityLogs(_selectedChildId, 30, 'week');
+    } catch (e) {
+        console.warn('[ActivityLogs] fetch error:', e.message);
     }
 
-    let logs;
-    if (typeof activeChild.activityLogs === 'string') {
-        try { logs = JSON.parse(activeChild.activityLogs); } catch (e) { logs = []; }
-    } else if (Array.isArray(activeChild.activityLogs)) {
-        logs = activeChild.activityLogs;
-    } else {
-        logs = [];
-    }
-
-    if (logs.length === 0) {
+    if (!logs || logs.length === 0) {
         listEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center h-full text-sm text-gray-400 font-medium pb-10">No recent activity.</div>';
         return;
     }
 
-    // Sort by descending timestamp
+    // Sort by descending timestamp (already ordered by DB, but ensure it)
     logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    logs = logs.slice(0, 15); // show top 15
+    logs = logs.slice(0, 20); // show top 20
 
     listEl.innerHTML = '<div class="absolute left-6 top-2 bottom-4 w-px bg-gray-100"></div>'; // Reset with vertical line
 
+    // Helper: pick icon + colors based on activity type
+    const _typeStyle = (type) => {
+        switch ((type || '').toLowerCase()) {
+            case 'play':           return { bg: '#EEF4FF', text: '#5B8DEF', icon: 'fa-gamepad' };
+            case 'watch':          return { bg: '#FFF4EC', text: '#FF7D3A', icon: 'fa-play-circle' };
+            case 'buddy_add':      return { bg: '#F0FBF4', text: '#2ECC71', icon: 'fa-user-plus' };
+            case 'message_sent':   return { bg: '#F3F0FF', text: '#8A51FC', icon: 'fa-comment' };
+            case 'reward':         return { bg: '#FFFBEB', text: '#F59E0B', icon: 'fa-star' };
+            case 'game_reward':    return { bg: '#FFFBEB', text: '#F59E0B', icon: 'fa-trophy' };
+            case 'safety_threat':  return { bg: '#FFF1F2', text: '#FF456A', icon: 'fa-shield-exclamation' };
+            default:               return { bg: '#EEF9EC', text: '#5EC74D', icon: 'fa-circle-check' };
+        }
+    };
+
     logs.forEach(log => {
-        const timeStr = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const ts = log.timestamp || log.$createdAt;
+        const timeAgoStr = ts ? timeAgo(ts) : '';
+        const timeOfDay = ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        const style = _typeStyle(log.type);
         const html = `
             <div class="flex gap-4 relative items-start">
-                <div class="w-10 h-10 rounded-[14px] bg-[#EEF9EC] border-[3px] border-white shadow-sm z-10 flex-shrink-0 flex items-center justify-center text-[#5EC74D] mt-0.5 ml-1">
-                    <i class="fa-solid fa-play text-xs"></i>
+                <div class="w-10 h-10 rounded-[14px] border-[3px] border-white shadow-sm z-10 flex-shrink-0 flex items-center justify-center mt-0.5 ml-1"
+                     style="background:${style.bg}; color:${style.text};">
+                    <i class="fa-solid ${style.icon} text-xs"></i>
                 </div>
                 <div class="bg-gray-50 rounded-2xl p-4 flex-1 border border-gray-100/50 shadow-sm transition-all hover:bg-white min-w-0">
                     <p class="text-sm text-[#1C1D21] font-bold truncate">${log.action}</p>
                     <div class="flex items-center gap-2 mt-1.5 flex-wrap">
-                        <span class="text-xs font-bold text-gray-400"><i class="fa-regular fa-clock mr-1 text-[10px]"></i>${timeStr}</span>
-                        ${log.link ? `<a href="${log.link}" class="text-[11px] text-[#8A51FC] font-bold hover:underline bg-[#F8F5FF] px-2 py-0.5 rounded-md border border-[#F8F5FF]">View Content</a>` : ''}
+                        <span class="text-xs font-bold text-gray-400"><i class="fa-regular fa-clock mr-1 text-[10px]"></i>${timeOfDay}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:${style.bg}; color:${style.text};">${timeAgoStr}</span>
                     </div>
                 </div>
             </div>
@@ -908,7 +922,12 @@ function changeTimeMode(mode) {
     if (activeChild && activeChild.screenTimeLogs) {
         let logs;
         if (typeof activeChild.screenTimeLogs === 'string') {
-            try { logs = JSON.parse(activeChild.screenTimeLogs); } catch (e) { logs = []; }
+            try {
+                const parsed = JSON.parse(activeChild.screenTimeLogs);
+                // Guard: JSON.parse might return an object (e.g. {_timeSettings:...})
+                // instead of an array — check before assigning.
+                logs = Array.isArray(parsed) ? parsed : [];
+            } catch (e) { logs = []; }
         } else if (Array.isArray(activeChild.screenTimeLogs)) {
             logs = activeChild.screenTimeLogs;
         } else {
@@ -1134,16 +1153,25 @@ function renderChart(labels, datasets, type) {
     });
 }
 
-// Helper: Simple Time Ago
+// Helper: Accurate Time Ago (supports days, weeks, months)
 function timeAgo(dateString) {
+    if (!dateString) return 'Unknown';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Unknown';
     const seconds = Math.floor((new Date() - date) / 1000);
-    if (seconds < 60) return "Just now";
+    if (seconds < 60) return 'Just now';
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes} mins ago`;
+    if (minutes < 60) return `${minutes} min${minutes !== 1 ? 's' : ''} ago`;
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} hours ago`;
-    return "Yesterday";
+    if (hours < 24) return `${hours} hr${hours !== 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days} days ago`;
+    if (days < 14) return '1 week ago';
+    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+    if (days < 60) return '1 month ago';
+    if (days < 365) return `${Math.floor(days / 30)} months ago`;
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 // Function to handle "Create Profile" button click

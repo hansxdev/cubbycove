@@ -361,6 +361,13 @@ async function sendMessage() {
     try {
         const saved = await DataService.sendChatMessage(_conversationId, _currentChild.$id, _currentChild.username || _currentChild.name, text);
         if (saved?.$id) _knownMessageIds.add(saved.$id);
+        // Log the social interaction so the parent's Activity tab shows it
+        DataService.logActivity(
+            _currentChild.$id,
+            'message_sent',
+            `Sent a message to ${_buddyName || 'a buddy'}`,
+            { buddyId: _buddyId, conversationId: _conversationId }
+        ).catch(() => {});
     } catch (e) {
         showSafetyWarning('Could not send. Check your connection.');
     } finally {
@@ -427,6 +434,13 @@ window.finalizeReport = async function () {
             _pendingReportText,
             _pendingViolationType
         );
+        // Log a safety event so the parent activity tab shows it
+        DataService.logActivity(
+            _currentChild.$id,
+            'safety_threat',
+            `Reported a ${_pendingViolationType || 'safety'} issue in chat with ${_buddyName || 'a buddy'}`,
+            { buddyId: _buddyId, violationType: _pendingViolationType }
+        ).catch(() => {});
         $('confirm-report-modal').classList.add('hidden');
         showSafetyWarning('Message reported to safety team. Thank you! 🛡️');
     } catch (e) {

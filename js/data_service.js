@@ -1537,8 +1537,9 @@ const DataService = {
             const children = result.documents;
 
             // Aggregate screen_time_logs entries per child and merge into screenTimeLogs field
+            // NOTE: We preserve the 'category' field so the parent dashboard chart can split
+            // Games / Entertainment / Communication correctly.
             try {
-                // Fetch all screen time logs for this parent's children in one query
                 const childIds = children.map(c => c.$id);
                 if (childIds.length > 0) {
                     const logsResult = await databases.listDocuments(DB_ID, 'screen_time_logs', [
@@ -1546,39 +1547,56 @@ const DataService = {
                     ]);
                     const rawLogs = logsResult.documents;
 
-                    // Group by childId and aggregate by date
+                    // Group by childId → (date|category) → total minutes
+                    // We use a composite key "date|category" so that each category keeps its
+                    // own bucket instead of being collapsed into a single total per day.
                     const byChild = {};
                     rawLogs.forEach(log => {
                         if (!childIds.includes(log.childId)) return;
                         if (!byChild[log.childId]) byChild[log.childId] = {};
                         const date = log.date || new Date().toISOString().split('T')[0];
-                        byChild[log.childId][date] = (byChild[log.childId][date] || 0) + (log.minutes || 0);
+                        const cat  = (log.category || 'general').toLowerCase();
+                        const key  = `${date}|${cat}`;
+                        byChild[log.childId][key] = (byChild[log.childId][key] || 0) + (log.minutes || 0);
                     });
 
                     // Merge into each child document
                     children.forEach(child => {
-                        const dateMap = byChild[child.$id];
-                        if (!dateMap) return;
+                        const catDateMap = byChild[child.$id];
+                        if (!catDateMap) return;
 
-                        // Parse any existing logs from child doc
+                        // Parse any existing logs from child doc (may be array or stale object)
                         let existingLogs = [];
                         if (child.screenTimeLogs) {
                             try {
-                                existingLogs = typeof child.screenTimeLogs === 'string'
+                                const parsed = typeof child.screenTimeLogs === 'string'
                                     ? JSON.parse(child.screenTimeLogs) : child.screenTimeLogs;
+                                existingLogs = Array.isArray(parsed) ? parsed : [];
                             } catch (e) { existingLogs = []; }
                         }
-                        // Build a date→minutes map from existing
+
+                        // Build a composite-key map from existing log entries
                         const combined = {};
-                        existingLogs.forEach(l => { if (l.date) combined[l.date] = (combined[l.date] || 0) + (l.minutes || 0); });
-                        // Merge in the screen_time_logs entries
-                        Object.entries(dateMap).forEach(([date, mins]) => {
-                            combined[date] = (combined[date] || 0) + mins;
+                        existingLogs.forEach(l => {
+                            if (!l.date) return;
+                            const cat = (l.category || 'general').toLowerCase();
+                            const key = `${l.date}|${cat}`;
+                            combined[key] = (combined[key] || 0) + (l.minutes || 0);
                         });
-                        // Sort and write back
+
+                        // Merge in the newly fetched screen_time_logs entries
+                        Object.entries(catDateMap).forEach(([key, mins]) => {
+                            combined[key] = (combined[key] || 0) + mins;
+                        });
+
+                        // Flatten back to an array: [{date, minutes, category}, ...]
                         const merged = Object.entries(combined)
-                            .map(([date, minutes]) => ({ date, minutes }))
+                            .map(([key, minutes]) => {
+                                const [date, category] = key.split('|');
+                                return { date, minutes, category };
+                            })
                             .sort((a, b) => a.date.localeCompare(b.date));
+
                         child.screenTimeLogs = JSON.stringify(merged);
                     });
                 }

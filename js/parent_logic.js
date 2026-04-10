@@ -930,11 +930,12 @@ function _renderRewardsPage() {
     const { rewards, page, limit } = window._rewardsState;
     
     if (rewards.length > 0) {
-        html += `<div>
-            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+        html += `<div class="relative mt-2">
+            <div class="absolute left-[22px] top-6 bottom-0 w-px bg-gray-100 z-0"></div>
+            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
                 <i class="fa-solid fa-bolt text-orange-400"></i> Recent Achievements
             </h4>
-            <div class="space-y-2 pb-2">`;
+            <div class="space-y-3 pb-2 relative z-10">`;
         
         const totalPages = Math.ceil(rewards.length / limit) || 1;
         const slice = rewards.slice((page - 1) * limit, page * limit);
@@ -942,24 +943,31 @@ function _renderRewardsPage() {
         slice.forEach(reward => {
             const timeStr = timeAgo(reward.earnedAt);
             const isPathBonus = reward.rewardType === 'path_bonus';
+            const bgClass = isPathBonus ? 'bg-[#F3F0FF] text-[#8A51FC]' : 'bg-[#FFFBEB] text-[#F59E0B]';
+            const icon = isPathBonus ? 'fa-trophy' : 'fa-star';
             
             html += `
-                <div class="flex items-center gap-3 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm group hover:border-orange-200 transition-colors">
-                    <div class="w-8 h-8 rounded-xl ${isPathBonus ? 'bg-purple-50 text-cubby-purple' : 'bg-orange-50 text-orange-500'} flex items-center justify-center shrink-0">
-                        <i class="fa-solid ${isPathBonus ? 'fa-trophy' : 'fa-star'} text-[10px]"></i>
+                <div class="flex gap-4 relative items-start">
+                    <div class="w-10 h-10 rounded-[14px] border-[3px] border-white shadow-sm z-10 flex-shrink-0 flex items-center justify-center mt-0.5 ml-0.5 ${bgClass}">
+                        <i class="fa-solid ${icon} text-xs"></i>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-[11px] font-bold text-gray-800 truncate">${isPathBonus ? 'Learning Path Complete!' : 'Video Watch Reward'}</p>
-                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">${timeStr}</p>
+                    <div class="bg-gray-50 rounded-2xl p-4 flex-1 border border-gray-100/50 shadow-sm transition-all hover:bg-white min-w-0 flex items-center justify-between">
+                        <div class="flex-1 min-w-0 pr-2">
+                            <p class="text-sm text-[#1C1D21] font-bold truncate">${isPathBonus ? 'Learning Path Complete!' : 'Video Watch Reward'}</p>
+                            <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                                <span class="text-xs font-bold text-gray-400"><i class="fa-regular fa-clock mr-1 text-[10px]"></i>${timeStr}</span>
+                                ${isPathBonus ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${bgClass}">Path Bonus</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="text-[14px] font-black ${isPathBonus ? 'text-[#8A51FC]' : 'text-orange-500'} bg-white px-3 py-1.5 rounded-[12px] shadow-sm border border-gray-100 shrink-0">+${reward.points}</div>
                     </div>
-                    <div class="text-[11px] font-black text-orange-500">+${reward.points}</div>
                 </div>`;
         });
         html += `</div>`;
         
         if (totalPages > 1) {
             html += `
-                <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                <div class="flex items-center justify-between mt-3 pt-4 border-t border-gray-100 relative z-10 bg-white/90 backdrop-blur-sm">
                     <button onclick="changeRewardsPage(-1)" ${page <= 1 ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-orange-500 transition-colors"'}><i class="fa-solid fa-chevron-left mr-1.5"></i>Prev</button>
                     <span class="text-[9px] font-black pointer-events-none text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded-md">Page ${page} / ${totalPages}</span>
                     <button onclick="changeRewardsPage(1)" ${page >= totalPages ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-orange-500 transition-colors"'}>Next<i class="fa-solid fa-chevron-right ml-1.5"></i></button>

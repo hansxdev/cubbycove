@@ -1580,8 +1580,20 @@ function renderFeedWithFilter(filter) {
         const cfg = categoryConfig[item.feedCategory] || categoryConfig.activity;
         const timeStr = timeAgo(item.timestamp);
         const fullTime = new Date(item.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const isThreat = item.feedCategory === 'threat';
+
+        // For threat cards: make them clickable & add a guidance cue badge
+        const guidanceCue = isThreat ? `
+            <button class="ml-auto shrink-0 flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 text-[10px] font-black px-2.5 py-1 rounded-xl transition-all">
+                <i class="fa-solid fa-lightbulb text-amber-500"></i> Guidance
+            </button>` : '';
+
+        const clickAttr = isThreat
+            ? `onclick="openGuidanceFlyout(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="cursor:pointer;"`
+            : '';
+
         return `
-        <div class="feed-card ${cfg.cardClass} rounded-2xl p-4 border border-gray-100 flex items-start gap-4 hover:shadow-sm transition-all group">
+        <div class="feed-card ${cfg.cardClass} rounded-2xl p-4 border border-gray-100 flex items-start gap-4 hover:shadow-sm transition-all group ${isThreat ? 'hover:border-amber-300 hover:bg-amber-50/30' : ''}" ${clickAttr}>
             <div class="w-10 h-10 ${cfg.bg} ${cfg.color} rounded-[14px] flex items-center justify-center shrink-0 border border-white shadow-sm mt-0.5">
                 <i class="fa-solid ${cfg.icon} text-sm"></i>
             </div>
@@ -1592,6 +1604,7 @@ function renderFeedWithFilter(filter) {
                     <span class="text-[11px] font-bold text-gray-400" title="${fullTime}"><i class="fa-regular fa-clock mr-1 opacity-60"></i>${timeStr}</span>
                 </div>
             </div>
+            ${guidanceCue}
         </div>`;
     }).join('');
 
@@ -1971,3 +1984,177 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 });
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GUIDANCE & PRIVACY HUB — Side-Panel Flyout
+// Research basis: Parental Mediation (Juarez et al., 2024) &
+//                 Privacy by Design (Pothong et al., 2024)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SAFETY_GUIDANCE_MAP = {
+    inappropriate_content: {
+        emoji: '🛡️',
+        title: 'Inappropriate Content Filtered',
+        subtext: "The filter caught content that wasn't age-appropriate.",
+        mediation: [
+            'Ask: "What were you hoping to find when you saw this?"',
+            'Discuss: Why some content is made for grown-ups, and how seeing it by accident can be confusing.',
+            'Guide: Remind them they can always tell you if they see something that makes them feel uncomfortable — no questions asked.',
+            'Reassure: "You didn\'t do anything wrong. The app caught it so you didn\'t have to worry about it."'
+        ],
+        privacyNote: 'The flagged content was analyzed by our local AI filter and was never stored permanently. Only the time and type of the event are saved to help you see patterns.',
+        retentionDays: 30
+    },
+    cyberbullying_alert: {
+        emoji: '💬',
+        title: 'Kindness Filter Triggered',
+        subtext: 'A message was blocked for not meeting our kindness standard.',
+        mediation: [
+            'Ask: "How do you think your buddy felt when you sent that?"',
+            'Discuss: The "Screen Shield" effect — it\'s easy to say hurtful things when we can\'t see someone\'s face.',
+            'Guide: Help them rephrase the message to be honest, but kind. Practice together!',
+            'Teach: "Being kind online is just as important as being kind in person."'
+        ],
+        privacyNote: "The flagged message was blocked before it was sent. The full text was not stored — only the timestamp and event type. Your child's private conversations remain private.",
+        retentionDays: 30
+    },
+    malicious_link: {
+        emoji: '🔗',
+        title: 'Suspicious Link Blocked',
+        subtext: 'Your child may have clicked on a link that was flagged as potentially unsafe.',
+        mediation: [
+            'Ask: "Where did you find this link? Did someone send it to you?"',
+            'Discuss: What phishing is — tricks people use online to disguise dangerous links as fun or friendly content.',
+            'Guide: Teach the rule: "Before clicking a link, ask a trusted adult first."',
+            'Reassure: "Clicking a bad link accidentally doesn\'t make you bad. Now you know what to look for!"'
+        ],
+        privacyNote: 'The URL was checked against a safety list. It was not logged in full — only the domain and event type are stored to help identify patterns.',
+        retentionDays: 30
+    },
+    stranger_danger: {
+        emoji: '👤',
+        title: 'Unknown Contact Alert',
+        subtext: "Someone outside your child's buddy list attempted to contact them.",
+        mediation: [
+            'Ask: "Do you know who this person is in real life?"',
+            'Discuss: Why it\'s important to only talk to people we know and trust online.',
+            'Guide: Review the buddy list together. Help them understand who is a "safe" contact.',
+            'Remind: "You can always tell me if a stranger messages you, and I won\'t be upset."'
+        ],
+        privacyNote: 'The contact attempt was blocked and no personal information was shared with the unknown user. Only the event type and time are recorded.',
+        retentionDays: 30
+    },
+    general: {
+        emoji: '🌟',
+        title: 'Safety Event Recorded',
+        subtext: 'The system flagged something for your review.',
+        mediation: [
+            'Check in: "How has your time on CubbyCove been lately? Anything surprising or confusing?"',
+            'Remind: "There are no bad questions. You can always ask me about anything you see online."',
+            'Encourage: "You\'re doing great navigating the digital world. Let\'s keep learning together."'
+        ],
+        privacyNote: "CubbyCove collects the minimum data necessary for your child's safety. Events older than 30 days are automatically removed. No audio, video, or full message text is ever stored.",
+        retentionDays: 30
+    }
+};
+
+/**
+ * Maps a feed item to a SAFETY_GUIDANCE_MAP key based on its action text.
+ */
+function _getGuidanceKey(item) {
+    const action = (item.action || item.threatType || '').toLowerCase();
+    if (action.includes('inappropriate') || action.includes('content') || action.includes('blocked')) return 'inappropriate_content';
+    if (action.includes('bully') || action.includes('kind') || action.includes('chat') || action.includes('message')) return 'cyberbullying_alert';
+    if (action.includes('link') || action.includes('url') || action.includes('phish')) return 'malicious_link';
+    if (action.includes('stranger') || action.includes('unknown') || action.includes('contact')) return 'stranger_danger';
+    return 'general';
+}
+
+/**
+ * Opens the Guidance & Privacy Hub side-panel for a given safety event.
+ */
+window.openGuidanceFlyout = function (item) {
+    const panel = document.getElementById('guidance-flyout');
+    if (!panel) return;
+
+    const key   = _getGuidanceKey(item);
+    const guide = SAFETY_GUIDANCE_MAP[key] || SAFETY_GUIDANCE_MAP.general;
+
+    const timeStr = item.timestamp
+        ? new Date(item.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : 'Recently';
+
+    const deleteDate = item.timestamp
+        ? new Date(new Date(item.timestamp).getTime() + 30 * 24 * 60 * 60 * 1000)
+              .toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'after 30 days';
+
+    // Populate panel content
+    document.getElementById('gf-emoji').textContent   = guide.emoji;
+    document.getElementById('gf-title').textContent   = guide.title;
+    document.getElementById('gf-subtext').textContent = guide.subtext;
+    document.getElementById('gf-time').textContent    = timeStr;
+    document.getElementById('gf-action').textContent  = item.action || 'Safety event';
+
+    document.getElementById('gf-tips').innerHTML = guide.mediation
+        .map((tip, i) => `
+            <div class="flex gap-3 items-start">
+                <div class="w-6 h-6 shrink-0 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[11px] font-black mt-0.5">${i + 1}</div>
+                <p class="text-sm text-gray-700 font-medium leading-relaxed">${escHtml(tip)}</p>
+            </div>`)
+        .join('');
+
+    document.getElementById('gf-privacy-note').textContent = guide.privacyNote;
+    document.getElementById('gf-delete-date').textContent  = deleteDate;
+
+    // Slide panel in from right
+    panel.classList.remove('translate-x-full');
+    panel.classList.add('translate-x-0');
+    document.getElementById('guidance-overlay')?.classList.remove('hidden');
+};
+
+/**
+ * Closes the Guidance & Privacy Hub side-panel.
+ */
+window.closeGuidanceFlyout = function () {
+    const panel = document.getElementById('guidance-flyout');
+    if (!panel) return;
+    panel.classList.remove('translate-x-0');
+    panel.classList.add('translate-x-full');
+    document.getElementById('guidance-overlay')?.classList.add('hidden');
+};
+
+/**
+ * Purges safety event logs older than 30 days from the threat_logs collection.
+ * Runs once per session on parent login — fulfills the Privacy by Design commitment.
+ */
+async function purgeOldSafetyLogs() {
+    try {
+        const { databases, DB_ID, COLLECTIONS } = AppwriteService;
+        const { Query } = Appwrite;
+        const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+        const old = await databases.listDocuments(DB_ID, COLLECTIONS.THREAT_LOGS, [
+            Query.lessThan('$createdAt', cutoff),
+            Query.limit(25) // batch: up to 25 per session
+        ]).catch(() => ({ documents: [] }));
+
+        if (old.documents.length === 0) return;
+
+        await Promise.allSettled(
+            old.documents.map(doc => databases.deleteDocument(DB_ID, COLLECTIONS.THREAT_LOGS, doc.$id))
+        );
+
+        console.log(`[PrivacyPurge] Removed ${old.documents.length} safety log(s) older than 30 days.`);
+    } catch (e) {
+        console.warn('[PrivacyPurge] Could not purge old logs:', e.message);
+    }
+}
+
+// Hook purge into the dashboard load (runs once per session)
+const _origLoadDashboardForPurge = window.loadDashboardData;
+window.loadDashboardData = async function () {
+    if (_origLoadDashboardForPurge) await _origLoadDashboardForPurge.apply(this, arguments);
+    purgeOldSafetyLogs();
+};

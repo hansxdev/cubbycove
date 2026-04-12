@@ -87,8 +87,10 @@ async function initAdminDashboard() {
 
         if (currentUser.role === 'super_admin') {
             const staffMenu = document.getElementById('menu-staff');
+            const manageMenu = document.getElementById('super-admin-manage');
             const viewsMenu = document.getElementById('super-admin-views');
             if (staffMenu) staffMenu.classList.remove('hidden');
+            if (manageMenu) manageMenu.classList.remove('hidden');
             if (viewsMenu) viewsMenu.classList.remove('hidden');
         }
 
@@ -221,6 +223,9 @@ async function loadDashboardCharts(period = 'day') {
             const ctx = canvas.getContext('2d');
             const existing = Chart.getChart(canvas);
             if (existing) existing.destroy();
+            const isDark = document.body.classList.contains('dark-mode');
+            const gridColor = isDark ? '#374151' : '#f3f4f6';
+            const tickColor = isDark ? '#9CA3AF' : '#6B7280';
             return new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -241,14 +246,55 @@ async function loadDashboardCharts(period = 'day') {
                     maintainAspectRatio: true,
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxTicksLimit: 8 } },
-                        y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { precision: 0, font: { size: 10 } } }
+                        x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10 }, maxTicksLimit: 8 } },
+                        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, precision: 0, font: { size: 10 } } }
                     }
                 }
             });
         };
 
-        chartReg = chartDef('chartRegistrations', regData, '#4CC9F0', 'Registrations');
+        const chartDefLine = (id, data, label) => {
+            const canvas = document.getElementById(id);
+            if (!canvas) return null;
+            const ctx = canvas.getContext('2d');
+            const existing = Chart.getChart(canvas);
+            if (existing) existing.destroy();
+            
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, '#7209B740'); // purple with opacity
+            gradient.addColorStop(1, '#4CC9F010'); // blue with opacity
+            
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label,
+                        data,
+                        backgroundColor: gradient,
+                        borderColor: '#7209B7',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#4CC9F0',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { beginAtZero: true, grid: { color: '#f3f4f6' }, border: { display: false } }
+                    }
+                }
+            });
+        };
+
+        chartReg = chartDefLine('chartRegistrations', regData, 'User Growth');
         chartLogin = chartDef('chartLogins', loginData, '#7209B7', 'Logins');
         chartReports = chartDef('chartReports', reportData, '#ef4444', 'Reports');
         chartPremium = chartDef('chartPremium', premiumData, '#f59e0b', 'Premium');
@@ -520,7 +566,7 @@ async function _loadVerificationImages(parent) {
     const svc = window.AppwriteService;
     if (!svc) return;
     const endpoint = (svc.client?.config?.endpoint || 'https://sgp.cloud.appwrite.io/v1').replace(/\/$/, '');
-    const projectId = svc.client?.config?.project || '69904f4900396667cf4c';
+    const projectId = svc.client?.config?.project;
     const bucketId = svc.BUCKET_PARENT_DOCS || 'parent_docs';
 
     const fetchImage = async (fileId, jwt) => {
@@ -567,7 +613,7 @@ async function updateParentStatus(userId, status) {
 // ─────────────────────────────────────────────────────────────────────────
 
 async function loadChatReports() {
-    const container = document.getElementById('tab-moderation');
+    const container = document.getElementById('moderation-list');
     if (!container) return;
     container.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cubby-blue text-4xl"></i></div>';
     try {
@@ -1176,8 +1222,13 @@ window.saveSettings = async function () {
         if (avatarUpload && avatarUpload.files && avatarUpload.files.length > 0) {
             const file = avatarUpload.files[0];
             try {
-                const { ID } = Appwrite;
-                const uploadResult = await svc.storage.createFile(svc.BUCKET_PROFILE_PICS, ID.unique(), file);
+                const { ID, Permission, Role } = Appwrite;
+                const uploadResult = await svc.storage.createFile(
+                    svc.BUCKET_PROFILE_PICS,
+                    ID.unique(),
+                    file,
+                    [Permission.read(Role.any())]
+                );
                 const fileUrl = `${svc.client.config.endpoint}/storage/buckets/${svc.BUCKET_PROFILE_PICS}/files/${uploadResult.$id}/view?project=${svc.client.config.project}`;
 
                 updatedPrefs.profilePictureUrl = fileUrl;

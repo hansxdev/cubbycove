@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CubbyCove - Welcome Back!</title>
     <link rel="icon" type="image/png" href="../images/closedlogo.png">
 
@@ -19,158 +19,164 @@
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/kid_theme.css">
+
+    <style>
+        body {
+            background-image: url('../images/bg_sky_3d.png');
+            background-size: cover;
+            background-position: center;
+            /* mobile friendly non-fixed background */ min-height: 100vh;
+            background-blend-mode: overlay;
+            background-color: rgba(255, 255, 255, 0.4); /* Opacity overlay */
+        }
+    </style>
+
 </head>
 
-<body class="bg-gray-50 text-gray-800 antialiased overflow-x-hidden">
+<body class="text-gray-800 antialiased overflow-x-hidden">
 
     <!-- TOP NAVIGATION BAR -->
-    <nav class="fixed top-0 left-0 w-full bg-white shadow-md z-50 h-16 flex items-center justify-between px-4 lg:px-6">
-
-        <!-- Left: Logo & Menu Toggle -->
-        <div class="flex items-center gap-4">
+    <nav id="top-nav" class="fixed top-4 left-4 right-4 lg:left-[18.25rem] lg:right-6 bg-white/30 backdrop-blur-2xl border border-white/40 z-50 h-[5.5rem] flex items-center justify-between px-4 lg:px-6 rounded-[3rem] shadow-lg text-white transition-all duration-300 ease-in-out">
+        
+        <!-- Left: Search Bar & Menu Toggle -->
+        <div class="flex items-center gap-4 flex-1 lg:max-w-md">
             <button id="menu-btn"
-                class="text-2xl text-gray-600 hover:text-cubby-blue p-2 rounded-full hover:bg-gray-100 transition-colors">
-                <i class="fa-solid fa-bars"></i>
+                class="text-2xl text-white hover:text-indigo-200 p-2 rounded-full transition-colors drop-shadow-md lg:bg-white/40 lg:backdrop-blur-md lg:w-11 lg:h-11 lg:flex lg:items-center lg:justify-center lg:border lg:border-white/50 lg:shadow-sm lg:text-indigo-900/60 lg:hover:text-indigo-900 lg:hover:bg-white/60 lg:hover:scale-105 z-50">
+                <i class="fa-solid fa-bars lg:drop-shadow-sm"></i>
             </button>
-            <a href="home_logged_in.html"
-                class="flex items-center gap-2 cursor-pointer relative overflow-hidden h-14 w-48 transition-all duration-300"
-                id="logo-container">
-                <img id="logo-long" src="../images/longlogo.png" alt="CubbyCove"
-                    class="h-14 absolute left-0 top-0 transition-opacity duration-300 opacity-100 object-contain">
-                <img id="logo-closed" src="../images/closedlogo.png" alt="CubbyCove"
-                    class="h-14 absolute left-0 top-0 transition-opacity duration-300 opacity-0 object-contain pointer-events-none">
-            </a>
+            <div class="w-full hidden sm:flex border border-white/50 rounded-full bg-white/40 backdrop-blur-lg shadow-inner overflow-hidden focus-within:bg-white/60 transition-colors">
+                <i class="fa-solid fa-magnifying-glass pl-5 py-3.5 text-indigo-900/50 text-lg drop-shadow-sm flex items-center"></i>
+                <input type="text" placeholder="Search for cartoons, games..."
+                    class="w-full bg-transparent py-3 pl-3 pr-6 outline-none placeholder-indigo-900/50 font-extrabold text-indigo-900 text-lg">
+            </div>
         </div>
 
-        <!-- Center: Search Bar -->
-        <div class="flex-1 max-w-2xl mx-4 hidden sm:flex">
-            <div class="relative w-full">
-                <input type="text" placeholder="Search for cartoons, games..."
-                    class="w-full bg-gray-100 border-2 border-transparent focus:border-cubby-blue focus:bg-white rounded-full py-2 pl-5 pr-12 outline-none transition-all placeholder-gray-400 font-semibold text-lg">
-                <button
-                    class="absolute right-0 top-0 h-full w-12 bg-gray-100 rounded-r-full text-gray-500 hover:text-cubby-blue hover:bg-gray-200 transition-colors border-l border-gray-200">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </button>
-            </div>
-            <button
-                class="ml-3 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200">
-                <i class="fa-solid fa-microphone"></i>
-            </button>
+        <!-- Center: Empty Area -->
+        <div class="hidden lg:flex absolute left-1/2 transform -translate-x-1/2 items-center justify-center relative h-16 w-36">
         </div>
 
         <!-- Right: Profile & Actions -->
-        <div class="flex items-center gap-3 sm:gap-5">
-            <button class="sm:hidden text-xl text-gray-600"><i class="fa-solid fa-magnifying-glass"></i></button>
+        <div class="flex items-center gap-3 sm:gap-4 justify-end">
+            <!-- Watch-to-Earn Point Counter -->
+            <div id="kid-points-display" class="hidden xl:flex items-center gap-2 bg-white/40 backdrop-blur-md border border-white/50 px-4 py-2 rounded-full shadow-sm">
+                <i class="fa-solid fa-star text-yellow-300 animate-pulse text-lg drop-shadow-sm"></i>
+                <span id="header-total-points" class="font-black text-indigo-900 text-base drop-shadow-sm">0</span>
+            </div>
 
-            <!-- Parent Gate (Still there for settings, but less intrusive) -->
-            <button onclick="alert('Ask your parent to open settings.')"
-                class="text-gray-400 hover:text-red-500 transition-colors tooltip" title="Parent Settings">
-                <i class="fa-solid fa-lock"></i>
-            </button>
+            <button class="sm:hidden text-xl text-indigo-900 bg-white/40 backdrop-blur-md p-3 rounded-full border border-white/50 drop-shadow-sm"><i class="fa-solid fa-magnifying-glass"></i></button>
 
-            <!-- User Profile (Logged In State) -->
-            <div class="flex items-center gap-3 cursor-pointer group" onclick="openKidSettingsModal()">
-                <span class="hidden md:block font-bold text-gray-700 group-hover:text-cubby-blue">Loading...</span>
+            <!-- User Profile -->
+            <div class="flex items-center gap-3 cursor-pointer group bg-white/40 backdrop-blur-md hover:bg-white/60 px-2 py-1.5 pr-4 rounded-full border border-white/50 shadow-sm transition-all" onclick="openKidSettingsModal()">
                 <div class="relative">
-                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Guest" alt="Avatar"
-                        class="w-10 h-10 rounded-full bg-cubby-blue p-0.5 border-2 border-white shadow-sm transition-transform group-hover:scale-105">
-                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full">
-                    </div>
+                    <img loading="lazy" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Guest" alt="Avatar"
+                        class="w-10 h-10 rounded-full bg-white/50 p-0.5 shadow-sm border border-white/80 transition-transform group-hover:scale-105 group-hover:rotate-3">
+                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border border-white rounded-full"></div>
+                </div>
+                <div class="hidden md:flex flex-col">
+                    <span class="font-bold text-indigo-900 text-sm leading-tight drop-shadow-sm">Loading...</span>
                 </div>
             </div>
 
-            <!-- Logout Button (Small) -->
-            <button onclick="handleKidLogout()" class="text-gray-400 hover:text-red-500 text-sm ml-2" title="Log Out">
-                <i class="fa-solid fa-right-from-bracket"></i>
+            <!-- Notifications -->
+            <button class="relative w-11 h-11 bg-white/40 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center text-indigo-900/60 hover:text-indigo-900 hover:bg-white/60 shadow-sm transition-all hover:scale-105">
+                <i class="fa-solid fa-bell text-lg drop-shadow-sm"></i>
+                <span class="absolute top-0 right-0 w-3 h-3 bg-red-400 border border-white shadow-sm rounded-full animate-bounce"></span>
+            </button>
+
+            <!-- Logout Button -->
+            <button onclick="handleKidLogout()" class="hidden sm:block bg-white/40 backdrop-blur-md hover:bg-white/60 text-indigo-900 font-extrabold px-5 py-2.5 rounded-full shadow-sm transition-all active:scale-95 text-sm border border-white/50 drop-shadow-sm">
+                Logout
             </button>
         </div>
     </nav>
 
     <!-- SIDEBAR -->
     <aside id="sidebar"
-        class="fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white overflow-y-auto transform lg:translate-x-0 -translate-x-full transition-all duration-300 ease-in-out z-40 pb-10 border-r border-gray-100 overflow-x-hidden">
+        class="fixed top-0 left-0 h-full w-[17.5rem] bg-white/20 backdrop-blur-2xl border-r border-white/50 overflow-y-auto transform lg:translate-x-0 -translate-x-full transition-all duration-300 ease-in-out z-[45] pt-[1.5rem] pb-10 overflow-x-hidden no-scrollbar">
 
-        <!-- Main Links -->
-        <div class="p-3 space-y-1">
-            <a href="home_logged_in.html"
-                class="flex items-center gap-4 px-4 py-3 bg-cubby-blue/10 text-cubby-blue rounded-xl font-bold text-lg sidebar-link transition-all duration-300">
-                <i class="fa-solid fa-house text-xl w-6 text-center"></i>
-                <span
-                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Home</span>
-            </a>
-            <a href="games.html"
-                class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors sidebar-link transition-all duration-300">
-                <i class="fa-solid fa-gamepad text-xl w-6 text-center text-cubby-orange"></i>
-                <span
-                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Games</span>
-            </a>
-            <!-- UNLOCKED: Chat -->
-            <a href="chat.html"
-                class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors sidebar-link transition-all duration-300">
-                <i class="fa-solid fa-comments text-xl w-6 text-center text-cubby-green"></i>
-                <span
-                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Chat</span>
-            </a>
-            <!-- UNLOCKED: Favorites -->
-            <a href="#"
-                class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-lg transition-colors sidebar-link transition-all duration-300">
-                <i class="fa-solid fa-heart text-xl w-6 text-center text-cubby-pink"></i>
-                <span
-                    class="sidebar-label whitespace-nowrap inline-block overflow-hidden transition-all duration-300">Favorites</span>
+        <!-- Sidebar Logo -->
+        <div class="flex justify-center mb-6 h-[5rem] pb-2 relative overflow-visible mt-2" id="logo-container">
+            <a href="home_logged_in.html" class="block relative w-full h-full flex justify-center items-center">
+                <img loading="lazy" id="logo-long" src="../images/longlogo.png" alt="CubbyCove" class="h-[4.5rem] absolute transition-all duration-300 opacity-100 object-contain drop-shadow-[0_2px_10px_rgba(255,255,255,0.5)] transform scale-100 mt-2">
+                <img loading="lazy" id="logo-closed" src="../images/closedlogo.png" alt="CubbyCove" class="h-[4.5rem] absolute transition-all duration-300 opacity-0 object-contain drop-shadow-[0_2px_10px_rgba(255,255,255,0.5)] pointer-events-none transform scale-50 mt-2">
             </a>
         </div>
 
-        <hr class="border-gray-200 mx-4 my-2">
+        <!-- Main Links -->
+        <div class="mx-6 mb-8 mt-4 space-y-4">
+            <a href="home_logged_in.html"
+                class="sidebar-link flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-gradient-to-r from-pink-400 to-pink-300 text-white rounded-full shadow-[0_6px_14px_rgba(244,114,182,0.4),_inset_0_2px_0_rgba(255,255,255,0.4)] font-extrabold text-lg transition-transform hover:-translate-y-[2px] active:translate-y-1 group border border-white/60">
+                <img loading="lazy" src="../images/icon_home.png" class="shrink-0 w-[3.25rem] h-[3.25rem] rounded-full object-cover shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/80 group-hover:scale-105 transition-transform bg-white/20">
+                <span class="sidebar-label whitespace-nowrap drop-shadow-md ml-1 tracking-wide">Home</span>
+            </a>
+            <a href="games.html"
+                class="sidebar-link flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-gradient-to-r from-blue-400 to-blue-300 text-white rounded-full shadow-[0_6px_14px_rgba(96,165,250,0.4),_inset_0_2px_0_rgba(255,255,255,0.4)] font-extrabold text-lg transition-transform hover:-translate-y-[2px] active:translate-y-1 group border border-white/60">
+                <img loading="lazy" src="../images/icon_games.png" class="shrink-0 w-[3.25rem] h-[3.25rem] rounded-full object-cover shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/80 group-hover:scale-105 transition-transform bg-white/20">
+                <span class="sidebar-label whitespace-nowrap drop-shadow-md ml-1 tracking-wide">Games</span>
+            </a>
+            <a href="chat.html"
+                class="sidebar-link flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-gradient-to-r from-emerald-400 to-green-300 text-white rounded-full shadow-[0_6px_14px_rgba(52,211,153,0.4),_inset_0_2px_0_rgba(255,255,255,0.4)] font-extrabold text-lg transition-transform hover:-translate-y-[2px] active:translate-y-1 group border border-white/60">
+                <img loading="lazy" src="../images/icon_chat.png" class="shrink-0 w-[3.25rem] h-[3.25rem] rounded-full object-cover shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/80 group-hover:scale-105 transition-transform bg-white/20">
+                <span class="sidebar-label whitespace-nowrap drop-shadow-md ml-1 tracking-wide">Chat</span>
+            </a>
+            <a href="favorites.html"
+                class="sidebar-link flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-gradient-to-r from-red-400 to-red-300 text-white rounded-full shadow-[0_6px_14px_rgba(248,113,113,0.4),_inset_0_2px_0_rgba(255,255,255,0.4)] font-extrabold text-lg transition-transform hover:-translate-y-[2px] active:translate-y-1 group border border-white/60">
+                <img loading="lazy" src="../images/icon_fav.png" class="shrink-0 w-[3.25rem] h-[3.25rem] rounded-full object-cover shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/80 group-hover:scale-105 transition-transform bg-white/20">
+                <span class="sidebar-label whitespace-nowrap drop-shadow-md ml-1 tracking-wide">Favorites</span>
+            </a>
+            <a href="history.html"
+                class="sidebar-link flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-gradient-to-r from-purple-400 to-purple-300 text-white rounded-full shadow-[0_6px_14px_rgba(192,132,252,0.4),_inset_0_2px_0_rgba(255,255,255,0.4)] font-extrabold text-lg transition-transform hover:-translate-y-[2px] active:translate-y-1 group border border-white/60">
+                <img loading="lazy" src="../images/icon_history.png" class="shrink-0 w-[3.25rem] h-[3.25rem] rounded-full object-cover shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/80 group-hover:scale-105 transition-transform bg-white/20">
+                <span class="sidebar-label whitespace-nowrap drop-shadow-md ml-1 tracking-wide">History</span>
+            </a>
+        </div>
 
         <!-- My Buddies (Dynamic) -->
-        <div class="p-4 sidebar-hide-mini transition-all duration-300 overflow-hidden">
-            <div class="p-2">
-
-                <!-- Incoming Requests Badge -->
-                <div id="buddy-requests-section" class="hidden mb-4">
-                    <button onclick="toggleBuddyRequests()"
-                        class="w-full flex items-center gap-2 bg-cubby-pink/10 border border-cubby-pink/30 text-cubby-pink rounded-xl px-3 py-2 font-bold text-sm hover:bg-cubby-pink/20 transition-colors">
-                        <i class="fa-solid fa-user-plus"></i>
-                        <span>Buddy Requests</span>
-                        <span id="buddy-req-count"
-                            class="ml-auto bg-cubby-pink text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">0</span>
-                    </button>
-                    <!-- Request list (toggled) -->
-                    <div id="buddy-requests-list" class="hidden mt-2 space-y-2"></div>
-                </div>
-
-                <!-- Buddy List Header -->
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="font-extrabold text-gray-400 uppercase text-xs ml-1 tracking-wider">Your Buddies</h3>
-                    <button onclick="openAddBuddyModal()"
-                        class="text-cubby-blue hover:text-blue-600 text-xs font-bold flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors">
-                        <i class="fa-solid fa-plus text-[10px]"></i> Add
-                    </button>
-                </div>
-
-                <!-- Buddy List -->
-                <div id="buddy-list" class="space-y-1">
-                    <div class="text-center py-6">
-                        <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                            <i class="fa-solid fa-user-group text-gray-300 text-xl"></i>
-                        </div>
-                        <p class="text-xs text-gray-400 font-semibold">No buddies yet</p>
-                        <button onclick="openAddBuddyModal()"
-                            class="mt-2 text-xs text-cubby-blue font-bold hover:underline">Add Buddies!</button>
-                    </div>
-                </div>
-
+        <div class="mx-6 mb-6 sidebar-hide-mini transition-all duration-300 group mt-8">
+            <div class="flex items-center justify-between mb-3 px-2">
+                <h3 class="font-extrabold text-indigo-900 text-lg drop-shadow-sm tracking-tight">Your Buddies</h3>
+                <button onclick="openAddBuddyModal()"
+                    class="text-indigo-900 hover:text-white bg-white/50 backdrop-blur-md hover:bg-white/70 font-black w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm border border-white/60">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                </button>
             </div>
+            <div class="p-4 overflow-hidden bg-white/30 backdrop-blur-2xl rounded-[2.5rem] shadow-[inset_0_2px_0_rgba(255,255,255,0.5)] border border-white/50 relative">
+                <div class="p-1">
 
-            <hr class="border-gray-200 mx-4 my-2">
+                    <!-- Incoming Requests Badge -->
+                    <div id="buddy-requests-section" class="hidden mb-4">
+                        <button onclick="toggleBuddyRequests()"
+                            class="w-full flex items-center justify-between bg-white/50 backdrop-blur-md border border-white/60 text-pink-600 rounded-full px-4 py-2.5 font-bold text-sm hover:bg-white/70 shadow-sm hover:-translate-y-[1px] active:translate-y-1 transition-all">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-user-plus drop-shadow-sm"></i> Requests</span>
+                            <span id="buddy-req-count"
+                                class="bg-pink-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-sm">0</span>
+                        </button>
+                        <!-- Request list (toggled) -->
+                        <div id="buddy-requests-list" class="hidden mt-3 space-y-2"></div>
+                    </div>
 
-            <!-- Bottom Graphic -->
-            <div class="px-6 mt-4 sidebar-promo">
-                <div
-                    class="bg-gradient-to-br from-cubby-yellow to-orange-300 rounded-2xl p-4 text-white text-center shadow-lg transform hover:scale-105 transition-transform cursor-pointer">
-                    <i class="fa-solid fa-star text-3xl mb-2 text-yellow-100"></i>
-                    <p class="font-bold text-sm leading-tight">You're a Super Star!</p>
+                    <!-- Buddy List -->
+                    <div id="buddy-list" class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2 text-center py-2">
+                            <div class="w-14 h-14 bg-white/40 backdrop-blur-md rounded-full flex items-center justify-center mx-auto mb-2 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/60 text-indigo-900/40 text-2xl">
+                                <i class="fa-solid fa-user-group"></i>
+                            </div>
+                            <p class="text-xs text-indigo-900/60 font-bold mb-2">No buddies yet</p>
+                            <button onclick="openAddBuddyModal()"
+                                class="text-xs bg-white/60 text-indigo-900 font-black rounded-full px-4 py-2 shadow-sm hover:bg-white/80 transition-all border border-white/80 backdrop-blur-md">Add!</button>
+                        </div>
+                    </div>
+
                 </div>
+            </div>
+        </div>
+
+        <!-- Bottom Graphic -->
+        <div class="px-5 mb-6 sidebar-promo">
+            <div
+                class="bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[2rem] p-4 text-indigo-900 text-center shadow-[0_4px_16px_rgba(255,255,255,0.3),_inset_0_2px_0_rgba(255,255,255,0.6)] transform hover:-translate-y-1 transition-all cursor-pointer group">
+                <i class="fa-solid fa-star text-3xl mb-2 text-yellow-300 drop-shadow-md group-hover:scale-110 transition-transform animate-pulse"></i>
+                <p class="font-extrabold text-sm leading-tight drop-shadow-sm">You're a Super Star!</p>
             </div>
         </div>
     </aside>
@@ -215,7 +221,7 @@
             <!-- Search Result -->
             <div id="buddy-search-result" class="hidden bg-gray-50 rounded-xl p-4 mb-4">
                 <div class="flex items-center gap-3">
-                    <img id="buddy-result-avatar" src="" class="w-12 h-12 rounded-full border-2 border-white shadow">
+                    <img loading="lazy" id="buddy-result-avatar" src="" class="w-12 h-12 rounded-full border-2 border-white shadow">
                     <div class="flex-1">
                         <p id="buddy-result-name" class="font-bold text-gray-800"></p>
                         <p id="buddy-result-kidid" class="text-xs text-gray-400"></p>
@@ -237,128 +243,203 @@
     <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
 
     <!-- MAIN CONTENT -->
-    <main id="main-content" class="lg:ml-64 pt-16 min-h-screen transition-all duration-300 ease-in-out">
+    <main id="main-content" class="lg:ml-[17.5rem] pt-[7.5rem] min-h-screen transition-all duration-300 ease-in-out">
 
-        <!-- NEW HERO SECTION WITH SLIDER -->
-        <div class="p-6 pb-2">
-            <div
-                class="relative w-full rounded-3xl overflow-hidden shadow-lg bg-gradient-to-r from-cubby-blue to-cubby-pink p-8 sm:p-12 text-white flex flex-col md:flex-row items-center gap-8">
-
-                <!-- Left Content -->
-                <div class="relative z-10 flex-1 max-w-2xl">
-                    <div
-                        class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md rounded-full px-4 py-1.5 mb-6 text-sm font-bold border border-white/30">
-                        <i class="fa-solid fa-wand-magic-sparkles text-cubby-yellow"></i>
-                        Welcome to CubbyCove!
-                    </div>
-                    <h1 class="text-4xl sm:text-5xl font-black mb-4 leading-tight">
-                        Safe, Fun, and Educational Content for Kids
-                    </h1>
-                    <p class="text-lg sm:text-xl font-medium text-white/90 mb-0 max-w-xl">
-                        Discover amazing cartoons, games, and learning adventures! Explore our featured games and
-                        entertainment, picked just for you.
-                    </p>
+        <!-- FEATURED BANNER -->
+        <div class="px-6 pt-4 mb-2">
+            <h2 class="text-xl font-extrabold text-gray-800 mb-4 ml-1">Featured</h2>
+            <div class="relative bg-gradient-to-r from-[#9ecbf5] to-[#7fb5ea] rounded-[2.5rem] p-6 md:p-10 flex flex-col md:flex-row items-center border-[6px] border-[#cce1f6] shadow-[0_8px_0_#75a7dc] overflow-hidden group hover:translate-y-[2px] hover:shadow-[0_4px_0_#75a7dc] active:translate-y-2 active:shadow-none transition-all cursor-pointer">
+                <!-- Background decorative elements -->
+                <div class="absolute top-4 right-8 w-16 h-16 bg-white/30 rounded-full blur-xl"></div>
+                <div class="absolute bottom-4 left-1/4 w-24 h-24 bg-white/20 rounded-full blur-2xl"></div>
+                <i class="fa-solid fa-asterisk text-yellow-300 opacity-80 absolute top-8 right-[30%] text-3xl animate-[spin_10s_linear_infinite]"></i>
+                <i class="fa-solid fa-cloud text-white/50 absolute bottom-2 left-6 text-5xl"></i>
+                <i class="fa-solid fa-star text-white/60 absolute top-10 left-[40%] text-xl animate-pulse"></i>
+                
+                <div class="relative z-10 w-full md:w-1/3 flex justify-center mb-6 md:mb-0">
+                    <img loading="lazy" src="../images/hero_tiger.png" alt="Tiger" onerror="this.src='../images/hero_tiger.png'" class="w-48 md:w-56 h-auto drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500 origin-bottom">
                 </div>
-
-                <!-- Right Slider -->
-                <div class="relative z-10 w-full md:w-1/2 max-w-lg aspect-video shrink-0">
-                    <div
-                        class="hero-slider relative w-full h-full rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 bg-black/20">
-                        <!-- Slide 1 -->
-                        <div class="slide absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-100">
-                            <img src="https://img.youtube.com/vi/a1i436o6h1U/maxresdefault.jpg" alt="Featured 1"
-                                class="w-full h-full object-cover">
-                            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                                <span
-                                    class="bg-cubby-blue text-white text-xs font-bold px-2 py-0.5 rounded shadow-sm">Educational</span>
-                                <h3 class="text-white font-bold text-sm truncate mt-1">Learn Colors with Balloons!</h3>
-                            </div>
-                        </div>
-                        <!-- Slide 2 -->
-                        <div class="slide absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0">
-                            <img src="https://img.freepik.com/free-vector/space-game-background-neon-landscape-alien-planet_107791-1634.jpg"
-                                alt="Featured 2" class="w-full h-full object-cover">
-                            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                                <span
-                                    class="bg-cubby-purple text-white text-xs font-bold px-2 py-0.5 rounded shadow-sm">Featured
-                                    Game</span>
-                                <h3 class="text-white font-bold text-sm truncate mt-1">Space Explorer 3000</h3>
-                            </div>
-                        </div>
-                        <!-- Slide 3 -->
-                        <div class="slide absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0">
-                            <img src="https://img.youtube.com/vi/34zP6j8t5eQ/maxresdefault.jpg" alt="Featured 3"
-                                class="w-full h-full object-cover">
-                            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                                <span
-                                    class="bg-cubby-green text-white text-xs font-bold px-2 py-0.5 rounded shadow-sm">Science</span>
-                                <h3 class="text-white font-bold text-sm truncate mt-1">Why Do Stars Twinkle?</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Decorative Circle -->
-                <div class="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none">
+                <div class="relative z-10 w-full md:w-2/3 md:pl-10 text-white text-center md:text-left flex flex-col items-center md:items-start">
+                    <h2 class="text-3xl md:text-5xl font-black leading-tight mb-4 drop-shadow-md tracking-tight">Hugs, Fun, and<br class="hidden md:block">Learning!</h2>
+                    <button class="bg-white text-blue-500 font-extrabold px-6 py-3 rounded-full text-base md:text-lg shadow-[0_4px_0_#e5e7eb] hover:translate-y-[2px] hover:shadow-[0_2px_0_#e5e7eb] active:translate-y-1 active:shadow-none transition-all">Explore Now!</button>
                 </div>
             </div>
         </div>
 
+        <!-- FEATURED VIDEO CARDS GRID (Trending Now) -->
+        <div class="px-6 py-6 pb-2 relative z-10">
+            <h2 class="text-xl font-extrabold text-gray-800 mb-4 ml-1">Trending Now</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                
+                <!-- Music -->
+                <div class="group relative rounded-3xl bg-[#ff99cd] border-[4px] border-[#e8609f] p-[4px] shadow-[0_6px_0_#d65592] hover:shadow-[0_2px_0_#d65592] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer">
+                    <div class="bg-white rounded-[20px] overflow-hidden h-56 flex flex-col">
+                        <div class="h-36 relative">
+                            <img loading="lazy" src="../images/thumb_music.png" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/10 flex flex-col items-center justify-center">
+                                <div class="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center text-white backdrop-blur-sm shadow-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-play text-lg ml-1"></i>
+                                </div>
+                            </div>
+                            <div class="absolute bottom-2 left-2 bg-white/90 backdrop-blur text-[#c2196e] font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                                Music
+                            </div>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-[#ff99cd]/20">
+                            <h3 class="font-extrabold text-[#991255] text-sm leading-tight drop-shadow-sm">Jam with the<br>Jungle Beats</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Science -->
+                <div class="group relative rounded-3xl bg-[#93c5fd] border-[4px] border-[#60a5fa] p-[4px] shadow-[0_6px_0_#3b82f6] hover:shadow-[0_2px_0_#3b82f6] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer">
+                    <div class="bg-white rounded-[20px] overflow-hidden h-56 flex flex-col">
+                        <div class="h-36 relative">
+                            <img loading="lazy" src="../images/thumb_science.png" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/10 flex flex-col items-center justify-center">
+                                <div class="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center text-white backdrop-blur-sm shadow-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-play text-lg ml-1"></i>
+                                </div>
+                            </div>
+                            <div class="absolute bottom-2 left-2 bg-white/90 backdrop-blur text-[#1e40af] font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                                Science
+                            </div>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-[#93c5fd]/20">
+                            <h3 class="font-extrabold text-[#1e3a8a] text-sm leading-tight drop-shadow-sm">Fizzing Volcano<br>Fun!</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Art -->
+                <div class="group relative rounded-3xl bg-[#fef08a] border-[4px] border-[#fde047] p-[4px] shadow-[0_6px_0_#eab308] hover:shadow-[0_2px_0_#eab308] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer">
+                    <div class="bg-white rounded-[20px] overflow-hidden h-56 flex flex-col">
+                        <div class="h-36 relative">
+                            <img loading="lazy" src="../images/thumb_art.png" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/10 flex flex-col items-center justify-center">
+                                <div class="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center text-white backdrop-blur-sm shadow-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-play text-lg ml-1"></i>
+                                </div>
+                            </div>
+                            <div class="absolute bottom-2 left-2 bg-white/90 backdrop-blur text-[#854d0e] font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                                Art
+                            </div>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-[#fef08a]/20">
+                            <h3 class="font-extrabold text-[#713f12] text-sm leading-tight drop-shadow-sm">Creative<br>Corner</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gaming -->
+                <div class="group relative rounded-3xl bg-[#86efac] border-[4px] border-[#4ade80] p-[4px] shadow-[0_6px_0_#22c55e] hover:shadow-[0_2px_0_#22c55e] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer">
+                    <div class="bg-white rounded-[20px] overflow-hidden h-56 flex flex-col">
+                        <div class="h-36 relative">
+                            <img loading="lazy" src="../images/thumb_gaming.png" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/10 flex flex-col items-center justify-center">
+                                <div class="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center text-white backdrop-blur-sm shadow-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-play text-lg ml-1"></i>
+                                </div>
+                            </div>
+                            <div class="absolute bottom-2 left-2 bg-white/90 backdrop-blur text-[#166534] font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                                Gaming
+                            </div>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-[#86efac]/20">
+                            <h3 class="font-extrabold text-[#14532d] text-sm leading-tight drop-shadow-sm">Blocky<br>Adventures</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nature -->
+                <div class="group relative rounded-3xl bg-[#d8b4fe] border-[4px] border-[#c084fc] p-[4px] shadow-[0_6px_0_#9333ea] hover:shadow-[0_2px_0_#9333ea] hover:translate-y-1 active:translate-y-2 active:shadow-none transition-all cursor-pointer">
+                    <div class="bg-white rounded-[20px] overflow-hidden h-56 flex flex-col">
+                        <div class="h-36 relative">
+                            <img loading="lazy" src="../images/thumb_nature.png" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/10 flex flex-col items-center justify-center">
+                                <div class="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center text-white backdrop-blur-sm shadow-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-play text-lg ml-1"></i>
+                                </div>
+                            </div>
+                            <div class="absolute bottom-2 left-2 bg-white/90 backdrop-blur text-[#581c87] font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                                Nature
+                            </div>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-[#d8b4fe]/20">
+                            <h3 class="font-extrabold text-[#4c1d95] text-sm leading-tight drop-shadow-sm">Animal<br>Wonders</h3>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
         <!-- QUICK GAMES SECTION -->
-        <div class="px-6 py-4">
-            <h2 class="flex items-center gap-3 text-2xl font-black text-gray-800 mb-4">
-                <i class="fa-solid fa-gamepad text-gray-700"></i> Quick Games
-            </h2>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <!-- Game 1 -->
-                <a href="games.html" class="block group">
-                    <div
-                        class="bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl p-6 text-center text-white shadow-md hover:shadow-xl hover:scale-[1.02] transition-all h-full flex flex-col items-center justify-center min-h-[160px]">
-                        <div
-                            class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center text-3xl mb-3 shadow-sm border-2 border-white/30">
-                            1 2<br>3 4
+        <div class="px-6 py-2">
+            <h2 class="text-xl font-extrabold text-gray-800 mb-4 ml-1">Quick Games</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Game 1: Math Adventure -->
+                <a href="games.html" class="group block cursor-pointer">
+                    <div class="relative bg-gradient-to-r from-[#93c5fd] to-[#60a5fa] rounded-full p-4 md:p-5 flex items-center justify-between shadow-[0_6px_0_#3b82f6] hover:translate-y-[2px] hover:shadow-[0_4px_0_#3b82f6] active:translate-y-1.5 active:shadow-none transition-all border-[3px] border-blue-200">
+                        <div class="pl-2">
+                            <h3 class="font-black text-white text-lg leading-tight tracking-tight drop-shadow-sm">Math<br>Adventure</h3>
                         </div>
-                        <h3 class="font-bold text-xl">Math Adventure</h3>
+                        <div class="w-14 h-14 bg-white/30 rounded-2xl flex items-center justify-center border-2 border-white/50 shadow-inner group-hover:rotate-6 transition-transform">
+                            <i class="fa-solid fa-calculator text-blue-900 text-2xl drop-shadow-sm"></i>
+                        </div>
                     </div>
                 </a>
-                <!-- Game 2 -->
-                <a href="games.html" class="block group">
-                    <div
-                        class="bg-gradient-to-br from-cubby-green to-emerald-500 rounded-2xl p-6 text-center text-white shadow-md hover:shadow-xl hover:scale-[1.02] transition-all h-full flex flex-col items-center justify-center min-h-[160px]">
-                        <div
-                            class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center text-3xl mb-3 shadow-sm border-2 border-white/30">
-                            <i class="fa-solid fa-pen"></i>
+                <!-- Game 2: Word Builder -->
+                <a href="games.html" class="group block cursor-pointer">
+                    <div class="relative bg-gradient-to-r from-[#86efac] to-[#4ade80] rounded-full p-4 md:p-5 flex items-center justify-between shadow-[0_6px_0_#22c55e] hover:translate-y-[2px] hover:shadow-[0_4px_0_#22c55e] active:translate-y-1.5 active:shadow-none transition-all border-[3px] border-green-200">
+                        <div class="pl-2">
+                            <h3 class="font-black text-white text-lg leading-tight tracking-tight drop-shadow-sm">Word<br>Builder</h3>
                         </div>
-                        <h3 class="font-bold text-xl">Word Builder</h3>
+                        <div class="w-14 h-14 bg-white/30 rounded-2xl flex items-center justify-center border-2 border-white/50 shadow-inner group-hover:rotate-6 transition-transform">
+                            <i class="fa-solid fa-spell-check text-green-900 text-2xl drop-shadow-sm"></i>
+                        </div>
                     </div>
                 </a>
-                <!-- Game 3 -->
-                <a href="games.html" class="block group">
-                    <div
-                        class="bg-gradient-to-br from-cubby-pink to-rose-500 rounded-2xl p-6 text-center text-white shadow-md hover:shadow-xl hover:scale-[1.02] transition-all h-full flex flex-col items-center justify-center min-h-[160px]">
-                        <div
-                            class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center text-3xl mb-3 shadow-sm border-2 border-white/30">
-                            <i class="fa-solid fa-palette"></i>
+                <!-- Game 3: Art Studio -->
+                <a href="games.html" class="group block cursor-pointer">
+                    <div class="relative bg-gradient-to-r from-[#f9a8d4] to-[#f472b6] rounded-full p-4 md:p-5 flex items-center justify-between shadow-[0_6px_0_#db2777] hover:translate-y-[2px] hover:shadow-[0_4px_0_#db2777] active:translate-y-1.5 active:shadow-none transition-all border-[3px] border-pink-200">
+                        <div class="pl-2">
+                            <h3 class="font-black text-white text-lg leading-tight tracking-tight drop-shadow-sm">Art<br>Studio</h3>
                         </div>
-                        <h3 class="font-bold text-xl">Art Studio</h3>
+                        <div class="w-14 h-14 bg-white/30 rounded-2xl flex items-center justify-center border-2 border-white/50 shadow-inner group-hover:rotate-6 transition-transform">
+                            <i class="fa-solid fa-palette text-pink-900 text-2xl drop-shadow-sm"></i>
+                        </div>
                     </div>
                 </a>
             </div>
         </div>
 
-        <!-- FILTER CHIPS (Moved Below Quick Games) -->
-        <div class="px-6 py-2 flex gap-3 overflow-x-auto no-scrollbar pb-4">
-            <button
-                class="px-6 py-2 bg-gray-900 text-white rounded-full font-bold text-sm whitespace-nowrap shadow-md hover:opacity-90 transition-opacity">All</button>
-            <button
-                class="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-full font-bold text-sm whitespace-nowrap shadow-sm hover:bg-gray-50 transition-colors">Cartoons</button>
-            <button
-                class="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-full font-bold text-sm whitespace-nowrap shadow-sm hover:bg-gray-50 transition-colors">Learning</button>
-            <button
-                class="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-full font-bold text-sm whitespace-nowrap shadow-sm hover:bg-gray-50 transition-colors">Music</button>
-            <button
-                class="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-full font-bold text-sm whitespace-nowrap shadow-sm hover:bg-gray-50 transition-colors">Minecraft</button>
+        <!-- FILTER CHIPS -->
+        <div class="px-6 py-4 flex gap-3 overflow-x-auto no-scrollbar pb-4 relative z-10">
+            <button class="px-6 py-2.5 bg-gray-800 text-white rounded-full font-bold text-sm whitespace-nowrap shadow-[0_4px_0_#374151] hover:translate-y-[1px] hover:shadow-[0_3px_0_#374151] active:translate-y-1 active:shadow-none transition-all border-2 border-gray-700">All</button>
+            <button class="px-6 py-2.5 bg-white text-gray-700 rounded-full font-bold text-sm whitespace-nowrap shadow-[0_4px_0_#e5e7eb] border-2 border-gray-100 hover:text-blue-500 hover:border-blue-200 hover:translate-y-[1px] hover:shadow-[0_3px_0_#e5e7eb] active:translate-y-1 active:shadow-none transition-all">Cartoons</button>
+            <button class="px-6 py-2.5 bg-white text-gray-700 rounded-full font-bold text-sm whitespace-nowrap shadow-[0_4px_0_#e5e7eb] border-2 border-gray-100 hover:text-blue-500 hover:border-blue-200 hover:translate-y-[1px] hover:shadow-[0_3px_0_#e5e7eb] active:translate-y-1 active:shadow-none transition-all">Learning</button>
+            <button class="px-6 py-2.5 bg-white text-gray-700 rounded-full font-bold text-sm whitespace-nowrap shadow-[0_4px_0_#e5e7eb] border-2 border-gray-100 hover:text-blue-500 hover:border-blue-200 hover:translate-y-[1px] hover:shadow-[0_3px_0_#e5e7eb] active:translate-y-1 active:shadow-none transition-all">Music</button>
+            <button class="px-6 py-2.5 bg-white text-gray-700 rounded-full font-bold text-sm whitespace-nowrap shadow-[0_4px_0_#e5e7eb] border-2 border-gray-100 hover:text-blue-500 hover:border-blue-200 hover:translate-y-[1px] hover:shadow-[0_3px_0_#e5e7eb] active:translate-y-1 active:shadow-none transition-all">Minecraft</button>
         </div>
+
+        <!-- LEARNING PATHS -->
+        <section class="px-6 pt-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="flex items-center gap-2 text-2xl font-black text-gray-800">
+                    <i class="fa-solid fa-route text-cubby-purple"></i> Learning Paths
+                </h2>
+                <span class="bg-purple-100 text-cubby-purple text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">Earn Bonus Stars!</span>
+            </div>
+
+            <div id="learning-paths-list" class="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory no-scrollbar">
+                <!-- Dynamic paths will be loaded here by kid_logic.js -->
+                <div class="py-12 text-center text-gray-500 font-bold w-full">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-cubby-purple mb-3"></i>
+                    <p>Loading your learning journey...</p>
+                </div>
+            </div>
+        </section>
 
         <!-- FEATURED FOR YOU -->
         <div class="px-6 pt-2">
@@ -370,21 +451,13 @@
                         class="fa-solid fa-arrow-trend-up text-xs"></i></a>
             </div>
 
-            <div id="kid-video-list"
-                class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div id="kid-video-list" class="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory no-scrollbar">
                 <!-- Dynamic videos will be loaded here by kid_logic.js -->
-                <div class="col-span-full py-12 text-center text-gray-500 font-bold">
+                <div class="py-12 text-center text-gray-500 font-bold w-full">
                     <i class="fa-solid fa-spinner fa-spin text-3xl text-cubby-blue mb-3"></i>
                     <p>Loading fun videos...</p>
                 </div>
             </div>
-            Virtual Zoo Tour 🦁 See Lions and Tigers!
-            </h3>
-            <p class="text-sm text-gray-500 font-bold">Nat Geo Kids</p>
-        </div>
-        </div>
-
-        </div>
         </div>
 
         <!-- CONTINUE WATCHING SECTION -->
@@ -392,76 +465,13 @@
             <h2 class="flex items-center gap-2 text-2xl font-black text-gray-800 mb-4">
                 <i class="fa-regular fa-clock text-cubby-pink"></i> Continue Watching
             </h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                <!-- CW Card 1 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 hover:shadow-lg transition-shadow cursor-pointer">
-                    <div
-                        class="aspect-video bg-cubby-purple/20 rounded-xl relative overflow-hidden flex items-center justify-center">
-                        <i class="fa-solid fa-star text-4xl text-cubby-purple rotate-12"></i>
-                        <!-- Progress Bar -->
-                        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
-                            <div class="h-full bg-cubby-blue w-1/3"></div>
-                        </div>
-                    </div>
-                    <div class="mt-2 px-1">
-                        <h3 class="font-bold text-gray-700 text-sm">Educational Content 1</h3>
-                        <p class="text-xs text-gray-400 mt-1">Continue from 5:30</p>
-                    </div>
-                </div>
-                <!-- CW Card 2 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 hover:shadow-lg transition-shadow cursor-pointer">
-                    <div
-                        class="aspect-video bg-cubby-pink/20 rounded-xl relative overflow-hidden flex items-center justify-center">
-                        <i class="fa-solid fa-shapes text-4xl text-cubby-pink -rotate-6"></i>
-                        <!-- Progress Bar -->
-                        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
-                            <div class="h-full bg-cubby-blue w-2/3"></div>
-                        </div>
-                    </div>
-                    <div class="mt-2 px-1">
-                        <h3 class="font-bold text-gray-700 text-sm">Educational Content 2</h3>
-                        <p class="text-xs text-gray-400 mt-1">Continue from 8:45</p>
-                    </div>
-                </div>
-                <!-- CW Card 3 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 hover:shadow-lg transition-shadow cursor-pointer">
-                    <div
-                        class="aspect-video bg-cubby-yellow/20 rounded-xl relative overflow-hidden flex items-center justify-center">
-                        <i class="fa-solid fa-rocket text-4xl text-cubby-yellow"></i>
-                        <!-- Progress Bar -->
-                        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
-                            <div class="h-full bg-cubby-blue w-1/2"></div>
-                        </div>
-                    </div>
-                    <div class="mt-2 px-1">
-                        <h3 class="font-bold text-gray-700 text-sm">Educational Content 3</h3>
-                        <p class="text-xs text-gray-400 mt-1">Continue from 2:15</p>
-                    </div>
-                </div>
-                <!-- CW Card 4 -->
-                <div
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 hover:shadow-lg transition-shadow cursor-pointer">
-                    <div
-                        class="aspect-video bg-cubby-green/20 rounded-xl relative overflow-hidden flex items-center justify-center">
-                        <i class="fa-solid fa-leaf text-4xl text-cubby-green rotate-45"></i>
-                        <!-- Progress Bar -->
-                        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
-                            <div class="h-full bg-cubby-blue w-3/4"></div>
-                        </div>
-                    </div>
-                    <div class="mt-2 px-1">
-                        <h3 class="font-bold text-gray-700 text-sm">Educational Content 4</h3>
-                        <p class="text-xs text-gray-400 mt-1">Continue from 10:00</p>
-                    </div>
-                </div>
+            <div id="continue-watching-list" class="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory no-scrollbar">
+                <p class="text-gray-400 font-semibold text-sm px-2">Loading...</p>
             </div>
         </div>
     </main>
 
-    <!-- KID SETTINGS MODAL -->
+    <!-- KID SETTINGS / SHOP MODAL -->
     <div id="kid-settings-modal"
         class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-7 relative max-h-[90vh] overflow-y-auto">
@@ -475,6 +485,12 @@
                     🐻
                 </div>
                 <h3 class="text-lg font-extrabold text-gray-800 mt-3">My Profile ✨</h3>
+                <!-- Star counter for the shop -->
+                <div class="mt-2 inline-flex items-center gap-2 bg-yellow-50 border-2 border-yellow-200 px-4 py-1.5 rounded-full">
+                    <i class="fa-solid fa-star text-yellow-500 text-sm animate-pulse"></i>
+                    <span class="font-black text-yellow-700 text-sm" id="shop-star-count">0</span>
+                    <span class="text-yellow-600 text-xs font-bold">Stars</span>
+                </div>
             </div>
             <div class="space-y-4">
                 <!-- Display Name -->
@@ -486,75 +502,126 @@
                 </div>
                 <!-- Avatar Color -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Avatar Color</label>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Avatar Color
+                        <span class="text-[10px] font-normal text-yellow-600 ml-1">🔒 = unlock with stars</span>
+                    </label>
                     <div id="avatar-color-grid" class="flex flex-wrap gap-2">
-                        <button onclick="pickAvatarColor('#ef4444')"
-                            class="w-8 h-8 rounded-full bg-red-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#f97316')"
-                            class="w-8 h-8 rounded-full bg-orange-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#eab308')"
-                            class="w-8 h-8 rounded-full bg-yellow-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#22c55e')"
-                            class="w-8 h-8 rounded-full bg-green-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#3b82f6')"
-                            class="w-8 h-8 rounded-full bg-blue-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#8b5cf6')"
-                            class="w-8 h-8 rounded-full bg-violet-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#ec4899')"
-                            class="w-8 h-8 rounded-full bg-pink-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
-                        <button onclick="pickAvatarColor('#14b8a6')"
-                            class="w-8 h-8 rounded-full bg-teal-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <!-- Free colors -->
+                        <button data-shop-id="color_ef4444" onclick="pickAvatarColor('color_ef4444')"
+                            class="relative w-9 h-9 rounded-full bg-red-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="color_f97316" onclick="pickAvatarColor('color_f97316')"
+                            class="relative w-9 h-9 rounded-full bg-orange-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="color_eab308" onclick="pickAvatarColor('color_eab308')"
+                            class="relative w-9 h-9 rounded-full bg-yellow-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="color_22c55e" onclick="pickAvatarColor('color_22c55e')"
+                            class="relative w-9 h-9 rounded-full bg-green-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <!-- Premium colors (50 stars) -->
+                        <button data-shop-id="color_3b82f6" onclick="pickAvatarColor('color_3b82f6')"
+                            class="relative w-9 h-9 rounded-full bg-blue-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="color_8b5cf6" onclick="pickAvatarColor('color_8b5cf6')"
+                            class="relative w-9 h-9 rounded-full bg-violet-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="color_ec4899" onclick="pickAvatarColor('color_ec4899')"
+                            class="relative w-9 h-9 rounded-full bg-pink-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="color_14b8a6" onclick="pickAvatarColor('color_14b8a6')"
+                            class="relative w-9 h-9 rounded-full bg-teal-500 hover:scale-110 transition-transform border-2 border-transparent">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
                     </div>
                 </div>
                 <!-- Avatar Icon -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Avatar Icon</label>
                     <div id="avatar-icon-grid" class="flex flex-wrap gap-2">
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (1).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (1).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (2).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (2).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (3).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (3).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (4).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (4).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (5).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (5).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (6).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (6).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (7).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (7).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (8).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (8).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (9).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (9).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (10).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (10).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (11).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (11).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (12).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (12).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (13).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (13).png" class="w-full h-full object-contain"></button>
-                        <button onclick="pickAvatarIcon('../images/avatars/icon (14).png')"
-                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img
-                                src="../images/avatars/icon (14).png" class="w-full h-full object-contain"></button>
+                        <!-- Free icons (1-4) -->
+                        <button data-shop-id="icon_1" onclick="pickAvatarIcon('icon_1')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (1).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_2" onclick="pickAvatarIcon('icon_2')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (2).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_3" onclick="pickAvatarIcon('icon_3')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (3).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_4" onclick="pickAvatarIcon('icon_4')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (4).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <!-- Premium icons 5-9 (75 stars) -->
+                        <button data-shop-id="icon_5" onclick="pickAvatarIcon('icon_5')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (5).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_6" onclick="pickAvatarIcon('icon_6')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (6).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_7" onclick="pickAvatarIcon('icon_7')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (7).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_8" onclick="pickAvatarIcon('icon_8')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (8).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_9" onclick="pickAvatarIcon('icon_9')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (9).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <!-- Premium icons 10-14 (100 stars) -->
+                        <button data-shop-id="icon_10" onclick="pickAvatarIcon('icon_10')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (10).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_11" onclick="pickAvatarIcon('icon_11')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (11).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_12" onclick="pickAvatarIcon('icon_12')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (12).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_13" onclick="pickAvatarIcon('icon_13')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (13).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
+                        <button data-shop-id="icon_14" onclick="pickAvatarIcon('icon_14')"
+                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
+                            <img loading="lazy" src="../images/avatars/icon (14).png" class="w-full h-full object-contain">
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                        </button>
                     </div>
                 </div>
-                <!-- Cover Color -->
+                <!-- Cover Color (all free) -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Cover Color</label>
                     <div class="flex flex-wrap gap-2">
@@ -581,34 +648,39 @@
                         placeholder="Tell your buddies about yourself!"></textarea>
                     <p class="text-xs text-gray-400 text-right"><span id="kid-bio-count">0</span>/100</p>
                 </div>
-                <!-- Theme Selector -->
+                <!-- Theme Selector (Sunflower is premium) -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Theme</label>
                     <div class="grid grid-cols-4 gap-2">
-                        <button onclick="pickTheme('default')"
-                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-blue-300 transition-colors">
+                        <button data-shop-id="theme_default" onclick="pickTheme('theme_default')"
+                            class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-blue-300 transition-colors">
                             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600"></div>
                             <span class="text-[10px] font-bold text-gray-500">Default</span>
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
                         </button>
-                        <button onclick="pickTheme('cherry')"
-                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-red-300 transition-colors">
+                        <button data-shop-id="theme_cherry" onclick="pickTheme('theme_cherry')"
+                            class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-red-300 transition-colors">
                             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-pink-600"></div>
                             <span class="text-[10px] font-bold text-gray-500">Cherry</span>
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
                         </button>
-                        <button onclick="pickTheme('blueberry')"
-                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-indigo-300 transition-colors">
+                        <button data-shop-id="theme_blueberry" onclick="pickTheme('theme_blueberry')"
+                            class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-indigo-300 transition-colors">
                             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600"></div>
                             <span class="text-[10px] font-bold text-gray-500">Blueberry</span>
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
                         </button>
-                        <button onclick="pickTheme('sunflower')"
-                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-yellow-300 transition-colors">
+                        <!-- Premium: Sunflower (150 stars) -->
+                        <button data-shop-id="theme_sunflower" onclick="pickTheme('theme_sunflower')"
+                            class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-yellow-300 transition-colors">
                             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500"></div>
                             <span class="text-[10px] font-bold text-gray-500">Sunflower</span>
+                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
                         </button>
                     </div>
                 </div>
                 <!-- Save -->
-                <button onclick="saveKidSettings()"
+                <button id="kid-save-btn" onclick="saveKidSettings()"
                     class="w-full py-3 bg-cubby-blue hover:bg-blue-400 text-white font-extrabold rounded-xl transition-colors shadow-md text-sm">
                     <i class="fa-solid fa-check mr-1"></i> Save My Profile!
                 </button>
@@ -644,6 +716,29 @@
         </div>
     </div>
 
+    <!-- REWARD CELEBRATION MODAL (Lottie/Particles style) -->
+    <div id="reward-celebration-modal" class="fixed inset-0 z-[10000] hidden pointer-events-none flex items-center justify-center overflow-hidden">
+        <div class="relative scale-0 transition-transform duration-500 ease-out" id="celebration-container">
+            <!-- Sparkle/Confetti elements will be injected here -->
+            <div class="bg-white rounded-3xl shadow-2xl p-8 text-center relative pointer-events-auto border-4 border-cubby-yellow">
+                <div class="w-24 h-24 bg-cubby-yellow rounded-full flex items-center justify-center text-5xl mx-auto mb-4 shadow-lg animate-bounce">
+                    <i class="fa-solid fa-star text-white"></i>
+                </div>
+                <h2 class="text-3xl font-black text-gray-800 mb-2">You're a Rockstar! 🌟</h2>
+                <p class="text-xl font-bold text-cubby-blue" id="reward-message">+10 Stars Earned!</p>
+                <div class="mt-6 flex justify-center">
+                    <button onclick="document.getElementById('reward-celebration-modal').classList.add('hidden')"
+                        class="bg-cubby-blue hover:bg-blue-500 text-white font-black px-8 py-3 rounded-2xl shadow-md transition-all active:scale-95">
+                        Awesome!
+                    </button>
+                </div>
+            </div>
+            <!-- Decorative particles -->
+            <div class="absolute -top-10 -left-10 w-20 h-20 bg-cubby-pink/20 rounded-full blur-xl animate-pulse"></div>
+            <div class="absolute -bottom-10 -right-10 w-20 h-20 bg-cubby-yellow/20 rounded-full blur-xl animate-pulse"></div>
+        </div>
+    </div>
+
     <!-- Appwrite & Data -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
     <script src="../js/appwrite_config.js"></script>
@@ -657,3 +752,5 @@
 </body>
 
 </html>
+
+

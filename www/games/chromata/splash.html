@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Project Chromata</title>
+    <link rel="icon" href="src/assets/images/icon.png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000000;
+        }
+
+        canvas {
+            display: block;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+</head>
+
+<body>
+    <script>
+
+        // if (window.electronAPI && window.electronAPI.loadSetting('splashSeen')) {
+        //     window.location.href = "index.html";
+        // } else if (localStorage.getItem('projectChromataSplashSeen') === 'true') { // Fallback for web version
+        //     window.location.href = "index.html";
+        // }
+        // --- Configuration ---
+        // =================================================================
+        // EDIT COLORS HERE
+        // You can change the hex codes for any color.
+        // =================================================================
+        const GAME_COLORS = {
+            red: '#e74c3c',
+            orange: '#e67e22',
+            yellow: '#f1c40f',
+            green: '#2ecc71',
+            cyan: '#00FFFF',
+            blue: '#3498db',
+            purple: '#9b59b6',
+            magenta: '#FF00FF',
+            white: '#FFFFFF',
+            amber: '#f39c12'
+        };
+
+        // --- Animation Control ---
+        const animationOrder = ['red', 'yellow', 'blue', 'orange', 'green', 'purple', 'cyan', 'amber', 'magenta', 'white'];
+        const timePerStep = 2500;
+        const textRevealTime = 1000;
+        const startDelay = 1000;
+        let skipInitiated = false;
+
+        // =================================================================
+        // EDIT FADE-OUT SPEED HERE
+        // This is the duration of the final fade to black, in milliseconds.
+        // =================================================================
+        const pauseBeforeFade = 500; // 1000ms = 1 second
+        const fadeOutTime = 4000;
+
+        const totalAnimationTime = animationOrder.length * timePerStep;
+        // This marks the time when the text is fully revealed
+        const animationEndTime = startDelay + totalAnimationTime + textRevealTime;
+        // This is when the fade-out will begin
+        const fadeOutStartTime = animationEndTime + pauseBeforeFade;
+        // This is the time when the fade out will be complete
+        const totalDuration = animationEndTime + fadeOutTime + 2000;
+
+
+        // --- Global State ---
+        let startTime;
+        const circles = {};
+        let logoText = "PROJECT CHROMATA";
+
+        // =================================================================
+        // EDIT VERTICAL POSITION HERE
+        // Increasing this number moves the entire animation further UP.
+        // Decreasing it (e.g., to negative numbers) moves it DOWN.
+        // =================================================================
+        const verticalOffset = 100;
+
+
+        // --- P5.js Functions ---
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            noStroke();
+            colorMode(RGB);
+
+            recalculateLayout(); // Initial placement of circles
+
+            startTime = millis();
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+            recalculateLayout(); // Recalculates positions based on new size
+        }
+
+        function draw() {
+            background(0);
+            const elapsedTime = millis() - startTime;
+
+            const animationTime = elapsedTime - startDelay;
+            if (animationTime < 0) return;
+
+            const currentStep = animationTime / timePerStep;
+
+            drawAllCircles(currentStep);
+            drawSkipPrompt(elapsedTime); // Draw the skip prompt
+
+            if (animationTime > totalAnimationTime) {
+                drawTextReveal(animationTime - totalAnimationTime);
+            }
+
+            // After the main animation and text reveal are finished, start fading.
+            if (elapsedTime > fadeOutStartTime) {
+                // Calculate the progress of the fade (a number from 0 to 1)
+                const fadeProgress = (elapsedTime - fadeOutStartTime) / fadeOutTime;
+                // Map the progress to an alpha value (0 to 255)
+                const alpha = min(255, 255 * fadeProgress);
+
+                // Draw a black rectangle over the entire screen with increasing opacity.
+                background(0, alpha);
+            }
+
+            // Once the total duration (including the fade) has passed, redirect.
+            if (elapsedTime > totalDuration) {
+                if (window.electronAPI) {
+                    window.electronAPI.saveSetting('splashSeen', true);
+                } else {
+                    localStorage.setItem('projectChromataSplashSeen', 'true'); // Fallback for web version
+                }
+                window.location.href = "game.html";
+            }
+        }
+
+        function easeOutCubic(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
+
+        function drawAllCircles(currentStep, isFinished = false) {
+            for (let i = 0; i < animationOrder.length; i++) {
+                const name = animationOrder[i];
+                const c = circles[name];
+                let progress = 0;
+
+                if (!c) continue;
+
+                if (isFinished || currentStep > i + 1) {
+                    progress = 1;
+                } else if (currentStep > i) {
+                    progress = easeOutCubic(currentStep - i);
+                }
+
+                if (progress > 0) {
+                    const fillHeight = c.radius * 2 * progress;
+
+                    drawingContext.save();
+
+                    // Create the circular clipping path
+                    drawingContext.beginPath();
+                    drawingContext.arc(c.x, c.y, c.radius, 0, TWO_PI);
+                    drawingContext.clip();
+
+                    // Define the fill color
+                    let finalColor = color(c.color);
+                    if (name === 'magenta') {
+                        finalColor.setAlpha(180);
+                    }
+                    drawingContext.fillStyle = finalColor.toString();
+
+                    // Draw the rectangle that fills the circle
+                    drawingContext.fillRect(c.x - c.radius, c.y + c.radius - fillHeight, c.radius * 2, fillHeight);
+
+                    drawingContext.restore();
+                }
+            }
+        }
+
+
+        function drawTextReveal(elapsedTime) {
+            const textProgress = easeOutCubic(min(1, elapsedTime / textRevealTime));
+
+            const textY = (height / 2 - verticalOffset) + min(width, height) * 0.35;
+            const neonTeal = '#00FFFF';
+
+            push();
+            textFont('Exo 2');
+            const baseSize = min(width, height) * 0.05;
+            textSize(baseSize);
+            textAlign(CENTER, CENTER);
+
+            drawingContext.shadowBlur = 15;
+            drawingContext.shadowColor = neonTeal;
+
+            fill(neonTeal);
+
+            drawingContext.globalAlpha = textProgress;
+            text(logoText, width / 2, textY);
+
+            drawingContext.globalAlpha = 1.0;
+            drawingContext.shadowBlur = 0;
+            pop();
+        }
+
+        function recalculateLayout() {
+            // 1. Recalculate Geometry Constants
+            const outerRadius = min(width, height) * 0.12;
+            const orbitRadius = outerRadius * 1.5;
+            const verticalOffset = 100; // Must match the global constant value
+
+            // 2. Define the static angular and ratio data
+            const layoutOrder = {
+                'red': { angle: -HALF_PI, radius: outerRadius, orbit: orbitRadius },
+                'orange': { angle: -HALF_PI + TWO_PI / 8, radius: outerRadius, orbit: orbitRadius },
+                'amber': { angle: -HALF_PI + 2 * TWO_PI / 8, radius: outerRadius, orbit: orbitRadius },
+                'yellow': { angle: -HALF_PI + 3 * TWO_PI / 8, radius: outerRadius, orbit: orbitRadius },
+                'purple': { angle: -HALF_PI + 4 * TWO_PI / 8, radius: outerRadius, orbit: orbitRadius },
+                'green': { angle: -HALF_PI + 5 * TWO_PI / 8, radius: outerRadius, orbit: orbitRadius },
+                'cyan': { angle: -HALF_PI + 6 * TWO_PI / 8, radius: outerRadius, orbit: orbitRadius },
+                'blue': { angle: -HALF_PI + 7 * TWO_PI / 8, radius: outerRadius, orbit: orbitRadius },
+                'magenta': { angle: 0, radius: outerRadius * 0.9, orbit: 0 },
+                'white': { angle: 0, radius: outerRadius * 0.25, orbit: 0 }
+            };
+
+            // 3. Update the global 'circles' object
+            for (const name in layoutOrder) {
+                const layout = layoutOrder[name];
+                // Ensure color and name properties are preserved across recalculations
+                if (!circles[name]) {
+                    circles[name] = { color: GAME_COLORS[name], name: name };
+                }
+
+                // Update size-dependent properties
+                circles[name].x = width / 2 + cos(layout.angle) * layout.orbit;
+                circles[name].y = (height / 2 - verticalOffset) + sin(layout.angle) * layout.orbit;
+                circles[name].radius = layout.radius;
+            }
+        }
+
+        function drawSkipPrompt(elapsedTime) {
+            // Only draw the prompt before the fade-out starts
+            if (elapsedTime >= fadeOutStartTime) return;
+
+            // Use a slow sine wave for a subtle pulse effect
+            const alpha = map(sin(frameCount * 0.05), -1, 1, 100, 255);
+            const textY = height - 20;
+            const textX = 20;
+            const baseSize = min(width, height) * 0.02;
+
+            push();
+            textFont('Exo 2');
+            textSize(baseSize);
+            textAlign(LEFT, CENTER);
+            fill(255, 255, 255, alpha); // White color with pulsing alpha
+            noStroke();
+            text("PRESS ANY KEY TO SKIP", textX, textY);
+            pop();
+        }
+
+        function skipAnimation() {
+            // Check if the skip has already been initiated or if the animation is done
+            if (skipInitiated || millis() > fadeOutStartTime) return;
+            skipInitiated = true;
+            // This instantly triggers the fade-out logic in the next draw cycle.
+            startTime = millis() - fadeOutStartTime;
+        }
+
+        function keyPressed() {
+            // Skip if any key is pressed
+            skipAnimation();
+        }
+
+        function mouseClicked() {
+            // Skip if left or right mouse button is clicked
+            if (mouseButton === LEFT || mouseButton === RIGHT) {
+                skipAnimation();
+            }
+        }
+
+    </script>
+</body>
+
+</html>

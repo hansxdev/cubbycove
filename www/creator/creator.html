@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Creator Studio - CubbyCove</title>
     <link rel="icon" type="image/png" href="../images/closedlogo.png">
 
@@ -27,7 +27,7 @@
     <link rel="stylesheet" href="../css/staff_theme.css">
 </head>
 
-<body class="bg-gray-100 text-gray-800 font-sans antialiased">
+<body class="bg-[#F7F9FC] text-gray-800 font-sans antialiased">
 
     <div class="flex h-screen overflow-hidden">
 
@@ -37,59 +37,88 @@
 
         <!-- SIDEBAR -->
         <aside
-            class="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:relative lg:transform-none z-50"
+            class="fixed inset-y-0 left-0 w-64 bg-[#0A2540] flex flex-col flex-shrink-0 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:relative lg:transform-none z-50 overflow-hidden"
             id="sidebar">
-            <div class="h-16 flex items-center justify-between px-4 border-b border-gray-100 bg-orange-500 text-white">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-video text-xl"></i>
-                    <span class="text-lg font-bold tracking-wide">Creator Studio</span>
+            <div class="h-16 flex items-center justify-between px-6 py-8 mt-2 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#0A2540]">
+                        <i class="fa-solid fa-c font-bold text-lg"></i>
+                    </div>
+                    <span class="text-xl font-bold tracking-wide text-white">Creator Studio</span>
                 </div>
-                <button class="lg:hidden text-white/80 hover:text-white p-1" onclick="toggleCreatorSidebar()">
+                <button class="lg:hidden text-gray-400 hover:text-white p-1" onclick="toggleCreatorSidebar()">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
-            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+            <div class="px-6 pb-6 pt-2">
+                <!-- User Profile Card -->
+                <div class="bg-white/10 rounded-xl p-3 flex items-center justify-between cursor-pointer hover:bg-white/15 transition-colors border border-white/5 shadow-sm">
+                    <div class="flex items-center gap-3">
+                       <img loading="lazy" id="creator-header-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Creator" class="w-10 h-10 rounded-full border border-white/20">
+                       <div>
+                           <div id="creator-header-name" class="text-sm font-bold text-white leading-tight mb-0.5 max-w-[100px] truncate">Creator</div>
+                           <div class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Playful Pro</div>
+                       </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-gray-400 text-xs text-white/50"></i>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 py-2 space-y-1 overflow-y-auto no-scrollbar">
+                <!-- DASHBOARD -->
+                <div class="mb-2 px-3 mt-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Dashboard</div>
+                <a href="#" onclick="showTab('overview')" id="nav-overview" class="flex items-center gap-3 px-3 py-2.5 text-gray-400 hover:text-white rounded-lg font-bold transition-all group">
+                    <i class="fa-solid fa-border-all w-5 text-center group-hover:text-white transition-colors"></i> Overview
+                </a>
+
+                <!-- CONTENT -->
+                <div class="mb-2 px-3 mt-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Content</div>
                 <a href="#" onclick="showTab('uploads')" id="nav-uploads"
-                    class="flex items-center gap-3 px-4 py-3 bg-orange-50 text-orange-600 rounded-lg font-bold border-l-4 border-orange-500 transition-all">
-                    <i class="fa-solid fa-upload w-5 text-center"></i> My Uploads
+                    class="flex items-center gap-3 px-3 py-2.5 bg-white/10 text-white rounded-lg font-bold transition-all shadow-sm border border-white/5">
+                    <i class="fa-solid fa-play w-5 text-center text-white"></i> My Uploads
                 </a>
                 <a href="#" onclick="showTab('new')" id="nav-new"
-                    class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
-                    <i class="fa-solid fa-plus w-5 text-center"></i> New Video
+                    class="flex items-center gap-3 px-3 py-2.5 text-gray-400 hover:text-white rounded-lg font-bold transition-all group">
+                    <i class="fa-solid fa-circle-plus w-5 text-center group-hover:text-white transition-colors"></i> New Video
                 </a>
+
+                <!-- ANALYTICS -->
+                <div class="mb-2 px-3 mt-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Analytics</div>
                 <a href="#" onclick="showTab('statistics')" id="nav-statistics"
-                    class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-lg font-semibold border-l-4 border-transparent hover:border-gray-300 transition-all">
-                    <i class="fa-solid fa-chart-line w-5 text-center"></i> Statistics
+                    class="flex items-center gap-3 px-3 py-2.5 text-gray-400 hover:text-white rounded-lg font-bold transition-all group">
+                    <i class="fa-solid fa-chart-simple w-5 text-center group-hover:text-white transition-colors"></i> Statistics
+                </a>
+
+                <!-- COMMUNITY -->
+                <div class="mb-2 px-3 mt-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Community</div>
+                <a href="#" onclick="showTab('paths')" id="nav-paths"
+                    class="flex items-center gap-3 px-3 py-2.5 text-gray-400 hover:text-white rounded-lg font-bold transition-all group">
+                    <i class="fa-solid fa-graduation-cap w-5 text-center group-hover:text-white transition-colors"></i> Learning Paths
                 </a>
             </nav>
 
-            <div class="p-4 border-t border-gray-100">
+            <div class="p-4 border-t border-white/10 mt-2">
                 <a href="../index.html"
-                    class="flex items-center gap-3 text-gray-400 hover:text-red-500 transition-colors font-bold text-sm">
-                    <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+                    class="flex items-center gap-3 px-4 py-2 text-gray-500 hover:text-red-400 transition-colors font-bold text-sm">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out
                 </a>
             </div>
         </aside>
 
         <!-- MAIN CONTENT -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-
-            <!-- HEADER -->
-            <header
-                class="h-16 bg-white shadow-sm flex items-center justify-between px-4 sm:px-6 z-10 border-b border-gray-100">
-                <div class="flex items-center gap-3">
-                    <button class="text-gray-500 hover:text-orange-500 focus:outline-none lg:hidden"
-                        onclick="toggleCreatorSidebar()">
-                        <i class="fa-solid fa-bars text-xl"></i>
-                    </button>
-                    <h2 class="text-lg font-bold text-gray-700" id="page-title">My Content</h2>
-                </div>
-                <div class="flex items-center gap-2">
-                    <img id="creator-header-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Creator"
-                        class="w-8 h-8 rounded-full border border-gray-200">
-                    <span id="creator-header-name"
-                        class="text-sm font-bold text-gray-600 hidden sm:block">Loading...</span>
+        <div class="flex-1 flex flex-col overflow-hidden bg-[#F8FAFC]">
+            
+            <!-- Mobile Header Only -->
+            <header class="lg:hidden h-16 bg-white border-b border-gray-100 flex items-center px-4 z-10 flex-shrink-0 shadow-sm">
+                <button class="text-gray-500 hover:text-orange-500 focus:outline-none" onclick="toggleCreatorSidebar()">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <div class="ml-4 flex items-center gap-2">
+                    <div class="w-6 h-6 bg-[#0A2540] rounded-full flex items-center justify-center text-white">
+                        <i class="fa-solid fa-c font-bold text-[10px]"></i>
+                    </div>
+                    <span class="font-bold text-gray-800">Creator Studio</span>
                 </div>
             </header>
 
@@ -97,33 +126,130 @@
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 sm:p-6 relative">
 
                 <!-- ═════════════════════════════════════════
-                     TAB 1: MY UPLOADS
+                     TAB 0: OVERVIEW
                 ═════════════════════════════════════════ -->
-                <div id="tab-uploads" class="space-y-6 max-w-5xl mx-auto">
+                <div id="tab-overview" class="space-y-6 max-w-6xl mx-auto">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-2xl font-black text-gray-800">Creator Studio</h2>
+                    </div>
 
-                    <!-- Stats Bar -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center">
-                            <span class="text-2xl font-bold text-gray-800" id="stat-live">0</span>
-                            <p class="text-xs text-gray-400 uppercase">Live Videos</p>
+                    <!-- 3 Top Stats -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+                        <!-- Live Videos -->
+                        <div class="bg-[#EFF6FF] p-4 rounded-3xl shadow-sm border border-[#DBEAFE] flex items-center gap-4 hover:shadow-md transition-shadow">
+                            <div class="w-14 h-14 rounded-2xl bg-[#3B82F6] text-white flex items-center justify-center text-2xl shadow-sm">
+                                <i class="fa-solid fa-tower-broadcast"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Live Videos</p>
+                                <h3 class="text-2xl font-black text-gray-800 mt-0.5" id="overview-stat-live">0</h3>
+                            </div>
                         </div>
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center">
-                            <span class="text-2xl font-bold text-yellow-500" id="stat-pending">0</span>
-                            <p class="text-xs text-gray-400 uppercase">Pending Review</p>
+                        <!-- Pending Review -->
+                        <div class="bg-[#FFF7ED] p-4 rounded-3xl shadow-sm border border-[#FFEDD5] flex items-center gap-4 hover:shadow-md transition-shadow">
+                            <div class="w-14 h-14 rounded-2xl bg-[#F97316] text-white flex items-center justify-center text-2xl shadow-sm">
+                                <i class="fa-solid fa-file-invoice"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Pending Review</p>
+                                <h3 class="text-2xl font-black text-gray-800 mt-0.5" id="overview-stat-pending">0</h3>
+                            </div>
                         </div>
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center">
-                            <span class="text-2xl font-bold text-cubby-blue" id="stat-total-views">0</span>
-                            <p class="text-xs text-gray-400 uppercase">Total Views</p>
+                        <!-- Total Views -->
+                        <div class="bg-[#EFF6FF] p-4 rounded-3xl shadow-sm border border-[#DBEAFE] flex items-center gap-4 hover:shadow-md transition-shadow">
+                            <div class="w-14 h-14 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center text-2xl shadow-sm">
+                                <i class="fa-solid fa-eye"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Views</p>
+                                <h3 class="text-2xl font-black text-gray-800 mt-0.5" id="overview-stat-views">0</h3>
+                            </div>
                         </div>
                     </div>
 
+                    <!-- Line Charts -->
+                    <div>
+                        <h3 class="text-lg font-black text-gray-800 mb-4">Statistics</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 p-6 flex flex-col">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h4 class="text-sm font-black text-gray-800">Subscribers Gained</h4>
+                                    <div class="text-[10px] font-bold text-gray-400 flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
+                                        <span class="w-2.5 h-1 rounded flex bg-[#F97316]"></span> Subscribers Gained
+                                    </div>
+                                </div>
+                                <div class="w-full h-[180px] relative"><canvas id="overviewChartSubs"></canvas></div>
+                            </div>
+                            <div class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 p-6 flex flex-col">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h4 class="text-sm font-black text-gray-800">Total Views</h4>
+                                    <div class="text-[10px] font-bold text-gray-400 flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
+                                        <span class="w-2.5 h-1 rounded flex bg-[#3B82F6]"></span> Total Views
+                                    </div>
+                                </div>
+                                <div class="w-full h-[180px] relative"><canvas id="overviewChartViews"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Row: Upload & Carousel -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
+                        <!-- Upload New Content Widget -->
+                        <div class="bg-white rounded-[2rem] shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-gray-100 p-8 flex flex-col justify-center text-center">
+                            <div class="w-16 h-16 bg-blue-50 text-blue-400 rounded-full mx-auto flex items-center justify-center text-3xl mb-4 border border-blue-100">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <h3 class="font-black text-gray-800 text-lg mb-1">Upload New Content</h3>
+                            <p class="text-[11px] font-bold text-gray-400 mb-6 px-4">Your video will be reviewed by our safety team before going live</p>
+                            
+                            <!-- Mock Inputs -->
+                            <div class="flex gap-2 mb-4">
+                                <div class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-left text-xs text-gray-400 font-semibold cursor-not-allowed">Video Source (YouTube URL)</div>
+                                <button onclick="showTab('new')" class="bg-[#0A2540] hover:bg-[#1A365D] text-white font-bold px-4 py-2 rounded-xl text-xs whitespace-nowrap transition-colors shadow-sm">Upload from Device</button>
+                            </div>
+                            <div class="flex gap-2 mb-6">
+                                <div class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-left text-xs text-gray-400 font-semibold cursor-not-allowed">Title</div>
+                                <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-left text-xs text-gray-400 font-semibold cursor-not-allowed w-28 flex justify-between items-center">Category <i class="fa-solid fa-chevron-down ml-1 text-[10px]"></i></div>
+                            </div>
+
+                            <button onclick="showTab('new')" class="bg-[#F97316] hover:bg-[#EA580C] text-white font-black py-3 rounded-2xl shadow-md transition-all text-sm w-full tracking-wide">
+                                Submit for Review
+                            </button>
+                        </div>
+
+                        <!-- Content Carousel -->
+                        <div class="lg:col-span-2 flex flex-col">
+                            <div class="flex justify-between items-center mb-4 px-1">
+                                <h3 class="text-lg font-black text-gray-800">Content Carousel</h3>
+                                <div class="flex gap-2">
+                                    <button class="w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-800 shadow-sm transition-colors"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                                    <button class="w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-800 shadow-sm transition-colors"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+                                </div>
+                            </div>
+                            <div class="flex gap-4 overflow-x-auto no-scrollbar pb-4 flex-1 items-stretch" id="overview-carousel">
+                                <div class="flex items-center justify-center w-full h-48 bg-gray-50 rounded-2xl border border-gray-100 border-dashed text-gray-400 font-bold text-sm">
+                                    <i class="fa-solid fa-circle-notch fa-spin mr-2 text-xl"></i> Loading Carousel...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═════════════════════════════════════════
+                     TAB 1: MY UPLOADS
+                ═════════════════════════════════════════ -->
+                <div id="tab-uploads" class="hidden space-y-6 max-w-5xl mx-auto">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-2xl font-black text-gray-800">My Uploads</h2>
+                    </div>
+
                     <!-- Sort/Filter Controls -->
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <h3 class="font-bold text-gray-700">Your Videos</h3>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="font-bold text-gray-600"><i class="fa-solid fa-video mr-2 text-orange-400"></i>Your Videos</h3>
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-bold text-gray-400">Sort by:</span>
                             <select id="video-sort"
-                                class="text-xs bg-white border border-gray-200 rounded-lg px-3 py-2 font-bold text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-400">
+                                class="text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-bold text-gray-600 focus:outline-none focus:border-orange-400 transition-colors cursor-pointer">
                                 <option value="recent">Most Recent</option>
                                 <option value="views">Most Viewed</option>
                                 <option value="likes">Most Liked</option>
@@ -146,7 +272,7 @@
                      TAB 2: UPLOAD NEW VIDEO
                 ═════════════════════════════════════════ -->
                 <div id="tab-new" class="hidden max-w-3xl mx-auto">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
+                    <div class="bg-white rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.04)] border border-gray-200 border border-gray-200 p-6 sm:p-8">
                         <div class="text-center mb-8">
                             <div
                                 class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 text-orange-500">
@@ -200,6 +326,34 @@
                                 </select>
                             </div>
 
+                            <!-- Custom Thumbnail Upload (Optional) -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Custom Thumbnail
+                                    <span class="text-gray-400 normal-case">(optional)</span></label>
+                                <div class="flex items-center gap-4">
+                                    <div id="thumbnail-preview"
+                                        class="w-32 h-20 bg-[#F7F9FC] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:border-orange-400 transition-colors"
+                                        onclick="document.getElementById('thumbnailFile').click()">
+                                        <div id="thumbnail-placeholder" class="text-center">
+                                            <i class="fa-solid fa-image text-gray-300 text-xl"></i>
+                                            <p class="text-[10px] text-gray-400 mt-1">Click to upload</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <input type="file" id="thumbnailFile"
+                                            accept="image/png, image/jpeg, image/jpg, image/webp" class="hidden"
+                                            onchange="previewThumbnail(this)">
+                                        <p class="text-xs text-gray-400 font-semibold">Upload a custom thumbnail for
+                                            your video. If left empty, we'll auto-generate from the video.</p>
+                                        <button type="button" id="clear-thumbnail-btn"
+                                            class="hidden text-xs text-red-400 hover:text-red-600 font-bold mt-1"
+                                            onclick="clearThumbnailPreview()">
+                                            <i class="fa-solid fa-times mr-1"></i>Remove thumbnail
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <button type="submit"
                                 class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg shadow-md shadow-orange-200 transition-all mt-4">
                                 Submit for Review
@@ -211,97 +365,154 @@
                 <!-- ═════════════════════════════════════════
                      TAB 3: STATISTICS
                 ═════════════════════════════════════════ -->
-                <div id="tab-statistics" class="hidden space-y-6 max-w-5xl mx-auto">
-
-                    <!-- Counter Cards -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase">Current Subscribers</p>
-                                    <h3 id="stats-subscribers" class="text-2xl font-black text-gray-800 mt-1">0</h3>
-                                </div>
-                                <div
-                                    class="w-10 h-10 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center">
-                                    <i class="fa-solid fa-users"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase">Total Views</p>
-                                    <h3 id="stats-total-views" class="text-2xl font-black text-gray-800 mt-1">0</h3>
-                                </div>
-                                <div
-                                    class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
-                                    <i class="fa-solid fa-eye"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase">Total Likes</p>
-                                    <h3 id="stats-total-likes" class="text-2xl font-black text-green-600 mt-1">0</h3>
-                                </div>
-                                <div
-                                    class="w-10 h-10 bg-green-50 text-green-500 rounded-xl flex items-center justify-center">
-                                    <i class="fa-solid fa-thumbs-up"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase">Total Dislikes</p>
-                                    <h3 id="stats-total-dislikes" class="text-2xl font-black text-red-500 mt-1">0</h3>
-                                </div>
-                                <div
-                                    class="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
-                                    <i class="fa-solid fa-thumbs-down"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Period Filter -->
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-bold text-gray-400 uppercase">Period:</span>
-                        <div class="flex bg-gray-100 rounded-lg p-0.5 text-xs font-bold">
+                <div id="tab-statistics" class="hidden space-y-6 max-w-6xl mx-auto">
+                    
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
+                        <h2 class="text-2xl font-black text-gray-800">Statistics</h2>
+                        <!-- Period Filter -->
+                        <div class="flex bg-white rounded-lg p-1 shadow-sm border border-gray-200 text-xs font-bold">
                             <button onclick="setStatsPeriod('day')" id="stats-period-day"
-                                class="stats-period-btn px-3 py-1.5 rounded-md bg-orange-500 text-white transition-colors">Day</button>
+                                class="stats-period-btn px-4 py-2 rounded-md bg-white text-gray-800 shadow-sm transition-all border border-gray-100">Day</button>
                             <button onclick="setStatsPeriod('week')" id="stats-period-week"
-                                class="stats-period-btn px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors">Week</button>
+                                class="stats-period-btn px-4 py-2 rounded-md text-gray-500 hover:text-gray-700 transition-all border border-transparent">Week</button>
                             <button onclick="setStatsPeriod('month')" id="stats-period-month"
-                                class="stats-period-btn px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors">Month</button>
+                                class="stats-period-btn px-4 py-2 rounded-md text-gray-500 hover:text-gray-700 transition-all border border-transparent">Month</button>
                         </div>
                     </div>
 
-                    <!-- Charts Grid -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <h3 class="text-sm font-black text-gray-800 mb-0 -mt-2">Quick Stat</h3>
+                    
+                    <!-- Counter Cards with Sparklines -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative group hover:shadow-md transition-shadow">
+                            <div class="p-5 pb-0">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-600">
+                                        <i class="fa-solid fa-user"></i>
+                                    </div>
+                                    <p class="text-xs font-bold text-gray-500">Subscribers</p>
+                                </div>
+                                <div class="flex items-end gap-2 mb-4 relative z-10">
+                                    <h3 id="stats-subscribers" class="text-2xl font-black text-gray-800">0</h3>
+                                    <span class="text-[10px] font-bold text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full mb-1">+2.4%</span>
+                                </div>
+                            </div>
+                            <div class="h-10 w-full"><canvas id="sparkSubs"></canvas></div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative group hover:shadow-md transition-shadow">
+                            <div class="p-5 pb-0">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-600">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </div>
+                                    <p class="text-xs font-bold text-gray-500">Views</p>
+                                </div>
+                                <div class="flex items-end gap-2 mb-4 relative z-10">
+                                    <h3 id="stats-total-views" class="text-2xl font-black text-gray-800">0</h3>
+                                    <span class="text-[10px] font-bold text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full mb-1">+1.5%</span>
+                                </div>
+                            </div>
+                            <div class="h-10 w-full"><canvas id="sparkViews"></canvas></div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative group hover:shadow-md transition-shadow">
+                            <div class="p-5 pb-0">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-600">
+                                        <i class="fa-regular fa-thumbs-up"></i>
+                                    </div>
+                                    <p class="text-xs font-bold text-gray-500">Likes</p>
+                                </div>
+                                <div class="flex items-end gap-2 mb-4 relative z-10">
+                                    <h3 id="stats-total-likes" class="text-2xl font-black text-gray-800">0</h3>
+                                    <span class="text-[10px] font-bold text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full mb-1">+0.8%</span>
+                                </div>
+                            </div>
+                            <div class="h-10 w-full"><canvas id="sparkLikes"></canvas></div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative group hover:shadow-md transition-shadow">
+                            <div class="p-5 pb-0">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-600">
+                                        <i class="fa-regular fa-thumbs-down"></i>
+                                    </div>
+                                    <p class="text-xs font-bold text-gray-500">Dislikes</p>
+                                </div>
+                                <div class="flex items-end gap-2 mb-4 relative z-10">
+                                    <h3 id="stats-total-dislikes" class="text-2xl font-black text-gray-800">0</h3>
+                                    <span class="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full mb-1">-1.1%</span>
+                                </div>
+                            </div>
+                            <div class="h-10 w-full"><canvas id="sparkDislikes"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Main Charts Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <!-- Subscribers Gained Chart -->
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                            <h4 class="text-sm font-bold text-gray-600 mb-3">
-                                <i class="fa-solid fa-user-plus text-orange-400 mr-1"></i> Subscribers Gained
-                            </h4>
-                            <div style="height: 220px;"><canvas id="chartSubscribers"></canvas></div>
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
+                            <div class="flex justify-between items-center mb-6">
+                                <h4 class="text-sm font-black text-gray-800">Subscribers Gained</h4>
+                                <div class="border border-gray-200 rounded text-xs px-2 py-1 text-gray-500 font-semibold cursor-pointer flex items-center gap-1 hover:bg-gray-50">
+                                    Last 30 Days <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                                </div>
+                            </div>
+                            <div class="w-full h-[220px] relative"><canvas id="chartSubscribers"></canvas></div>
                         </div>
 
                         <!-- Total Views Chart -->
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                            <h4 class="text-sm font-bold text-gray-600 mb-3">
-                                <i class="fa-solid fa-eye text-blue-400 mr-1"></i> Total Views
-                            </h4>
-                            <div style="height: 220px;"><canvas id="chartViews"></canvas></div>
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
+                            <div class="flex justify-between items-center mb-6">
+                                <h4 class="text-sm font-black text-gray-800">Total Views</h4>
+                                <div class="border border-gray-200 rounded text-xs px-2 py-1 text-gray-500 font-semibold cursor-pointer flex items-center gap-1 hover:bg-gray-50">
+                                    Last 30 Days <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                                </div>
+                            </div>
+                            <div class="w-full h-[220px] relative"><canvas id="chartViews"></canvas></div>
                         </div>
 
                         <!-- Likes vs Dislikes Chart -->
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 lg:col-span-2">
-                            <h4 class="text-sm font-bold text-gray-600 mb-3">
-                                <i class="fa-solid fa-heart text-pink-400 mr-1"></i> Likes vs Dislikes
-                            </h4>
-                            <div style="height: 220px;"><canvas id="chartLikesDislikes"></canvas></div>
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
+                            <div class="flex justify-between items-center mb-6">
+                                <h4 class="text-sm font-black text-gray-800">Likes vs Dislikes</h4>
+                                <div class="flex items-center gap-4">
+                                    <div class="flex items-center gap-3 text-xs font-bold">
+                                        <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-green-500"></span><span class="text-gray-600">Likes</span></div>
+                                        <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-red-500"></span><span class="text-gray-600">Dislikes</span></div>
+                                    </div>
+                                    <div class="border border-gray-200 rounded text-xs px-2 py-1 text-gray-500 font-semibold cursor-pointer flex items-center gap-1 hover:bg-gray-50">
+                                        Last 30 Days <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="w-full h-[220px] relative"><canvas id="chartLikesDislikes"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═════════════════════════════════════════
+                     TAB 4: LEARNING PATHS
+                ═════════════════════════════════════════ -->
+                <div id="tab-paths" class="hidden space-y-6 max-w-5xl mx-auto">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">Learning Paths</h3>
+                            <p class="text-sm text-gray-500">Group your videos into structured journeys for kids.</p>
+                        </div>
+                        <button onclick="openCreatePathModal()"
+                            class="bg-[#0A2540] hover:bg-purple-600 text-white px-5 py-2.5 rounded-lg font-bold text-sm flex items-center gap-2 shadow-md shadow-purple-100 transition-all active:scale-95">
+                            <i class="fa-solid fa-plus"></i> Create New Path
+                        </button>
+                    </div>
+
+                    <!-- Paths List -->
+                    <div id="paths-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Dynamic: Path Cards -->
+                        <div class="col-span-full py-20 text-center text-gray-400 font-bold bg-white rounded-lg border-2 border-dashed border-gray-100">
+                            <i class="fa-solid fa-route text-4xl mb-3 opacity-20"></i>
+                            <p>No learning paths yet. Start building one!</p>
                         </div>
                     </div>
                 </div>
@@ -311,11 +522,90 @@
     </div>
 
     <!-- ═════════════════════════════════════════
+         CREATE PATH MODAL
+    ═════════════════════════════════════════ -->
+    <div id="path-create-modal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col relative">
+            <button onclick="closeCreatePathModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl z-10">
+                <i class="fa-solid fa-times"></i>
+            </button>
+
+            <div class="p-6 border-b border-gray-100">
+                <h3 class="text-xl font-bold text-gray-800">Create Learning Path</h3>
+                <p class="text-sm text-gray-500">Structure your videos into a thematic or sequential journey.</p>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <!-- Step 1: Basic Info -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Path Title</label>
+                        <input type="text" id="path-title" placeholder="e.g. Colors & Shapes Adventure"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Description</label>
+                        <textarea id="path-description" rows="2" placeholder="What will kids learn in this path?"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Path Type</label>
+                        <select id="path-type"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            <option value="sequential">Strictly Sequential (Episodes)</option>
+                            <option value="thematic">Thematic (Any Order)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Bonus Stars</label>
+                        <input type="number" id="path-bonus" value="50" min="0"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+                </div>
+
+                <!-- Step 2: Video Selection -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Videos in this Path (Drag to reorder)</label>
+                    <div id="path-video-selection" class="space-y-2 max-h-60 overflow-y-auto p-2 bg-gray-50 rounded-lg border border-gray-200">
+                        <!-- List of selected videos -->
+                        <div class="text-center py-8 text-gray-400 text-xs font-bold">
+                            No videos added yet. Select from your approved videos below.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Available Videos -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Available Approved Videos</label>
+                    <div id="available-videos-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto no-scrollbar">
+                        <!-- Loading or list of approved videos -->
+                        <p class="text-center text-xs text-gray-400 py-4 col-span-full font-bold italic">Loading your approved videos...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+                <span id="path-video-count" class="text-xs font-bold text-gray-400 uppercase">0 Videos Selected</span>
+                <button onclick="saveLearningPath()" id="save-path-btn"
+                    class="bg-[#0A2540] hover:bg-purple-600 text-white font-bold px-8 py-3 rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50"
+                    disabled>
+                    Create Learning Path
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═════════════════════════════════════════
          VIDEO DETAIL MODAL
     ═════════════════════════════════════════ -->
     <div id="video-detail-modal"
         class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto relative">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto relative">
             <button onclick="closeVideoDetail()"
                 class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl z-10">
                 <i class="fa-solid fa-times"></i>
@@ -333,22 +623,22 @@
 
                 <!-- Per-video Stats -->
                 <div class="grid grid-cols-3 gap-3 mb-5">
-                    <div class="bg-gray-50 p-3 rounded-xl text-center">
+                    <div class="bg-gray-50 p-3 rounded-lg text-center">
                         <span id="detail-views" class="text-lg font-black text-blue-500">0</span>
                         <p class="text-[10px] text-gray-400 font-bold uppercase">Views</p>
                     </div>
-                    <div class="bg-gray-50 p-3 rounded-xl text-center">
+                    <div class="bg-gray-50 p-3 rounded-lg text-center">
                         <span id="detail-likes" class="text-lg font-black text-green-500">0</span>
                         <p class="text-[10px] text-gray-400 font-bold uppercase">Likes</p>
                     </div>
-                    <div class="bg-gray-50 p-3 rounded-xl text-center">
+                    <div class="bg-gray-50 p-3 rounded-lg text-center">
                         <span id="detail-dislikes" class="text-lg font-black text-red-500">0</span>
                         <p class="text-[10px] text-gray-400 font-bold uppercase">Dislikes</p>
                     </div>
                 </div>
 
                 <!-- Per-video Subscribers Chart -->
-                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
                     <div class="flex items-center justify-between mb-3">
                         <h4 class="text-xs font-bold text-gray-500 uppercase">Subscribers from this Video</h4>
                         <div class="flex bg-white rounded-lg p-0.5 text-[10px] font-bold border border-gray-200">
@@ -375,6 +665,32 @@
         }
     </script>
 
+    <!-- CREATOR RULES MODAL -->
+    <div id="creator-rules-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] hidden flex justify-center p-4" style="align-items: flex-start; padding-top: 10vh;">
+        <div class="bg-white rounded-xl shadow-[0_2px_5px_rgba(0,0,0,0.04)] w-full max-w-lg p-6 sm:p-8 relative transform transition-all border border-gray-200">
+            <button type="button" onclick="closeCreatorRules()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl z-10"><i class="fa-solid fa-times"></i></button>
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-indigo-50 text-[#635BFF] rounded-full flex items-center justify-center text-3xl mx-auto mb-4"><i class="fa-solid fa-scale-balanced"></i></div>
+                <h3 class="text-xl font-bold text-gray-800">Creator Community Rules</h3>
+                <p class="text-sm text-gray-500 mt-1">Please review before submitting</p>
+            </div>
+            <div class="space-y-4 text-sm text-gray-600 bg-[#F7F9FC] p-4 rounded-lg border border-gray-100 mb-6 max-h-[40vh] overflow-y-auto">
+                <p><strong>1. Kid-Friendly Content:</strong> All videos must be entirely safe for children (ages 4-12). No violence, inappropriate language, or adult themes.</p>
+                <p><strong>2. No Ads or Placements:</strong> Direct advertising, sponsored messages, or external product links are strictly prohibited inside the video.</p>
+                <p><strong>3. Educational Value:</strong> We prioritize content that teaches, inspires, or provides positive interactive value.</p>
+                <p><strong>4. Human Review:</strong> Every video is manually reviewed. Violations will result in immediate creator account suspension.</p>
+            </div>
+            <label class="flex items-start gap-3 mb-6 cursor-pointer group">
+                <input type="checkbox" id="rules-agree-checkbox" class="mt-1 w-4 h-4 text-[#635BFF] rounded border-gray-300 focus:ring-[#635BFF]">
+                <span class="text-sm text-gray-700 font-semibold group-hover:text-gray-900">I agree to the Community Rules and understand my video will go through human moderation.</span>
+            </label>
+            <div class="flex gap-3">
+                <button type="button" onclick="closeCreatorRules()" class="flex-1 py-3 border border-gray-200 text-gray-600 font-bold rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+                <button type="button" id="confirm-upload-btn" onclick="confirmAndUpload()" class="flex-1 py-3 bg-[#635BFF] hover:opacity-90 text-white font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Submit Video</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Import Logic -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
     <script src="../js/appwrite_config.js"></script>
@@ -383,3 +699,5 @@
 </body>
 
 </html>
+
+

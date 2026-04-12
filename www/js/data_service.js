@@ -15,6 +15,37 @@ const DataService = {
         return window.AppwriteService; // { client, account, databases, DB_ID, COLLECTIONS }
     },
 
+    // --- REALTIME METHODS ---
+
+    /**
+     * Subscribes to changes in specific Appwrite channels.
+     * channels: array of channel names (e.g. ['databases.DB.collections.COL.documents'])
+     * callback: function to run on update (receives the response object)
+     * returns: Unsubscribe function
+     */
+    subscribe: function (channels, callback) {
+        const { client } = this._getServices();
+        return client.subscribe(channels, callback);
+    },
+
+    /**
+     * Subscribes to all document changes within a specific collection.
+     */
+    subscribeToCollection: function (collectionId, callback) {
+        const { DB_ID } = this._getServices();
+        const channel = `databases.${DB_ID}.collections.${collectionId}.documents`;
+        return this.subscribe([channel], callback);
+    },
+
+    /**
+     * Subscribes to changes for a specific document.
+     */
+    subscribeToDocument: function (collectionId, documentId, callback) {
+        const { DB_ID } = this._getServices();
+        const channel = `databases.${DB_ID}.collections.${collectionId}.documents.${documentId}`;
+        return this.subscribe([channel], callback);
+    },
+
     // --- AUTHENTICATION METHODS ---
 
     /**
@@ -370,6 +401,15 @@ const DataService = {
 
         const GENERIC_ERROR = 'Invalid credentials. Please check your username, parent\'s email, and password.';
 
+        // ✅ SECURITY: The children collection requires Role.users() to read.
+        // We must obtain an Appwrite Anonymous Session before querying it.
+        try {
+            const { account } = this._getServices();
+            await account.createAnonymousSession();
+        } catch (e) {
+            // Safe to ignore: user already has an active session
+        }
+
         // ── 1. Find child by username ────────────────────────────────────────────
         let child;
         try {
@@ -385,56 +425,43 @@ const DataService = {
         }
 
         // ── 2. Verify the parent email matches this child's parent ───────────────
-        // Strategy: look up the parent by the email the kid entered and verify that
-        // the parent's document $id matches the child's parentId field.
-        // (Using listDocuments avoids 404s from $id vs Auth-ID mismatches.)
+        // IMPORTANT: Kids are unauthenticated, so we CANNOT use listDocuments() with
+        // query filters on the `users` collection — Appwrite returns 401 for that.
+        // Instead, we fetch the parent document by its known ID (child.parentId) using
+        // getDocument(), which works with read("any") permissions even for guests.
         if (!child.parentId) throw new Error(GENERIC_ERROR);
 
         let parent;
         try {
-            // Look up the parent user by the email entered — case-insensitive
-            const parentList = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
-                Query.equal('email', parentEmail.toLowerCase().trim()),
-                Query.equal('role', 'parent'),
-                Query.limit(1)
-            ]);
-
-            if (parentList.documents.length === 0) throw new Error(GENERIC_ERROR);
-            parent = parentList.documents[0];
+            // Fetch parent doc directly by ID — no auth required if doc has read("any")
+            parent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, child.parentId);
         } catch (e) {
-            if (e.message === GENERIC_ERROR) throw e;
-            throw new Error(GENERIC_ERROR);
-        }
-
-        // Make sure this parent actually owns the child
-        // child.parentId should equal parent.$id (or in some setups the Auth user $id)
-        if (child.parentId !== parent.$id) {
-            // Fallback: try matching by parentId directly in case child stores Auth ID
-            // which might differ from the users doc $id
-            // Re-query users by document that HAS this $id or try email match
-            // The parent email check above already confirms the email is correct.
-            // Just check: does the parent doc's $id appear somewhere in the child's hierarchy?
-            // We rely on: the found child (by username) must belong to the parent (by email).
-            // Since we can't do a direct $id match reliably, we verify via a secondary query.
-            const childCheck = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
-                Query.equal('username', username),
-                Query.equal('parentId', parent.$id),
-                Query.limit(1)
-            ]).catch(() => ({ documents: [] }));
-
-            if (childCheck.documents.length === 0) {
-                // The username exists under a different parent — wrong parent email
+            // If getDocument also fails (e.g. collection only allows authenticated reads),
+            // fall back to checking the parentEmail field stored on the child doc itself.
+            if (child.parentEmail) {
+                // Validate email inline without touching the users collection
+                if (child.parentEmail.toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
+                    throw new Error(GENERIC_ERROR);
+                }
+                // Create a minimal parent stub so the rest of the flow still works
+                parent = { $id: child.parentId, email: child.parentEmail, role: 'parent' };
+            } else {
+                // Cannot verify — deny for safety
                 throw new Error(GENERIC_ERROR);
             }
-            // Use the verified child doc
-            child = childCheck.documents[0];
+        }
+
+        // Verify the email the kid entered matches the parent's actual email
+        if (!parent.email || parent.email.toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
+            throw new Error(GENERIC_ERROR);
         }
 
         // ── 3. Verify password ───────────────────────────────────────────────────
         // Children have a `password` field (plain or hashed) stored on creation.
-        // We perform an exact match here (the field is set by the parent when adding the child).
+        // We perform a secure hash comparison here.
         const storedPassword = child.password || '';
-        if (!storedPassword || storedPassword !== password) {
+        const isPasswordCorrect = await SecurityUtils.verifyPassword(password, storedPassword);
+        if (!isPasswordCorrect) {
             throw new Error(GENERIC_ERROR);
         }
 
@@ -568,20 +595,61 @@ const DataService = {
     /**
      * Step 4 (Kid side): Build and store child session from an approved request.
      * Called once polling detects status === 'approved'.
+     * NOW ASYNC — fetches child prefs from DB so profile persists across logins.
      */
-    kidLoginFromApproved: function (approvedRequest) {
+    kidLoginFromApproved: async function (approvedRequest) {
+        const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
+
+        // ✅ SECURITY: The 'fake' sessionStorage token is insecure.
+        // We now create an official Appwrite Anonymous Session for the kid.
+        // The kid doesn't have an email/password in the Appwrite Auth system,
+        // but this grants them a real JWT token so Cloud Functions (Gemini) can
+        // verify them, and Appwrite permissions (Role.users()) will recognize them.
+        try {
+            await account.createAnonymousSession();
+        } catch (e) {
+            console.warn('[Kid Login] Anonymous session creation failed or exists:', e.message);
+        }
+
+        // Fetch the full child document to hydrate prefs (avatarImage, bio, etc.)
+        let childDoc = null;
+        try {
+            // Note: Since we haven't given the child's anonymous Appwrite account
+            // explicit read access to this specific child document yet (that would require
+            // a Cloud Function or Appwrite Teams), we might hit a read error if Role.users()
+            // is not enough (which it shouldn't be, if we locked it down correctly).
+            // For now, if we get 401, we rely on the data stamped on the approvedRequest.
+            childDoc = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, approvedRequest.childId);
+        } catch (e) {
+            console.warn('[Kid Login] Could not fetch child prefs from DB (expected if locked down):', e.message);
+        }
+
         const childSession = {
             $id: approvedRequest.childId,
             role: 'kid',
-            firstName: approvedRequest.childName,
-            name: approvedRequest.childName,
-            username: approvedRequest.childUsername,
-            parentId: approvedRequest.parentId
+            firstName: childDoc?.name || approvedRequest.childName,
+            name: childDoc?.name || approvedRequest.childName,
+            username: childDoc?.username || approvedRequest.childUsername,
+            parentId: approvedRequest.parentId,
+            totalPoints: childDoc?.totalPoints || 0,
+            avatar: childDoc?.avatar || null,
+            avatarImage: childDoc?.avatarImage || null,
+            avatarBgColor: childDoc?.avatarBgColor || null,
+            // prefs object mirrors what saveKidSettings writes
+            prefs: {
+                displayName: childDoc?.displayName || childDoc?.name || approvedRequest.childName,
+                bio: childDoc?.bio || '',
+                avatarImage: childDoc?.avatarImage || null,
+                avatarBgColor: childDoc?.avatarBgColor || '#60a5fa',
+                coverColor: childDoc?.coverColor || '#3b82f6',
+                theme: childDoc?.theme || 'default',
+                avatarIcon: childDoc?.avatarIcon || '🐻',
+            }
         };
         sessionStorage.setItem('cubby_child_session', JSON.stringify(childSession));
         // Clean up the cached password
         sessionStorage.removeItem('cubby_login_req_pass_' + approvedRequest.$id);
-        console.log('✅ [Kid] Session stored for:', approvedRequest.childUsername);
+        console.log('✅ [Kid] Anonymous Auth Session established for:', childSession.username);
         return childSession;
     },
 
@@ -1157,6 +1225,11 @@ const DataService = {
             uploadedAt: videoData.uploadedAt || new Date().toISOString()
         };
 
+        // Optional custom thumbnail
+        if (videoData.thumbnailUrl) {
+            newVideo.thumbnailUrl = videoData.thumbnailUrl;
+        }
+
         const doc = await databases.createDocument(DB_ID, COLLECTIONS.VIDEOS, ID.unique(), newVideo);
         return doc;
     },
@@ -1380,8 +1453,10 @@ const DataService = {
             // The parentId passed in is the Appwrite Auth user.$id which may differ
             // from the database document $id if the 1:1 mapping was not used.
             let resolvedParentId = parentId;
+            let parentEmail = "";
             try {
-                await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
+                const parentDoc = await databases.getDocument(DB_ID, COLLECTIONS.USERS, parentId);
+                parentEmail = parentDoc.email;
                 // If we get here, IDs match 1:1
             } catch (e) {
                 if (e.code === 404) {
@@ -1392,25 +1467,30 @@ const DataService = {
                     ]);
                     if (list.documents.length === 0) throw new Error("Parent profile not found in database.");
                     resolvedParentId = list.documents[0].$id;
+                    parentEmail = list.documents[0].email;
                 } else {
                     throw e;
                 }
             }
 
             // --- Step 2: Create the child document ---
-            // Only include attributes that actually exist in the Appwrite children collection:
-            // parentId, name, username, password, isOnline, threatScore
+            // Attributes required by the Appwrite children collection schema
+            // ✅ SECURITY: Hash the password before storing it; never store plaintext.
             const childId = ID.unique();
+            const childHashedPassword = await SecurityUtils.hashPassword(childData.password);
             const newChild = {
                 parentId: resolvedParentId,
+                parentEmail: parentEmail,
                 name: childData.name,
                 username: childData.username,
-                password: childData.password,
+                password: childHashedPassword,
+                status: childData.status || 'active', // required field in schema
                 avatar: childData.avatar || 'Felix',
                 allowChat: childData.allowChat !== undefined ? childData.allowChat : false,
                 allowGames: childData.allowGames !== undefined ? childData.allowGames : true,
                 isOnline: false,
                 threatScore: 0,
+                totalPoints: 0,
                 kidId: '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase().padStart(6, '0')
             };
 
@@ -1457,8 +1537,9 @@ const DataService = {
             const children = result.documents;
 
             // Aggregate screen_time_logs entries per child and merge into screenTimeLogs field
+            // NOTE: We preserve the 'category' field so the parent dashboard chart can split
+            // Games / Entertainment / Communication correctly.
             try {
-                // Fetch all screen time logs for this parent's children in one query
                 const childIds = children.map(c => c.$id);
                 if (childIds.length > 0) {
                     const logsResult = await databases.listDocuments(DB_ID, 'screen_time_logs', [
@@ -1466,39 +1547,56 @@ const DataService = {
                     ]);
                     const rawLogs = logsResult.documents;
 
-                    // Group by childId and aggregate by date
+                    // Group by childId → (date|category) → total minutes
+                    // We use a composite key "date|category" so that each category keeps its
+                    // own bucket instead of being collapsed into a single total per day.
                     const byChild = {};
                     rawLogs.forEach(log => {
                         if (!childIds.includes(log.childId)) return;
                         if (!byChild[log.childId]) byChild[log.childId] = {};
                         const date = log.date || new Date().toISOString().split('T')[0];
-                        byChild[log.childId][date] = (byChild[log.childId][date] || 0) + (log.minutes || 0);
+                        const cat  = (log.category || 'general').toLowerCase();
+                        const key  = `${date}|${cat}`;
+                        byChild[log.childId][key] = (byChild[log.childId][key] || 0) + (log.minutes || 0);
                     });
 
                     // Merge into each child document
                     children.forEach(child => {
-                        const dateMap = byChild[child.$id];
-                        if (!dateMap) return;
+                        const catDateMap = byChild[child.$id];
+                        if (!catDateMap) return;
 
-                        // Parse any existing logs from child doc
+                        // Parse any existing logs from child doc (may be array or stale object)
                         let existingLogs = [];
                         if (child.screenTimeLogs) {
                             try {
-                                existingLogs = typeof child.screenTimeLogs === 'string'
+                                const parsed = typeof child.screenTimeLogs === 'string'
                                     ? JSON.parse(child.screenTimeLogs) : child.screenTimeLogs;
+                                existingLogs = Array.isArray(parsed) ? parsed : [];
                             } catch (e) { existingLogs = []; }
                         }
-                        // Build a date→minutes map from existing
+
+                        // Build a composite-key map from existing log entries
                         const combined = {};
-                        existingLogs.forEach(l => { if (l.date) combined[l.date] = (combined[l.date] || 0) + (l.minutes || 0); });
-                        // Merge in the screen_time_logs entries
-                        Object.entries(dateMap).forEach(([date, mins]) => {
-                            combined[date] = (combined[date] || 0) + mins;
+                        existingLogs.forEach(l => {
+                            if (!l.date) return;
+                            const cat = (l.category || 'general').toLowerCase();
+                            const key = `${l.date}|${cat}`;
+                            combined[key] = (combined[key] || 0) + (l.minutes || 0);
                         });
-                        // Sort and write back
+
+                        // Merge in the newly fetched screen_time_logs entries
+                        Object.entries(catDateMap).forEach(([key, mins]) => {
+                            combined[key] = (combined[key] || 0) + mins;
+                        });
+
+                        // Flatten back to an array: [{date, minutes, category}, ...]
                         const merged = Object.entries(combined)
-                            .map(([date, minutes]) => ({ date, minutes }))
+                            .map(([key, minutes]) => {
+                                const [date, category] = key.split('|');
+                                return { date, minutes, category };
+                            })
                             .sort((a, b) => a.date.localeCompare(b.date));
+
                         child.screenTimeLogs = JSON.stringify(merged);
                     });
                 }
@@ -1519,6 +1617,11 @@ const DataService = {
     updateChild: async function (childId, updateData) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         try {
+            // ✅ SECURITY: Hash the password if it is being updated
+            if (updateData.password) {
+                 updateData.password = await SecurityUtils.hashPassword(updateData.password);
+            }
+
             const doc = await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, updateData);
             console.log("✅ [Appwrite] Child profile updated:", doc.$id);
             return doc;
@@ -1527,6 +1630,108 @@ const DataService = {
             throw error;
         }
     },
+
+    /**
+     * Fetch a single child document (used to read current prefs before editing).
+     * Safe to call without an Appwrite Auth session (uses 'any' read permission).
+     */
+    getChildWithPrefs: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            return await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+        } catch (e) {
+            console.warn('[getChildWithPrefs] Could not fetch child doc:', e.message);
+            return null;
+        }
+    },
+
+    /**
+     * Persist a kid's profile prefs to the Children collection.
+     * Updates: name/displayName, bio, avatarImage, avatarBgColor, coverColor, theme, avatarIcon.
+     *
+     * PERMISSION NOTE: Children collection must have 'Any' update permission enabled
+     * in Appwrite Console so unauthenticated kids can update their own profile.
+     * If you see a 401 error, add that permission in:
+     *   Appwrite Console → Database → Children → Permissions → Role: any → update ✓
+     */
+    updateChildPrefs: async function (childId, prefs) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        if (!childId) throw new Error('[updateChildPrefs] childId is required');
+
+        // Build the update payload — only include defined fields
+        const payload = {};
+        if (prefs.displayName !== undefined && prefs.displayName !== null) {
+            payload.name = prefs.displayName;       // top-level name field
+        }
+        if (prefs.bio !== undefined)         payload.bio = prefs.bio;
+        if (prefs.avatarImage !== undefined)  payload.avatarImage = prefs.avatarImage;
+        if (prefs.avatarBgColor !== undefined) payload.avatarBgColor = prefs.avatarBgColor;
+        if (prefs.coverColor !== undefined)  payload.coverColor = prefs.coverColor;
+        if (prefs.theme !== undefined)       payload.theme = prefs.theme;
+        if (prefs.avatarIcon !== undefined)  payload.avatarIcon = prefs.avatarIcon;
+        if (prefs.isOnline !== undefined)    payload.isOnline = prefs.isOnline;
+        // Shop: persist the list of unlocked premium items
+        if (prefs.unlockedItems !== undefined) payload.unlockedItems = prefs.unlockedItems;
+
+        try {
+            const doc = await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, payload);
+            console.log('✅ [updateChildPrefs] Profile saved for child:', childId, payload);
+            return doc;
+        } catch (error) {
+            // Classify the error for easier debugging
+            if (error.code === 401) {
+                console.error('[Profile] ❌ Permission Denied (401): The Children collection does not have \'Any\' update permission. Enable it in Appwrite Console.');
+                throw new Error('Permission Denied: Profile cannot be saved. Please contact support.');
+            } else if (error.code === 0 || error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('timeout')) {
+                console.error('[Profile] ❌ Network Timeout / Offline:', error.message);
+                throw new Error('Network error: Could not reach the server. Please check your connection and try again.');
+            } else {
+                console.error('[Profile] ❌ Unexpected DB error:', error);
+                throw error;
+            }
+        }
+    },
+
+    /**
+     * Persist a parent/staff user profile update to the Users collection.
+     * Supports: firstName, lastName (DB fields) + arbitrary prefs (Appwrite Account prefs).
+     */
+    updateUserProfile: async function (userId, profileData) {
+        const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
+
+        const dbPayload = {};
+        if (profileData.firstName) dbPayload.firstName = profileData.firstName;
+        if (profileData.lastName)  dbPayload.lastName = profileData.lastName;
+
+        try {
+            // 1. Update the Users collection document
+            if (Object.keys(dbPayload).length > 0) {
+                await databases.updateDocument(DB_ID, COLLECTIONS.USERS, userId, dbPayload);
+                console.log('✅ [updateUserProfile] DB fields updated:', dbPayload);
+            }
+
+            // 2. Update Appwrite Account Preferences (for bio, tags, profilePictureUrl etc.)
+            if (profileData.prefs && Object.keys(profileData.prefs).length > 0) {
+                let currentPrefs = {};
+                try { currentPrefs = await account.getPrefs(); } catch (e) { /* no existing prefs */ }
+                await account.updatePrefs({ ...currentPrefs, ...profileData.prefs });
+                console.log('✅ [updateUserProfile] Account prefs updated:', profileData.prefs);
+            }
+
+            return true;
+        } catch (error) {
+            if (error.code === 401) {
+                console.error('[Profile] ❌ Permission Denied (401):', error.message);
+                throw new Error('Permission Denied: Could not update profile.');
+            } else if (error.message?.includes('fetch') || error.message?.includes('network')) {
+                console.error('[Profile] ❌ Network error:', error.message);
+                throw new Error('Network error: Could not reach the server. Check your connection.');
+            }
+            console.error('[updateUserProfile] Error:', error);
+            throw error;
+        }
+    },
+
     updateThreatLog: async function (logId, status, resolution) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         await databases.updateDocument(DB_ID, COLLECTIONS.THREAT_LOGS, logId, {
@@ -1561,11 +1766,12 @@ const DataService = {
      * Kids don't have an Appwrite Auth session so they cannot call updateDocument.
      * The parent dashboard reads and aggregates these log entries.
      *
-     * @param {string} childId   - The child's Appwrite document $id (from sessionStorage)
-     * @param {number} minutes   - Minutes spent (float, will be rounded)
-     * @param {string} [category] - 'games' | 'entertainment' | 'communication' (optional)
+     * @param {string} childId    - The child's Appwrite document $id (from sessionStorage)
+     * @param {number} minutes    - Minutes spent (float, will be rounded)
+     * @param {string} [category] - 'games' | 'entertainment' | 'learning' | 'communication' (optional)
+     * @param {string} [detail]   - Specific game or video title for the Interest Heatmap (optional)
      */
-    logScreenTime: async function (childId, minutes, category) {
+    logScreenTime: async function (childId, minutes, category, detail) {
         if (!childId) return;
         const mins = Math.round(minutes);
         if (mins < 1) return; // skip sessions under 1 minute
@@ -1576,14 +1782,785 @@ const DataService = {
         const todayStr = new Date().toISOString().split('T')[0]; // "2026-03-04"
 
         try {
-            const data = { childId, date: todayStr, minutes: mins };
+            const data = {
+                childId,
+                date: todayStr,
+                minutes: mins,
+                timestamp: new Date().toISOString()
+            };
             if (category) data.category = category;
+            if (detail)   data.detail   = detail;
 
             await databases.createDocument(DB_ID, 'screen_time_logs', ID.unique(), data);
-            console.log(`⏱️ [ScreenTime] Logged ${mins} min (${category || 'general'}) for child ${childId} on ${todayStr}`);
+            console.log(`⏱️ [ScreenTime] Logged ${mins} min (${category || 'general'}) for child ${childId} on ${todayStr}${detail ? ' | ' + detail : ''}`);
         } catch (err) {
             console.warn('logScreenTime error:', err.message);
         }
+    },
+
+    /**
+     * Logs a content or social activity event for a child.
+     * Used to populate the Activity Log in the Parent Dashboard.
+     * Writes to the new 'activity_logs' collection (any-write, no auth needed).
+     *
+     * @param {string} childId  - The child's Appwrite document $id
+     * @param {string} type     - Event type: 'watch' | 'play' | 'buddy_add' | 'message_sent'
+     * @param {string} action   - Human-readable description: e.g. "Started watching: Learn Colors"
+     * @param {object} [meta]   - Optional metadata object (will be JSON-stringified)
+     */
+    logActivity: async function (childId, type, action, meta) {
+        if (!childId || !type || !action) return;
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+        try {
+            const data = {
+                childId,
+                type,
+                action,
+                timestamp: new Date().toISOString()
+            };
+            if (meta) data.metadata = JSON.stringify(meta);
+
+            await databases.createDocument(DB_ID, 'activity_logs', ID.unique(), data);
+            console.log(`📋 [Activity] [${type}] ${action} for child ${childId}`);
+        } catch (err) {
+            console.warn('logActivity error:', err.message);
+        }
+    },
+
+    /**
+     * Fetches the activity log for a child (for the Parent Dashboard).
+     * Efficiently queries the 'activity_logs' collection by childId and timestamp.
+     *
+     * @param {string} childId  - The child's Appwrite document $id
+     * @param {number} [limit]  - Number of entries to fetch (default: 50)
+     * @param {string} [filter] - 'today' | 'week' | 'month' | 'all' (default: 'week')
+     * @returns {Array} activity log documents sorted newest-first
+     */
+    getActivityLogs: async function (childId, limit = 50, filter = 'week') {
+        if (!childId) return [];
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+
+        const now = new Date();
+        let startDate = null;
+        if (filter === 'today') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        } else if (filter === 'week') {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 7);
+        } else if (filter === 'month') {
+            startDate = new Date(now);
+            startDate.setMonth(now.getMonth() - 1);
+        }
+
+        try {
+            const queries = [
+                Query.equal('childId', childId),
+                Query.orderDesc('timestamp'),
+                Query.limit(limit)
+            ];
+            if (startDate) {
+                queries.push(Query.greaterThanEqual('timestamp', startDate.toISOString()));
+            }
+            const result = await databases.listDocuments(DB_ID, 'activity_logs', queries);
+            return result.documents;
+        } catch (e) {
+            console.warn('getActivityLogs error:', e.message);
+            return [];
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // KID WATCH HISTORY
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Log a video view in the kid's watch history.
+     * Uses 'any' create permission (kids have no Appwrite auth session).
+     */
+    logWatchHistory: async function (childId, videoId, videoTitle, videoCategory, videoUrl, thumbnailUrl) {
+        if (!childId || !videoId) return;
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+        try {
+            await databases.createDocument(DB_ID, 'kid_watch_history', ID.unique(), {
+                childId,
+                videoId,
+                videoTitle: videoTitle || '',
+                videoCategory: videoCategory || '',
+                videoUrl: videoUrl || '',
+                thumbnailUrl: thumbnailUrl || '',
+                watchedAt: new Date().toISOString()
+            });
+        } catch (e) {
+            console.warn('logWatchHistory error:', e.message);
+        }
+    },
+
+    /**
+     * Get watch history for a child.
+     * @param {string} childId
+     * @param {string} filter - 'today' | 'week' | 'month' | 'all'
+     * @returns {Array} history documents sorted newest-first
+     */
+    getWatchHistory: async function (childId, filter = 'all') {
+        if (!childId) return [];
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+
+        const now = new Date();
+        let startDate = null;
+        if (filter === 'today') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        } else if (filter === 'week') {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 7);
+        } else if (filter === 'month') {
+            startDate = new Date(now);
+            startDate.setMonth(now.getMonth() - 1);
+        }
+
+        try {
+            const queries = [
+                Query.equal('childId', childId),
+                Query.orderDesc('watchedAt'),
+                Query.limit(200)
+            ];
+            if (startDate) {
+                queries.push(Query.greaterThanEqual('watchedAt', startDate.toISOString()));
+            }
+            const result = await databases.listDocuments(DB_ID, 'kid_watch_history', queries);
+            return result.documents;
+        } catch (e) {
+            console.warn('getWatchHistory error:', e.message);
+            return [];
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // KID FAVORITES
+    // ─────────────────────────────────────────────────────────────────────────
+
+    addFavorite: async function (childId, videoId, videoTitle, videoCategory, videoUrl, thumbnailUrl) {
+        if (!childId || !videoId) return;
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+        try {
+            return await databases.createDocument(DB_ID, 'kid_favorites', ID.unique(), {
+                childId,
+                videoId,
+                videoTitle: videoTitle || '',
+                videoCategory: videoCategory || '',
+                videoUrl: videoUrl || '',
+                thumbnailUrl: thumbnailUrl || '',
+                addedAt: new Date().toISOString()
+            });
+        } catch (e) {
+            console.warn('addFavorite error:', e.message);
+        }
+    },
+
+    removeFavorite: async function (childId, videoId) {
+        if (!childId || !videoId) return;
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, 'kid_favorites', [
+                Query.equal('childId', childId),
+                Query.equal('videoId', videoId),
+                Query.limit(1)
+            ]);
+            if (result.documents.length > 0) {
+                await databases.deleteDocument(DB_ID, 'kid_favorites', result.documents[0].$id);
+            }
+        } catch (e) {
+            console.warn('removeFavorite error:', e.message);
+        }
+    },
+
+    getFavorites: async function (childId) {
+        if (!childId) return [];
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, 'kid_favorites', [
+                Query.equal('childId', childId),
+                Query.orderDesc('addedAt'),
+                Query.limit(200)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('getFavorites error:', e.message);
+            return [];
+        }
+    },
+
+    isFavorited: async function (childId, videoId) {
+        if (!childId || !videoId) return false;
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, 'kid_favorites', [
+                Query.equal('childId', childId),
+                Query.equal('videoId', videoId),
+                Query.limit(1)
+            ]);
+            return result.documents.length > 0;
+        } catch (e) {
+            return false;
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // VIDEO LIKES / DISLIKES
+    // ─────────────────────────────────────────────────────────────────────────
+
+    likeVideo: async function (videoId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            const video = await databases.getDocument(DB_ID, COLLECTIONS.VIDEOS, videoId);
+            return await databases.updateDocument(DB_ID, COLLECTIONS.VIDEOS, videoId, {
+                likes: (video.likes || 0) + 1
+            });
+        } catch (e) {
+            console.warn('likeVideo error:', e.message);
+        }
+    },
+
+    dislikeVideo: async function (videoId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            const video = await databases.getDocument(DB_ID, COLLECTIONS.VIDEOS, videoId);
+            return await databases.updateDocument(DB_ID, COLLECTIONS.VIDEOS, videoId, {
+                dislikes: (video.dislikes || 0) + 1
+            });
+        } catch (e) {
+            console.warn('dislikeVideo error:', e.message);
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // LEARNING PATHS & REWARDS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    addPath: async function (pathData) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+        const newPath = {
+            title: pathData.title,
+            description: pathData.description || '',
+            creatorEmail: pathData.creatorEmail,
+            type: pathData.type || 'flexible',
+            videoIds: pathData.videoIds || [],
+            bonusPoints: pathData.bonusPoints || 50,
+            createdAt: new Date().toISOString()
+        };
+        return await databases.createDocument(DB_ID, COLLECTIONS.PATHS, ID.unique(), newPath);
+    },
+
+    getPaths: async function () {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        const result = await databases.listDocuments(DB_ID, COLLECTIONS.PATHS, [
+            Query.orderDesc('createdAt'),
+            Query.limit(100)
+        ]);
+        return result.documents;
+    },
+
+    getPathById: async function (pathId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        return await databases.getDocument(DB_ID, COLLECTIONS.PATHS, pathId);
+    },
+
+    updatePath: async function (pathId, updateData) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        return await databases.updateDocument(DB_ID, COLLECTIONS.PATHS, pathId, {
+            ...updateData,
+            updatedAt: new Date().toISOString()
+        });
+    },
+
+    deletePath: async function (pathId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        return await databases.deleteDocument(DB_ID, COLLECTIONS.PATHS, pathId);
+    },
+
+    /**
+     * Records a video completion reward for a child.
+     * Updates the child's total points atomically.
+     */
+    recordVideoReward: async function (childId, videoId, points = 10) {
+        if (!childId || !videoId) return;
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID, Query } = Appwrite;
+
+        const rewardId = `video_${childId}_${videoId}`;
+        try {
+            // 1. Check if already rewarded with unique rewardId
+            const existing = await databases.listDocuments(DB_ID, COLLECTIONS.KID_REWARDS, [
+                Query.equal('rewardId', rewardId)
+            ]);
+
+            if (existing.documents.length > 0) {
+                console.log('ℹ️ Video reward already claimed.');
+                return existing.documents[0];
+            }
+
+            // 2. Create reward entry with unique rewardId
+            const reward = await databases.createDocument(DB_ID, COLLECTIONS.KID_REWARDS, ID.unique(), {
+                childId,
+                rewardType: 'video_completion',
+                points,
+                sourceId: videoId,
+                rewardId: rewardId,
+                earnedAt: new Date().toISOString()
+            });
+
+            // 3. Update child totalPoints
+            const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+            await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
+                totalPoints: (child.totalPoints || 0) + points
+            });
+
+            console.log(`⭐ [Rewards] Child ${childId} earned ${points} stars for Video ${videoId}`);
+            return reward;
+
+        } catch (e) {
+            console.error('recordVideoReward error:', e.message);
+            if (e.code === 401) {
+                console.error('[Rewards] ❌ Permission Denied (401): Ensure the `kid_rewards` collection has "Create" permission for "Any", and the `children` collection has "Update" permission for "Any" in the Appwrite Console.');
+                throw new Error('Permission Denied: Ensure Appwrite permissions are set correctly for rewards.');
+            }
+            throw e;
+        }
+    },
+
+    getRewardsByChild: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        const result = await databases.listDocuments(DB_ID, COLLECTIONS.KID_REWARDS, [
+            Query.equal('childId', childId),
+            Query.orderDesc('earnedAt'),
+            Query.limit(50)
+        ]);
+        return result.documents;
+    },
+
+    /**
+     * Get path progress for a child.
+     */
+    getPathProgress: async function (childId, pathId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.KID_PATH_STATUS, [
+                Query.equal('childId', childId),
+                Query.equal('pathId', pathId),
+                Query.limit(1)
+            ]);
+            return result.documents.length > 0 ? result.documents[0] : null;
+        } catch (e) {
+            console.warn('getPathProgress error:', e.message);
+            return null;
+        }
+    },
+
+    getPathStatusesByChild: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        const result = await databases.listDocuments(DB_ID, COLLECTIONS.KID_PATH_STATUS, [
+            Query.equal('childId', childId),
+            Query.orderDesc('updatedAt'),
+            Query.limit(50)
+        ]);
+        return result.documents;
+    },
+
+    /**
+     * Updates path progress when a video is finished.
+     * If all videos in path are finished, awards bonus.
+     */
+    updatePathProgress: async function (childId, pathId, videoId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+
+        try {
+            const path = await this.getPathById(pathId);
+            let status = await this.getPathProgress(childId, pathId);
+
+            if (!status) {
+                status = await databases.createDocument(DB_ID, COLLECTIONS.KID_PATH_STATUS, ID.unique(), {
+                    childId,
+                    pathId,
+                    completedVideoIds: [videoId],
+                    currentStatus: 'in_progress',
+                    updatedAt: new Date().toISOString()
+                });
+            } else {
+                if (!status.completedVideoIds.includes(videoId)) {
+                    const newList = [...status.completedVideoIds, videoId];
+                    const isFinished = newList.length >= path.videoIds.length;
+                    
+                    status = await databases.updateDocument(DB_ID, COLLECTIONS.KID_PATH_STATUS, status.$id, {
+                        completedVideoIds: newList,
+                        currentStatus: isFinished ? 'completed' : 'in_progress',
+                        updatedAt: new Date().toISOString()
+                    });
+
+                    // Award bonus if just finished
+                    if (isFinished) {
+                        await this.recordPathBonus(childId, pathId, path.bonusStars || path.bonusPoints || 0);
+                    }
+                }
+            }
+            return status;
+        } catch (e) {
+            console.error('updatePathProgress error:', e.message);
+            if (e.code === 401) {
+                console.error('[PathProgress] ❌ Permission Denied (401): Ensure the `kid_path_status` collection has "Create" and "Update" permissions for "Any" in the Appwrite Console.');
+            }
+            throw e;
+        }
+    },
+
+    recordPathBonus: async function (childId, pathId, points) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID, Query } = Appwrite;
+
+        const rewardId = `path_${childId}_${pathId}`;
+        try {
+            const existing = await databases.listDocuments(DB_ID, COLLECTIONS.KID_REWARDS, [
+                Query.equal('rewardId', rewardId)
+            ]);
+
+            if (existing.documents.length > 0) return existing.documents[0];
+
+            const reward = await databases.createDocument(DB_ID, COLLECTIONS.KID_REWARDS, ID.unique(), {
+                childId,
+                rewardType: 'path_bonus',
+                points,
+                sourceId: pathId,
+                rewardId: rewardId,
+                earnedAt: new Date().toISOString()
+            });
+
+            const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+            await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
+                totalPoints: (child.totalPoints || 0) + points
+            });
+
+            console.log(`🏆 [Rewards] Path Bonus! Child ${childId} earned ${points} for finishing Path ${pathId}`);
+            return reward;
+        } catch (e) {
+            console.error('recordPathBonus error:', e.message);
+             if (e.code === 401) {
+                console.error('[Rewards] ❌ Permission Denied (401): Ensure the `kid_rewards` collection has "Create" permission for "Any", and the `children` collection has "Update" permission for "Any" in the Appwrite Console.');
+            }
+            throw e;
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TIME MANAGEMENT & SETTINGS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Update time management settings for a child.
+     * Stored on the Children document for simplicity and polling.
+     * @param {string} childId
+     * @param {Object} settings - { dailyAllowanceMinutes, bedtime, warningThresholdMinutes, allowChat, allowGames, blacklistedGames }
+     */
+    updateChildTimeSettings: async function (childId, settings) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const payload = {};
+        if (settings.dailyAllowanceMinutes !== undefined) payload.screenTimeLogs = (payload.screenTimeLogs || ''); // we store settings in a new field
+        // We encode all time settings into a single JSON string stored in a dedicated field
+        const existing = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+        const existingMeta = (() => { try { return JSON.parse(existing.bio?.startsWith('{') ? existing.bio : '{}'); } catch(e) { return {}; } })();
+        // Store settings as JSON in activityLogs field repurposed as metadata (we'll use a dedicated approach via Appwrite prefs instead)
+        // Actually store as structured JSON string in existing schema-compatible field
+        const settingsPayload = {
+            dailyAllowanceMinutes: settings.dailyAllowanceMinutes ?? 60,
+            bedtime: settings.bedtime ?? '',
+            warningThresholdMinutes: settings.warningThresholdMinutes ?? 5,
+            allowChat: settings.allowChat !== undefined ? settings.allowChat : (existing.allowChat ?? true),
+            allowGames: settings.allowGames !== undefined ? settings.allowGames : (existing.allowGames ?? true),
+        };
+        // Encode as JSON in screenTimeLogs (repurposed for settings since it's a large string field)
+        const settingsJson = JSON.stringify({ _timeSettings: settingsPayload, _v: 1 });
+        return await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
+            screenTimeLogs: settingsJson,
+            allowChat: settingsPayload.allowChat,
+            allowGames: settingsPayload.allowGames,
+        });
+    },
+
+    /**
+     * Get time management settings for a child.
+     * @param {string} childId
+     * @returns {Object} Settings object with defaults
+     */
+    getChildTimeSettings: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const defaults = {
+            dailyAllowanceMinutes: 60,
+            bedtime: '',
+            warningThresholdMinutes: 5,
+            allowChat: true,
+            allowGames: true,
+        };
+        try {
+            const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+            if (child.screenTimeLogs && child.screenTimeLogs.startsWith('{')) {
+                const parsed = JSON.parse(child.screenTimeLogs);
+                if (parsed._timeSettings) {
+                    return { ...defaults, ...parsed._timeSettings };
+                }
+            }
+            return { ...defaults, allowChat: child.allowChat ?? true, allowGames: child.allowGames ?? true };
+        } catch (e) {
+            console.warn('getChildTimeSettings error:', e.message);
+            return defaults;
+        }
+    },
+
+    /**
+     * Get aggregated screen time data for a child — used for Reports widgets.
+     * Returns { totalMinutesToday, byCategory, byDay (last 7 days), topContent }
+     * @param {string} childId
+     */
+    getScreenTimeSummary: async function (childId) {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekAgo = new Date(now);
+        weekAgo.setDate(now.getDate() - 7);
+
+        try {
+            const [todayLogs, weekLogs, activityLogs] = await Promise.all([
+                databases.listDocuments(DB_ID, 'screen_time_logs', [
+                    Query.equal('childId', childId),
+                    Query.greaterThanEqual('timestamp', todayStart.toISOString()),
+                    Query.limit(200)
+                ]).catch(() => ({ documents: [] })),
+                databases.listDocuments(DB_ID, 'screen_time_logs', [
+                    Query.equal('childId', childId),
+                    Query.greaterThanEqual('timestamp', weekAgo.toISOString()),
+                    Query.orderDesc('timestamp'),
+                    Query.limit(500)
+                ]).catch(() => ({ documents: [] })),
+                databases.listDocuments(DB_ID, 'activity_logs', [
+                    Query.equal('childId', childId),
+                    Query.greaterThanEqual('timestamp', weekAgo.toISOString()),
+                    Query.orderDesc('timestamp'),
+                    Query.limit(100)
+                ]).catch(() => ({ documents: [] }))
+            ]);
+
+            // Total today
+            const totalMinutesToday = todayLogs.documents.reduce((sum, l) => sum + (l.minutes || 0), 0);
+
+            // By category (today)
+            const byCategory = {};
+            todayLogs.documents.forEach(l => {
+                const cat = l.category || 'general';
+                byCategory[cat] = (byCategory[cat] || 0) + (l.minutes || 0);
+            });
+
+            // By day (last 7 days) — group by date string
+            const byDay = {};
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(now.getDate() - i);
+                byDay[d.toLocaleDateString('en-US', { weekday: 'short' })] = 0;
+            }
+            weekLogs.documents.forEach(l => {
+                const label = new Date(l.timestamp).toLocaleDateString('en-US', { weekday: 'short' });
+                if (byDay[label] !== undefined) {
+                    byDay[label] += (l.minutes || 0);
+                }
+            });
+
+            // Top content (from activity logs)
+            const contentCount = {};
+            activityLogs.documents.forEach(l => {
+                if (l.type === 'watch' || l.type === 'play') {
+                    const key = l.action || 'Unknown';
+                    contentCount[key] = (contentCount[key] || 0) + 1;
+                }
+            });
+            const topContent = Object.entries(contentCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([action, count]) => ({ action, count }));
+
+            // Hour distribution (0–23)
+            const byHour = Array(24).fill(0);
+            weekLogs.documents.forEach(l => {
+                const hour = new Date(l.timestamp).getHours();
+                byHour[hour] += (l.minutes || 0);
+            });
+
+            return { totalMinutesToday, byCategory, byDay, topContent, byHour, totalActivities: activityLogs.documents.length };
+        } catch (e) {
+            console.warn('getScreenTimeSummary error:', e.message);
+            return { totalMinutesToday: 0, byCategory: {}, byDay: {}, topContent: [], byHour: Array(24).fill(0), totalActivities: 0 };
+        }
+    },
+
+    /**
+     * Get the merged activity feed for a child (logs + threats + watch history).
+     * @param {string} childId
+     * @param {number} limit
+     * @returns {Array} sorted newest-first unified feed items
+     */
+    getUnifiedActivityFeed: async function (childId, limit = 50) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+
+        try {
+            const [actLogs, threats, watchHistory] = await Promise.all([
+                databases.listDocuments(DB_ID, 'activity_logs', [
+                    Query.equal('childId', childId),
+                    Query.orderDesc('timestamp'),
+                    Query.limit(100)
+                ]).catch(() => ({ documents: [] })),
+                databases.listDocuments(DB_ID, COLLECTIONS.THREAT_LOGS, [
+                    Query.equal('childId', childId),
+                    Query.orderDesc('$createdAt'),
+                    Query.limit(20)
+                ]).catch(() => ({ documents: [] })),
+                databases.listDocuments(DB_ID, 'kid_watch_history', [
+                    Query.equal('childId', childId),
+                    Query.orderDesc('watchedAt'),
+                    Query.limit(30)
+                ]).catch(() => ({ documents: [] }))
+            ]);
+
+            const feed = [];
+
+            // Activity logs
+            actLogs.documents.forEach(l => {
+                feed.push({
+                    id: l.$id,
+                    type: l.type || 'activity',
+                    action: l.action,
+                    timestamp: l.timestamp,
+                    metadata: l.metadata,
+                    feedCategory: l.type === 'message_sent' ? 'social' :
+                                  l.type === 'buddy_add' ? 'social' :
+                                  l.type === 'play' ? 'game' : 'activity'
+                });
+            });
+
+            // Threat logs
+            threats.documents.forEach(t => {
+                feed.push({
+                    id: t.$id,
+                    type: 'threat',
+                    action: `⚠️ ${t.violationType || 'Safety Alert'}: ${(t.messageContent || t.content || '').slice(0, 80)}`,
+                    timestamp: t.$createdAt,
+                    metadata: JSON.stringify({ resolved: t.resolved, status: t.status }),
+                    feedCategory: 'threat'
+                });
+            });
+
+            // Watch history (dedupe by videoId)
+            const seenVideos = new Set();
+            watchHistory.documents.forEach(h => {
+                if (seenVideos.has(h.videoId)) return;
+                seenVideos.add(h.videoId);
+                feed.push({
+                    id: h.$id,
+                    type: 'watch',
+                    action: `Watched: ${h.videoTitle || 'a video'}`,
+                    timestamp: h.watchedAt,
+                    metadata: JSON.stringify({ category: h.videoCategory }),
+                    feedCategory: 'activity'
+                });
+            });
+
+            // Sort newest first and limit
+            return feed
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                .slice(0, limit);
+
+        } catch (e) {
+            console.warn('getUnifiedActivityFeed error:', e.message);
+            return [];
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // LEARNING PATHS CRUD
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Fetch all learning paths (readable by any, filtered further by caller).
+     */
+    getPaths: async function () {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const res = await databases.listDocuments(DB_ID, 'paths', [
+                Query.orderDesc('$createdAt'),
+                Query.limit(100)
+            ]);
+            return res.documents;
+        } catch (e) {
+            console.error('getPaths error:', e);
+            return [];
+        }
+    },
+
+    /**
+     * Create a new learning path.
+     * @param {Object} pathData - { title, description, type, bonusPoints, videoIds, creatorEmail }
+     */
+    addPath: async function (pathData) {
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+        return await databases.createDocument(DB_ID, 'paths', ID.unique(), {
+            title: pathData.title,
+            description: pathData.description || '',
+            type: pathData.type || 'sequential',
+            bonusPoints: pathData.bonusPoints || 0,
+            videoIds: pathData.videoIds || [],
+            creatorEmail: pathData.creatorEmail,
+            createdAt: new Date().toISOString()
+        });
+    },
+
+    /**
+     * Update an existing learning path.
+     * @param {string} pathId
+     * @param {Object} pathData
+     */
+    updatePath: async function (pathId, pathData) {
+        const { databases, DB_ID } = this._getServices();
+        return await databases.updateDocument(DB_ID, 'paths', pathId, {
+            title: pathData.title,
+            description: pathData.description || '',
+            type: pathData.type || 'sequential',
+            bonusPoints: pathData.bonusPoints || 0,
+            videoIds: pathData.videoIds || [],
+            creatorEmail: pathData.creatorEmail
+        });
+    },
+
+    /**
+     * Delete a learning path by ID.
+     * @param {string} pathId
+     */
+    deletePath: async function (pathId) {
+        const { databases, DB_ID } = this._getServices();
+        return await databases.deleteDocument(DB_ID, 'paths', pathId);
     }
 };
 

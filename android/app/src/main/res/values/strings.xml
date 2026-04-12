@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">cubbycove</string>
-    <string name="title_activity_main">cubbycove</string>
-    <string name="package_name">com.cubbycove.app</string>
-    <string name="custom_url_scheme">com.cubbycove.app</string>
+    <string name="app_name">CubbyCove</string>
+    <string name="title_activity_main">CubbyCove</string>
+    <string name="package_name">com.cubbycove.mobile</string>
+    <string name="custom_url_scheme">com.cubbycove.mobile</string>
 </resources>

@@ -1,0 +1,19 @@
+Things to add, fix, and improve:
+
+Improve:
+1. UI for creator
+2. UI for staffs (admin and assistant)
+3. UI for parents
+
+Fix:
+1. The current bio and username for kids are not mirrored to their friends (cannot be seen by their friends or buddies)
+2. The screen time is not working properly, it just divides the overall screentime of the kid into 3 section (games, entertainment, and chat) and not separates the actual time that the kid spends on that specific feature.
+3. Landing page and login page saying "Cubby Cove" instead of "CubbyCove" (no space)
+
+Add:
+1. Games, this section is practically empty, therefore, let's find an API for games that can be played by the kids
+2. Activity log for parents. Right now, it is empty and not working, therefore, we will put this in use. Activity log should reflect the kids activity in cubbycove (what they watched, played, and who they talk to. This will have a flyout menu where parents can select what they want to see on their child's activity.) This activity log should be different from other kids. Example, I have 2 children named Mikasa and Reiner, then, what Reiner watched, played, and talked too, should not be displayed to Mikasa's activity log. (They have a separate activity log)
+3. Add more vides (Filipino)
+4. True face recognition and registration (for parents. I plan to use gcash's way of verifying that the camera is actually capturing a live person rather than a picture)
+5. Add the settings for Parent accounts (General that includes message, setting, and help)
+6. Add text of rules that will pop-up for creators once they create or submit a video

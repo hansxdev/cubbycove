@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>CubbyCove - My Favorites</title>
+    <link rel="icon" type="image/png" href="../images/closedlogo.png">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind-config.js"></script>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/kid_theme.css">
+    <style>
+        body {
+            background-image: url('../images/bg_sky_3d.png');
+            background-size: cover;
+            background-position: center;
+            /* mobile friendly non-fixed background */ min-height: 100vh;
+            background-blend-mode: overlay;
+            background-color: rgba(255, 255, 255, 0.4); /* Opacity overlay */
+        }
+    </style>
+</head>
+
+<body class="text-gray-800 antialiased overflow-x-hidden">
+
+    <!-- TOP NAVIGATION BAR -->
+    <nav id="top-nav" class="fixed top-4 left-4 right-4 lg:left-[18.25rem] lg:right-6 bg-white/30 backdrop-blur-2xl border border-white/40 z-50 h-[5.5rem] flex items-center justify-between px-4 lg:px-6 rounded-[3rem] shadow-lg text-white transition-all duration-300 ease-in-out">
+        
+        <!-- Left: Search Bar & Menu Toggle -->
+        <div class="flex items-center gap-4 flex-1 lg:max-w-md">
+            <button id="menu-btn"
+                class="text-2xl text-white hover:text-indigo-200 p-2 rounded-full transition-colors drop-shadow-md lg:bg-white/40 lg:backdrop-blur-md lg:w-11 lg:h-11 lg:flex lg:items-center lg:justify-center lg:border lg:border-white/50 lg:shadow-sm lg:text-indigo-900/60 lg:hover:text-indigo-900 lg:hover:bg-white/60 lg:hover:scale-105 z-50">
+                <i class="fa-solid fa-bars lg:drop-shadow-sm"></i>
+            </button>
+            <div class="w-full hidden sm:flex border border-white/50 rounded-full bg-white/40 backdrop-blur-lg shadow-inner overflow-hidden focus-within:bg-white/60 transition-colors">
+                <i class="fa-solid fa-magnifying-glass pl-5 py-3.5 text-indigo-900/50 text-lg drop-shadow-sm flex items-center"></i>
+                <input type="text" placeholder="Search for cartoons, games..."
+                    class="w-full bg-transparent py-3 pl-3 pr-6 outline-none placeholder-indigo-900/50 font-extrabold text-indigo-900 text-lg">
+            </div>
+        </div>
+
+        <!-- Center: Empty Area -->
+        <div class="hidden lg:flex absolute left-1/2 transform -translate-x-1/2 items-center justify-center relative h-16 w-36">
+        </div>
+
+        <!-- Right: Profile & Actions -->
+        <div class="flex items-center gap-3 sm:gap-4 justify-end">
+            <!-- Watch-to-Earn Point Counter -->
+            <div id="kid-points-display" class="hidden xl:flex items-center gap-2 bg-white/40 backdrop-blur-md border border-white/50 px-4 py-2 rounded-full shadow-sm">
+                <i class="fa-solid fa-star text-yellow-300 animate-pulse text-lg drop-shadow-sm"></i>
+                <span id="header-total-points" class="font-black text-indigo-900 text-base drop-shadow-sm">0</span>
+            </div>
+
+            <button class="sm:hidden text-xl text-indigo-900 bg-white/40 backdrop-blur-md p-3 rounded-full border border-white/50 drop-shadow-sm"><i class="fa-solid fa-magnifying-glass"></i></button>
+
+            <!-- User Profile -->
+            <div class="flex items-center gap-3 cursor-pointer group bg-white/40 backdrop-blur-md hover:bg-white/60 px-2 py-1.5 pr-4 rounded-full border border-white/50 shadow-sm transition-all" onclick="openKidSettingsModal()">
+                <div class="relative">
+                    <img loading="lazy" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Guest" alt="Avatar"
+                        class="w-10 h-10 rounded-full bg-white/50 p-0.5 shadow-sm border border-white/80 transition-transform group-hover:scale-105 group-hover:rotate-3">
+                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border border-white rounded-full"></div>
+                </div>
+                <div class="hidden md:flex flex-col">
+                    <span class="font-bold text-indigo-900 text-sm leading-tight drop-shadow-sm">Loading...</span>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <button class="relative w-11 h-11 bg-white/40 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center text-indigo-900/60 hover:text-indigo-900 hover:bg-white/60 shadow-sm transition-all hover:scale-105">
+                <i class="fa-solid fa-bell text-lg drop-shadow-sm"></i>
+                <span class="absolute top-0 right-0 w-3 h-3 bg-red-400 border border-white shadow-sm rounded-full animate-bounce"></span>
+            </button>
+
+            <!-- Logout Button -->
+            <button onclick="handleKidLogout()" class="hidden sm:block bg-white/40 backdrop-blur-md hover:bg-white/60 text-indigo-900 font-extrabold px-5 py-2.5 rounded-full shadow-sm transition-all active:scale-95 text-sm border border-white/50 drop-shadow-sm">
+                Logout
+            </button>
+        </div>
+    </nav>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar"
+        class="fixed top-0 left-0 h-full w-[17.5rem] bg-white/20 backdrop-blur-2xl border-r border-white/50 overflow-y-auto transform lg:translate-x-0 -translate-x-full transition-all duration-300 ease-in-out z-[45] pt-[1.5rem] pb-10 overflow-x-hidden no-scrollbar">
+
+        <!-- Sidebar Logo -->
+        <div class="flex justify-center mb-6 h-[5rem] pb-2 relative overflow-visible mt-2" id="logo-container">
+            <a href="home_logged_in.html" class="block relative w-full h-full flex justify-center items-center">
+                <img loading="lazy" id="logo-long" src="../images/longlogo.png" alt="CubbyCove" class="h-[4.5rem] absolute transition-all duration-300 opacity-100 object-contain drop-shadow-[0_2px_10px_rgba(255,255,255,0.5)] transform scale-100 mt-2">
+                <img loading="lazy" id="logo-closed" src="../images/closedlogo.png" alt="CubbyCove" class="h-[4.5rem] absolute transition-all duration-300 opacity-0 object-contain drop-shadow-[0_2px_10px_rgba(255,255,255,0.5)] pointer-events-none transform scale-50 mt-2">
+            </a>
+        </div>
+
+        <!-- Main Links -->
+        <div class="mx-6 mb-8 mt-4 space-y-4">
+            <a href="home_logged_in.html"
+                class="sidebar-link flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-gradient-to-r from-pink-400 to-pink-300 text-white rounded-full shadow-[0_6px_14px_rgba(244,114,182,0.4),_inset_0_2px_0_rgba(255,255,255,0.4)] font-extrabold text-lg transition-transform hover:-translate-y-[2px] active:translate-y-1 group border border-white/60">
+                <img loading="lazy" src="../images/icon_home.png" class="shrink-0 w-[3.25rem] h-[3.25rem] rounded-full object-cover shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/80 group-hover:scale-105 transition-transform bg-white/20">
+                <span class="sidebar-label whitespace-nowrap drop-shadow-md ml-1 tracking-wide">Home</span>
+            </a>
+            <a href="games.html"
+                class="sidebar-link flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-gradient-to-r from-blue-400 to-blue-300 text-white rounded-full shadow-[0_6px_14px_rgba(96,165,250,0.4),_inset_0_2px_0_rgba(255,255,255,0.4)] font-extrabold text-lg transition-transform hover:-translate-y-[2px] active:translate-y-1 group border border-white/60">
+                <img loading="lazy" src="../images/icon_games.png" class="shrink-0 w-[3.25rem] h-[3.25rem] rounded-full object-cover shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/80 group-hover:scale-105 transition-transform bg-white/20">
+                <span class="sidebar-label whitespace-nowrap drop-shadow-md ml-1 tracking-wide">Games</span>
+            </a>
+            <a href="chat.html"
+                class="sidebar-link flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-gradient-to-r from-emerald-400 to-green-300 text-white rounded-full shadow-[0_6px_14px_rgba(52,211,153,0.4),_inset_0_2px_0_rgba(255,255,255,0.4)] font-extrabold text-lg transition-transform hover:-translate-y-[2px] active:translate-y-1 group border border-white/60">
+                <img loading="lazy" src="../images/icon_chat.png" class="shrink-0 w-[3.25rem] h-[3.25rem] rounded-full object-cover shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/80 group-hover:scale-105 transition-transform bg-white/20">
+                <span class="sidebar-label whitespace-nowrap drop-shadow-md ml-1 tracking-wide">Chat</span>
+            </a>
+            <a href="favorites.html"
+                class="sidebar-link flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-gradient-to-r from-red-400 to-red-300 text-white rounded-full shadow-[0_6px_14px_rgba(248,113,113,0.4),_inset_0_2px_0_rgba(255,255,255,0.4)] font-extrabold text-lg transition-transform hover:-translate-y-[2px] active:translate-y-1 group border border-white/60">
+                <img loading="lazy" src="../images/icon_fav.png" class="shrink-0 w-[3.25rem] h-[3.25rem] rounded-full object-cover shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/80 group-hover:scale-105 transition-transform bg-white/20">
+                <span class="sidebar-label whitespace-nowrap drop-shadow-md ml-1 tracking-wide">Favorites</span>
+            </a>
+            <a href="history.html"
+                class="sidebar-link flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-gradient-to-r from-purple-400 to-purple-300 text-white rounded-full shadow-[0_6px_14px_rgba(192,132,252,0.4),_inset_0_2px_0_rgba(255,255,255,0.4)] font-extrabold text-lg transition-transform hover:-translate-y-[2px] active:translate-y-1 group border border-white/60">
+                <img loading="lazy" src="../images/icon_history.png" class="shrink-0 w-[3.25rem] h-[3.25rem] rounded-full object-cover shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/80 group-hover:scale-105 transition-transform bg-white/20">
+                <span class="sidebar-label whitespace-nowrap drop-shadow-md ml-1 tracking-wide">History</span>
+            </a>
+        </div>
+
+        <!-- My Buddies (Dynamic) -->
+        <div class="mx-6 mb-6 sidebar-hide-mini transition-all duration-300 group mt-8">
+            <div class="flex items-center justify-between mb-3 px-2">
+                <h3 class="font-extrabold text-indigo-900 text-lg drop-shadow-sm tracking-tight">Your Buddies</h3>
+                <button onclick="openAddBuddyModal()"
+                    class="text-indigo-900 hover:text-white bg-white/50 backdrop-blur-md hover:bg-white/70 font-black w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm border border-white/60">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                </button>
+            </div>
+            <div class="p-4 overflow-hidden bg-white/30 backdrop-blur-2xl rounded-[2.5rem] shadow-[inset_0_2px_0_rgba(255,255,255,0.5)] border border-white/50 relative">
+                <div class="p-1">
+
+                    <!-- Incoming Requests Badge -->
+                    <div id="buddy-requests-section" class="hidden mb-4">
+                        <button onclick="toggleBuddyRequests()"
+                            class="w-full flex items-center justify-between bg-white/50 backdrop-blur-md border border-white/60 text-pink-600 rounded-full px-4 py-2.5 font-bold text-sm hover:bg-white/70 shadow-sm hover:-translate-y-[1px] active:translate-y-1 transition-all">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-user-plus drop-shadow-sm"></i> Requests</span>
+                            <span id="buddy-req-count"
+                                class="bg-pink-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-sm">0</span>
+                        </button>
+                        <!-- Request list (toggled) -->
+                        <div id="buddy-requests-list" class="hidden mt-3 space-y-2"></div>
+                    </div>
+
+                    <!-- Buddy List -->
+                    <div id="buddy-list" class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2 text-center py-2">
+                            <div class="w-14 h-14 bg-white/40 backdrop-blur-md rounded-full flex items-center justify-center mx-auto mb-2 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/60 text-indigo-900/40 text-2xl">
+                                <i class="fa-solid fa-user-group"></i>
+                            </div>
+                            <p class="text-xs text-indigo-900/60 font-bold mb-2">No buddies yet</p>
+                            <button onclick="openAddBuddyModal()"
+                                class="text-xs bg-white/60 text-indigo-900 font-black rounded-full px-4 py-2 shadow-sm hover:bg-white/80 transition-all border border-white/80 backdrop-blur-md">Add!</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Graphic -->
+        <div class="px-5 mb-6 sidebar-promo">
+            <div
+                class="bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[2rem] p-4 text-indigo-900 text-center shadow-[0_4px_16px_rgba(255,255,255,0.3),_inset_0_2px_0_rgba(255,255,255,0.6)] transform hover:-translate-y-1 transition-all cursor-pointer group">
+                <i class="fa-solid fa-star text-3xl mb-2 text-yellow-300 drop-shadow-md group-hover:scale-110 transition-transform animate-pulse"></i>
+                <p class="font-extrabold text-sm leading-tight drop-shadow-sm">You're a Super Star!</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
+
+    <main id="main-content" class="lg:ml-[17.5rem] pt-[6.5rem] min-h-screen transition-all duration-300 ease-in-out">
+        <div class="px-8 py-6">
+            <!-- Header -->
+            <div class="mb-6">
+                <h1 class="text-3xl font-black text-gray-800 flex items-center gap-3">
+                    <i class="fa-solid fa-heart text-cubby-pink"></i> My Favorites
+                </h1>
+                <p class="text-gray-500 font-semibold mt-1">Videos you've loved ❤️</p>
+            </div>
+
+            <!-- Favorites Grid -->
+            <div id="favorites-video-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <div class="col-span-full text-center py-12">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-cubby-pink"></i>
+                    <p class="text-gray-400 font-semibold mt-2">Loading favorites...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- KID SETTINGS MODAL -->
+    <div id="kid-settings-modal"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-7 relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeKidSettingsModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"><i
+                    class="fa-solid fa-times"></i></button>
+            <div class="text-center mb-5">
+                <div id="kid-avatar-preview"
+                    class="w-20 h-20 rounded-full mx-auto flex items-center justify-center text-4xl shadow-lg border-4 border-white"
+                    style="background:#60a5fa">
+                    🐻
+                </div>
+                <h3 class="text-lg font-extrabold text-gray-800 mt-3">My Profile ✨</h3>
+            </div>
+            <div class="space-y-4">
+                <!-- Display Name -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Display Name</label>
+                    <input id="kid-display-name" type="text" maxlength="30"
+                        class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-cubby-blue transition-colors"
+                        placeholder="What should buddies call you?">
+                </div>
+                <!-- Avatar Color -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Avatar Color</label>
+                    <div id="avatar-color-grid" class="flex flex-wrap gap-2">
+                        <button onclick="pickAvatarColor('#ef4444')"
+                            class="w-8 h-8 rounded-full bg-red-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#f97316')"
+                            class="w-8 h-8 rounded-full bg-orange-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#eab308')"
+                            class="w-8 h-8 rounded-full bg-yellow-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#22c55e')"
+                            class="w-8 h-8 rounded-full bg-green-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#3b82f6')"
+                            class="w-8 h-8 rounded-full bg-blue-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#8b5cf6')"
+                            class="w-8 h-8 rounded-full bg-violet-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#ec4899')"
+                            class="w-8 h-8 rounded-full bg-pink-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                        <button onclick="pickAvatarColor('#14b8a6')"
+                            class="w-8 h-8 rounded-full bg-teal-500 hover:scale-110 transition-transform border-2 border-transparent"></button>
+                    </div>
+                </div>
+                <!-- Avatar Icon -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Avatar Icon</label>
+                    <div id="avatar-icon-grid" class="flex flex-wrap gap-2">
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (1).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (1).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (2).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (2).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (3).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (3).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (4).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (4).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (5).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (5).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (6).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (6).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (7).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (7).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (8).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (8).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (9).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (9).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (10).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (10).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (11).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (11).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (12).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (12).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (13).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (13).png" class="w-full h-full object-contain"></button>
+                        <button onclick="pickAvatarIcon('../images/avatars/icon (14).png')"
+                            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img loading="lazy" 
+                                src="../images/avatars/icon (14).png" class="w-full h-full object-contain"></button>
+                    </div>
+                </div>
+                <!-- Cover Color -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Cover Color</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="pickCoverColor('#3b82f6')"
+                            class="w-12 h-6 rounded-lg bg-blue-500 hover:scale-105 transition-transform"></button>
+                        <button onclick="pickCoverColor('#8b5cf6')"
+                            class="w-12 h-6 rounded-lg bg-violet-500 hover:scale-105 transition-transform"></button>
+                        <button onclick="pickCoverColor('#ec4899')"
+                            class="w-12 h-6 rounded-lg bg-pink-500 hover:scale-105 transition-transform"></button>
+                        <button onclick="pickCoverColor('#ef4444')"
+                            class="w-12 h-6 rounded-lg bg-red-500 hover:scale-105 transition-transform"></button>
+                        <button onclick="pickCoverColor('#f97316')"
+                            class="w-12 h-6 rounded-lg bg-orange-500 hover:scale-105 transition-transform"></button>
+                        <button onclick="pickCoverColor('#22c55e')"
+                            class="w-12 h-6 rounded-lg bg-green-500 hover:scale-105 transition-transform"></button>
+                    </div>
+                    <div id="cover-color-preview" class="mt-2 h-4 rounded-full w-full" style="background:#3b82f6"></div>
+                </div>
+                <!-- Bio -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">About Me</label>
+                    <textarea id="kid-bio" rows="2" maxlength="100"
+                        class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cubby-blue resize-none"
+                        placeholder="Tell your buddies about yourself!"></textarea>
+                    <p class="text-xs text-gray-400 text-right"><span id="kid-bio-count">0</span>/100</p>
+                </div>
+                <!-- Theme Selector -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Theme</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="pickTheme('default')"
+                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-blue-300 transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600"></div>
+                            <span class="text-[10px] font-bold text-gray-500">Default</span>
+                        </button>
+                        <button onclick="pickTheme('cherry')"
+                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-red-300 transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-pink-600"></div>
+                            <span class="text-[10px] font-bold text-gray-500">Cherry</span>
+                        </button>
+                        <button onclick="pickTheme('blueberry')"
+                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-indigo-300 transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600"></div>
+                            <span class="text-[10px] font-bold text-gray-500">Blueberry</span>
+                        </button>
+                        <button onclick="pickTheme('sunflower')"
+                            class="flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-yellow-300 transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500"></div>
+                            <span class="text-[10px] font-bold text-gray-500">Sunflower</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Save -->
+                <button id="kid-save-btn" onclick="saveKidSettings()"
+                    class="w-full py-3 bg-cubby-blue hover:bg-blue-400 text-white font-extrabold rounded-xl transition-colors shadow-md text-sm">
+                    <i class="fa-solid fa-check mr-1"></i> Save My Profile!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BUDDY PROFILE VIEW MODAL -->
+    <div id="buddy-profile-modal"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden relative">
+            <button onclick="closeBuddyProfileModal()"
+                class="absolute top-4 right-4 z-10 text-white/80 hover:text-white text-xl"><i
+                    class="fa-solid fa-times"></i></button>
+            <!-- Cover -->
+            <div id="buddy-cover" class="h-28 relative" style="background:#3b82f6">
+                <div class="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
+                    <div id="buddy-avatar-view"
+                        class="w-16 h-16 rounded-full flex items-center justify-center text-3xl shadow-lg border-4 border-white"
+                        style="background:#60a5fa">
+                        🐻
+                    </div>
+                </div>
+            </div>
+            <div class="pt-12 pb-6 px-6 text-center">
+                <h3 id="buddy-display-name" class="text-lg font-extrabold text-gray-800"></h3>
+                <p id="buddy-username" class="text-sm text-gray-400 font-semibold"></p>
+                <div class="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <p class="text-xs font-bold text-gray-500 uppercase mb-1">About</p>
+                    <p id="buddy-bio" class="text-sm text-gray-600">No bio yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REWARD CELEBRATION MODAL (Lottie/Particles style) -->
+    <div id="reward-celebration-modal" class="fixed inset-0 z-[10000] hidden pointer-events-none flex items-center justify-center overflow-hidden">
+        <div class="relative scale-0 transition-transform duration-500 ease-out" id="celebration-container">
+            <!-- Sparkle/Confetti elements will be injected here -->
+            <div class="bg-white rounded-3xl shadow-2xl p-8 text-center relative pointer-events-auto border-4 border-cubby-yellow">
+                <div class="w-24 h-24 bg-cubby-yellow rounded-full flex items-center justify-center text-5xl mx-auto mb-4 shadow-lg animate-bounce">
+                    <i class="fa-solid fa-star text-white"></i>
+                </div>
+                <h2 class="text-3xl font-black text-gray-800 mb-2">You're a Rockstar! 🌟</h2>
+                <p class="text-xl font-bold text-cubby-blue" id="reward-message">+10 Stars Earned!</p>
+                <div class="mt-6 flex justify-center">
+                    <button onclick="document.getElementById('reward-celebration-modal').classList.add('hidden')"
+                        class="bg-cubby-blue hover:bg-blue-500 text-white font-black px-8 py-3 rounded-2xl shadow-md transition-all active:scale-95">
+                        Awesome!
+                    </button>
+                </div>
+            </div>
+            <!-- Decorative particles -->
+            <div class="absolute -top-10 -left-10 w-20 h-20 bg-cubby-pink/20 rounded-full blur-xl animate-pulse"></div>
+            <div class="absolute -bottom-10 -right-10 w-20 h-20 bg-cubby-yellow/20 rounded-full blur-xl animate-pulse"></div>
+        </div>
+    </div>
+
+    <!-- Appwrite & Data -->
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
+    <script src="../js/appwrite_config.js"></script>
+    <script src="../js/data_service.js"></script>
+
+    <!-- Import Logic -->
+    <script src="../js/sidebar-logic.js"></script>
+    <script src="../js/hero_slider.js"></script>
+    <script src="../js/kid_logic.js"></script>
+    <script src="../js/buddy_logic.js"></script>
+</body>
+
+</html>
+
+

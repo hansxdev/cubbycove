@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Loading Project Chromata...</title>
+    <script>
+        // This function will check for the splash screen and redirect.
+        function performRedirect() {
+            let splashSeen = false;
+
+            // Check for the Electron API first.
+            if (window.electronAPI && typeof window.electronAPI.loadSetting === 'function') {
+
+                // Electron version: Check the settings file. This is an async call.
+                window.electronAPI.loadSetting('splashSeen')
+                    .then(seen => {
+                        if (seen) {
+                            window.location.replace('game.html');
+                        } else {
+                            window.location.replace('splash.html');
+                        }
+                    })
+                    .catch(err => {
+                        // If it fails for any reason, go to splash.
+                        console.error("Failed to load setting, going to splash:", err);
+                        window.location.replace('splash.html');
+                    });
+            } else {
+                // Web (itch.io) version: Fallback to localStorage.
+                splashSeen = localStorage.getItem('projectChromataSplashSeen') === 'true';
+                if (splashSeen) {
+                    window.location.replace('game.html');
+                } else {
+                    window.location.replace('splash.html');
+                }
+            }
+        }
+
+        // --- Wait for the preload script to load ---
+        // We wait for the DOM to be ready, which gives the preload script time to run.
+        document.addEventListener('DOMContentLoaded', () => {
+            // By this point, window.electronAPI should exist if we are in Electron.
+            performRedirect();
+        });
+
+        // --- Fallback Timer ---
+        // This primarily catches the web-only version.
+        setTimeout(() => {
+            if (!window.electronAPI) {
+                performRedirect();
+            }
+        }, 50); // 50ms should be enough for localStorage check.
+
+    </script>
+</head>
+
+<body>
+</body>
+
+</html>

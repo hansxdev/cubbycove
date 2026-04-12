@@ -239,7 +239,7 @@ async function _loadVerificationImages(parent) {
     if (!svc) return;
 
     const endpoint = (svc.client?.config?.endpoint || 'https://sgp.cloud.appwrite.io/v1').replace(/\/$/, '');
-    const projectId = svc.client?.config?.project || '69904f4900396667cf4c';
+    const projectId = svc.client?.config?.project;
     const bucketId = svc.BUCKET_PARENT_DOCS || 'parent_docs';
 
     const fetchImage = async (fileId, jwtToken) => {
@@ -755,8 +755,14 @@ window.saveSettings = async function () {
         if (avatarUpload && avatarUpload.files && avatarUpload.files.length > 0) {
             const file = avatarUpload.files[0];
             try {
-                const { ID } = Appwrite;
-                const uploadResult = await svc.storage.createFile(svc.BUCKET_PROFILE_PICS, ID.unique(), file);
+                const { ID, Permission, Role } = Appwrite;
+                const uploadResult = await svc.storage.createFile(
+                    svc.BUCKET_PROFILE_PICS,
+                    ID.unique(),
+                    file,
+                    [Permission.read(Role.any())]
+                );
+
                 const fileUrl = `${svc.client.config.endpoint}/storage/buckets/${svc.BUCKET_PROFILE_PICS}/files/${uploadResult.$id}/view?project=${svc.client.config.project}`;
 
                 updatedPrefs.profilePictureUrl = fileUrl;

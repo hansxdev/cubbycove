@@ -1332,6 +1332,18 @@ const DataService = {
         await databases.updateDocument(DB_ID, COLLECTIONS.USERS, userId, {
             role: newRole
         });
+        // Also sync the role in pending_staff so unclaimed accounts see the correct role on the claim page
+        try {
+            const { Query } = Appwrite;
+            const res = await databases.listDocuments(DB_ID, COLLECTIONS.PENDING_STAFF, [
+                Query.equal('usersDocId', userId), Query.limit(1)
+            ]);
+            if (res.documents.length > 0) {
+                await databases.updateDocument(DB_ID, COLLECTIONS.PENDING_STAFF, res.documents[0].$id, { role: newRole });
+            }
+        } catch (e) {
+            console.warn('[updateUserRole] Could not sync pending_staff role:', e.message);
+        }
         return true;
     },
 

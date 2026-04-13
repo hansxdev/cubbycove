@@ -629,22 +629,22 @@ function generateTimeLabels(period) {
 }
 
 function generateRandomData(length, max) {
-    // Placeholder data with realistic distribution centered around the actual total
-    return Array.from({ length }, () => Math.floor(Math.random() * max));
+    // Deterministic: produces consistent output for the same max value using a sine wave
+    return Array.from({ length }, (_, i) => Math.floor((Math.sin(i * 1.3) * 0.5 + 0.5) * max));
 }
 
 function distributeValue(total, length) {
-    // Distribute a total value across time periods with some randomness
+    // Deterministic distribution using a sine-curve bell shape — consistent across reloads
     if (total === 0) return Array(length).fill(0);
-    const data = [];
-    let remaining = total;
-    for (let i = 0; i < length - 1; i++) {
-        const maxSlice = Math.ceil(remaining / (length - i) * 2);
-        const val = Math.min(remaining, Math.floor(Math.random() * maxSlice));
-        data.push(val);
-        remaining -= val;
-    }
-    data.push(Math.max(0, remaining));
+    const weights = Array.from({ length }, (_, i) =>
+        Math.max(0, Math.sin((i / (length - 1)) * Math.PI))
+    );
+    const weightSum = weights.reduce((a, b) => a + b, 0);
+    const data = weights.map(w => Math.round((w / weightSum) * total));
+    // Correct any rounding error by adjusting the peak element
+    const diff = total - data.reduce((a, b) => a + b, 0);
+    const peakIdx = data.indexOf(Math.max(...data));
+    data[peakIdx] = Math.max(0, data[peakIdx] + diff);
     return data;
 }
 

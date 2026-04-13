@@ -15,7 +15,7 @@ const EMAILJS_TEMPLATE_ID = 'template_ioda61h';     // Email Templates tab
 
 
 let currentUser = null;
-let currentPeriod = 'day'; // 'day' | 'week' | 'month'
+let currentPeriod = 'month'; // 'day' | 'week' | 'month' | 'overall'
 
 // Chart instances
 let chartReg = null, chartLogin = null, chartReports = null, chartPremium = null;
@@ -136,7 +136,11 @@ async function loadStats() {
 
 window.setChartPeriod = function (period) {
     currentPeriod = period;
-    ['day', 'week', 'month'].forEach(p => {
+    // Sync the select dropdown if it exists
+    const sel = document.getElementById('admin-chart-period');
+    if (sel && sel.value !== period) sel.value = period;
+    // Update legacy toggle buttons if present
+    ['day', 'week', 'month', 'overall'].forEach(p => {
         const btn = document.getElementById(`period-${p}`);
         if (!btn) return;
         if (p === period) {
@@ -156,7 +160,7 @@ async function loadDashboardCharts(period = 'day') {
         const { Query } = Appwrite;
 
         const now = new Date();
-        let buckets = [], bucketMs;
+        let buckets = [];
 
         if (period === 'day') {
             buckets = Array.from({ length: 24 }, (_, i) => {
@@ -171,7 +175,18 @@ async function loadDashboardCharts(period = 'day') {
                 d.setHours(0, 0, 0, 0);
                 return { label: d.toLocaleDateString('en', { weekday: 'short' }), start: d.getTime(), end: d.getTime() + 86400000 };
             });
+        } else if (period === 'overall') {
+            // Overall: use 12 monthly buckets from 11 months ago to today
+            buckets = Array.from({ length: 12 }, (_, i) => {
+                const d = new Date(now);
+                d.setMonth(now.getMonth() - (11 - i), 1);
+                d.setHours(0, 0, 0, 0);
+                const end = new Date(d);
+                end.setMonth(d.getMonth() + 1);
+                return { label: d.toLocaleDateString('en', { month: 'short', year: '2-digit' }), start: d.getTime(), end: end.getTime() };
+            });
         } else {
+            // 'month' — last 30 days
             buckets = Array.from({ length: 30 }, (_, i) => {
                 const d = new Date(now);
                 d.setDate(now.getDate() - (29 - i));
@@ -326,8 +341,12 @@ window.exportCSV = function () {
 };
 
 window.exportPDF = async function () {
-    if (!window.jspdf) { alert('PDF library not loaded.'); return; }
-    const { jsPDF } = window.jspdf;
+    const jspdfLib = window.jspdf;
+    if (!jspdfLib || !jspdfLib.jsPDF) {
+        alert('PDF library not loaded yet, please try again.');
+        return;
+    }
+    const { jsPDF } = jspdfLib;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const { labels, registrations, logins, reports, premium } = _analyticsCache;
 

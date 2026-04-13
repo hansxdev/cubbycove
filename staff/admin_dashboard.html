@@ -20,8 +20,7 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-
-    <!-- jsPDF -->
+    <!-- jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- EmailJS -->
@@ -265,8 +264,26 @@
                             
                             <!-- User Growth Chart -->
                             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                <div class="flex justify-between items-center mb-4">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                                     <h3 class="font-bold text-gray-800 text-lg">User Growth</h3>
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <select id="admin-chart-period"
+                                            onchange="setChartPeriod(this.value)"
+                                            class="text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 font-bold text-gray-600 focus:outline-none focus:border-[#635BFF] cursor-pointer transition-colors">
+                                            <option value="day">Today</option>
+                                            <option value="week">Last Week</option>
+                                            <option value="month" selected>Last 30 Days</option>
+                                            <option value="overall">Overall</option>
+                                        </select>
+                                        <button onclick="exportCSV()" title="Export as CSV (opens in Excel)"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg transition-colors shadow-sm">
+                                            <i class="fa-solid fa-file-csv"></i> Export CSV
+                                        </button>
+                                        <button onclick="exportPDF()" title="Export as PDF"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors shadow-sm">
+                                            <i class="fa-solid fa-file-pdf"></i> Export PDF
+                                        </button>
+                                    </div>
                                 </div>
                                 <canvas id="chartRegistrations" style="max-height: 250px;"></canvas>
                             </div>

@@ -10,7 +10,8 @@ const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 let currentUser = null;
 let creatorVideos = [];
 let creatorPaths = [];
-let statsPeriod = 'day';
+let statsPeriod = 'month'; // 'day' | 'week' | 'month' | 'overall'
+let _creatorStatsCache = null; // cache for export functions
 
 // Path Creation State
 let selectedPathVideos = []; // Array of video objects
@@ -618,7 +619,15 @@ function generateTimeLabels(period) {
             d.setDate(now.getDate() - i);
             labels.push(d.toLocaleDateString([], { weekday: 'short' }));
         }
+    } else if (period === 'overall') {
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(1);
+            d.setMonth(now.getMonth() - i);
+            labels.push(d.toLocaleDateString([], { month: 'short', year: '2-digit' }));
+        }
     } else {
+        // 'month' — last 30 days
         for (let i = 29; i >= 0; i--) {
             const d = new Date(now);
             d.setDate(now.getDate() - i);
@@ -671,6 +680,9 @@ function updateStatsCharts(videos) {
     const viewsData = distributeValue(totalViews, len);
     const likesData = distributeValue(totalLikes, len);
     const dislikesData = distributeValue(totalDislikes, len);
+
+    // Cache for export
+    _creatorStatsCache = { labels, subs: subsData, views: viewsData, likes: likesData, dislikes: dislikesData };
 
     const chartOpts = {
         responsive: true,
@@ -774,6 +786,7 @@ function updateStatsCharts(videos) {
 
 window.setStatsPeriod = function (period) {
     statsPeriod = period;
+    // Update period toggle buttons
     document.querySelectorAll('.stats-period-btn').forEach(btn => {
         btn.classList.remove('bg-white', 'text-gray-800', 'shadow-sm', 'border-gray-100');
         btn.classList.add('text-gray-500', 'border-transparent');
@@ -783,7 +796,80 @@ window.setStatsPeriod = function (period) {
         activeBtn.classList.add('bg-white', 'text-gray-800', 'shadow-sm', 'border-gray-100');
         activeBtn.classList.remove('text-gray-500', 'border-transparent');
     }
+    // Sync per-chart selects so they all stay in sync
+    ['chart-period-subscribers', 'chart-period-views', 'chart-period-likes'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (sel && sel.value !== period) sel.value = period;
+    });
     loadStatistics();
+};
+
+// ─── Creator CSV Export ────────────────────────────────────────────────────────
+
+window.exportCreatorCSV = function () {
+    if (!_creatorStatsCache) { alert('No data loaded yet. Open the Statistics tab first.'); return; }
+    const { labels, subs, views, likes, dislikes } = _creatorStatsCache;
+    const rows = [['Period', 'Subscribers Gained', 'Views', 'Likes', 'Dislikes']];
+    labels.forEach((lbl, i) => rows.push([lbl, subs[i] || 0, views[i] || 0, likes[i] || 0, dislikes[i] || 0]));
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `creator_stats_${statsPeriod}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+window.exportCreatorPDF = async function () {
+    const jspdfLib = window.jspdf;
+    if (!jspdfLib || !jspdfLib.jsPDF) { alert('PDF library not loaded yet, please try again.'); return; }
+    if (!_creatorStatsCache) { alert('No data loaded yet. Open the Statistics tab first.'); return; }
+    const { jsPDF } = jspdfLib;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const { labels, subs, views, likes, dislikes } = _creatorStatsCache;
+
+    doc.setFontSize(16);
+    doc.text('Creator Studio Analytics Report', 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Period: ${statsPeriod} — Generated: ${new Date().toLocaleString()}`, 14, 22);
+
+    // Embed chart images
+    const chartIds = ['chartSubscribers', 'chartViews', 'chartLikesDislikes'];
+    const titles = ['Subscribers Gained', 'Total Views', 'Likes vs Dislikes'];
+    let x = 14, y = 30;
+    for (let i = 0; i < chartIds.length; i++) {
+        const canvas = document.getElementById(chartIds[i]);
+        if (canvas) {
+            const img = canvas.toDataURL('image/png');
+            doc.setFontSize(9);
+            doc.text(titles[i], x, y - 1);
+            doc.addImage(img, 'PNG', x, y, 85, 50);
+            x += 95;
+            if (x > 230) { x = 14; y += 60; }
+        }
+    }
+
+    // Data table
+    y += 10;
+    doc.setFontSize(10);
+    doc.text('Data Table', 14, y);
+    y += 6;
+    doc.setFontSize(8);
+    const headers = ['Period', 'Subscribers', 'Views', 'Likes', 'Dislikes'];
+    const colX = [14, 60, 100, 140, 180];
+    headers.forEach((h, i) => { doc.setFont(undefined, 'bold'); doc.text(h, colX[i], y); });
+    doc.setFont(undefined, 'normal');
+    y += 5;
+    (labels || []).slice(0, 25).forEach((lbl, idx) => {
+        [lbl, subs[idx] || 0, views[idx] || 0, likes[idx] || 0, dislikes[idx] || 0].forEach((v, i) => {
+            doc.text(String(v), colX[i], y);
+        });
+        y += 5;
+        if (y > 190) { doc.addPage(); y = 15; }
+    });
+
+    doc.save(`creator_stats_${statsPeriod}_${new Date().toISOString().slice(0, 10)}.pdf`);
 };
 
 // ═════════════════════════════════════════════════════════════════════════════

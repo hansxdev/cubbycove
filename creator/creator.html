@@ -19,6 +19,8 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- Cloudinary Upload Widget -->
     <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
@@ -370,13 +372,25 @@
                     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
                         <h2 class="text-2xl font-black text-gray-800">Statistics</h2>
                         <!-- Period Filter -->
-                        <div class="flex bg-white rounded-lg p-1 shadow-sm border border-gray-200 text-xs font-bold">
-                            <button onclick="setStatsPeriod('day')" id="stats-period-day"
-                                class="stats-period-btn px-4 py-2 rounded-md bg-white text-gray-800 shadow-sm transition-all border border-gray-100">Day</button>
-                            <button onclick="setStatsPeriod('week')" id="stats-period-week"
-                                class="stats-period-btn px-4 py-2 rounded-md text-gray-500 hover:text-gray-700 transition-all border border-transparent">Week</button>
-                            <button onclick="setStatsPeriod('month')" id="stats-period-month"
-                                class="stats-period-btn px-4 py-2 rounded-md text-gray-500 hover:text-gray-700 transition-all border border-transparent">Month</button>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <div class="flex bg-white rounded-lg p-1 shadow-sm border border-gray-200 text-xs font-bold">
+                                <button onclick="setStatsPeriod('day')" id="stats-period-day"
+                                    class="stats-period-btn px-4 py-2 rounded-md text-gray-500 hover:text-gray-700 transition-all border border-transparent">Today</button>
+                                <button onclick="setStatsPeriod('week')" id="stats-period-week"
+                                    class="stats-period-btn px-4 py-2 rounded-md text-gray-500 hover:text-gray-700 transition-all border border-transparent">Week</button>
+                                <button onclick="setStatsPeriod('month')" id="stats-period-month"
+                                    class="stats-period-btn px-4 py-2 rounded-md bg-white text-gray-800 shadow-sm transition-all border border-gray-100">Month</button>
+                                <button onclick="setStatsPeriod('overall')" id="stats-period-overall"
+                                    class="stats-period-btn px-4 py-2 rounded-md text-gray-500 hover:text-gray-700 transition-all border border-transparent">Overall</button>
+                            </div>
+                            <button onclick="exportCreatorCSV()" title="Export as CSV (opens in Excel)"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg transition-colors shadow-sm">
+                                <i class="fa-solid fa-file-csv"></i> Export CSV
+                            </button>
+                            <button onclick="exportCreatorPDF()" title="Export as PDF"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors shadow-sm">
+                                <i class="fa-solid fa-file-pdf"></i> Export PDF
+                            </button>
                         </div>
                     </div>
 
@@ -455,9 +469,13 @@
                         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
                             <div class="flex justify-between items-center mb-6">
                                 <h4 class="text-sm font-black text-gray-800">Subscribers Gained</h4>
-                                <div class="border border-gray-200 rounded text-xs px-2 py-1 text-gray-500 font-semibold cursor-pointer flex items-center gap-1 hover:bg-gray-50">
-                                    Last 30 Days <i class="fa-solid fa-chevron-down text-[10px]"></i>
-                                </div>
+                                <select id="chart-period-subscribers" onchange="setStatsPeriod(this.value)"
+                                    class="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 font-semibold cursor-pointer focus:outline-none hover:bg-gray-50 bg-gray-50">
+                                    <option value="day">Today</option>
+                                    <option value="week">Last Week</option>
+                                    <option value="month" selected>Last 30 Days</option>
+                                    <option value="overall">Overall</option>
+                                </select>
                             </div>
                             <div class="w-full h-[220px] relative"><canvas id="chartSubscribers"></canvas></div>
                         </div>
@@ -466,9 +484,13 @@
                         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
                             <div class="flex justify-between items-center mb-6">
                                 <h4 class="text-sm font-black text-gray-800">Total Views</h4>
-                                <div class="border border-gray-200 rounded text-xs px-2 py-1 text-gray-500 font-semibold cursor-pointer flex items-center gap-1 hover:bg-gray-50">
-                                    Last 30 Days <i class="fa-solid fa-chevron-down text-[10px]"></i>
-                                </div>
+                                <select id="chart-period-views" onchange="setStatsPeriod(this.value)"
+                                    class="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 font-semibold cursor-pointer focus:outline-none hover:bg-gray-50 bg-gray-50">
+                                    <option value="day">Today</option>
+                                    <option value="week">Last Week</option>
+                                    <option value="month" selected>Last 30 Days</option>
+                                    <option value="overall">Overall</option>
+                                </select>
                             </div>
                             <div class="w-full h-[220px] relative"><canvas id="chartViews"></canvas></div>
                         </div>
@@ -482,9 +504,13 @@
                                         <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-green-500"></span><span class="text-gray-600">Likes</span></div>
                                         <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-red-500"></span><span class="text-gray-600">Dislikes</span></div>
                                     </div>
-                                    <div class="border border-gray-200 rounded text-xs px-2 py-1 text-gray-500 font-semibold cursor-pointer flex items-center gap-1 hover:bg-gray-50">
-                                        Last 30 Days <i class="fa-solid fa-chevron-down text-[10px]"></i>
-                                    </div>
+                                    <select id="chart-period-likes" onchange="setStatsPeriod(this.value)"
+                                        class="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 font-semibold cursor-pointer focus:outline-none hover:bg-gray-50 bg-gray-50">
+                                        <option value="day">Today</option>
+                                        <option value="week">Last Week</option>
+                                        <option value="month" selected>Last 30 Days</option>
+                                        <option value="overall">Overall</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="w-full h-[220px] relative"><canvas id="chartLikesDislikes"></canvas></div>

@@ -2573,6 +2573,302 @@ const DataService = {
     deletePath: async function (pathId) {
         const { databases, DB_ID } = this._getServices();
         return await databases.deleteDocument(DB_ID, 'paths', pathId);
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PARENT EMAIL OTP VERIFICATION
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Generates a 6-digit OTP, stores it in the parent's Users document,
+     * and sends it via EmailJS. Call this right after registerParent().
+     * @param {string} email   Parent's email address
+     * @param {string} docId   The Users document $id (same as auth userId)
+     */
+    generateAndSendOTP: async function (email, docId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+
+        // 1. Generate code & expiry
+        const code = String(Math.floor(100000 + Math.random() * 900000)); // 6-digit
+        const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // +10 min
+
+        // 2. Persist to DB
+        await databases.updateDocument(DB_ID, COLLECTIONS.USERS, docId, {
+            otpCode: code,
+            otpExpires: expires,
+            isEmailVerified: false
+        });
+
+        // 3. Send via EmailJS (reuses the same public key from admin_logic.js)
+        const EMAILJS_PUBLIC_KEY  = 'bu5PysfqwXeXaEOhU';
+        const EMAILJS_SERVICE_ID  = 'service_4sdis7b';
+        const EMAILJS_OTP_TEMPLATE = 'template_otp_verify'; // Create this template in EmailJS
+
+        try {
+            if (window.emailjs) {
+                await window.emailjs.send(
+                    EMAILJS_SERVICE_ID,
+                    EMAILJS_OTP_TEMPLATE,
+                    { to_email: email, otp_code: code, expires_in: '10 minutes' },
+                    EMAILJS_PUBLIC_KEY
+                );
+                console.log('📧 [OTP] Verification email sent to:', email);
+            } else {
+                // Fallback: log to console in dev environments
+                console.warn('[OTP DEV] Code:', code, '— EmailJS not loaded, showing in console only.');
+            }
+        } catch (emailErr) {
+            console.warn('[OTP] EmailJS send failed (will still work via console):', emailErr.message);
+        }
+
+        return { code, expires }; // Return for dev testing
+    },
+
+    /**
+     * Verifies an OTP code submitted by the parent during registration.
+     * On success, sets isEmailVerified = true and clears the OTP fields.
+     * @param {string} email  Parent's email
+     * @param {string} code   6-digit code entered by the user
+     * @returns {Promise<boolean>} true if verified
+     */
+    verifyOTP: async function (email, code) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+
+        // 1. Look up parent document
+        const result = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+            Query.equal('email', email.toLowerCase().trim()),
+            Query.limit(1)
+        ]);
+        if (!result.documents.length) throw new Error('Account not found.');
+
+        const doc = result.documents[0];
+
+        // 2. Check expiry
+        if (!doc.otpExpires || new Date() > new Date(doc.otpExpires)) {
+            throw new Error('Verification code has expired. Please request a new one.');
+        }
+
+        // 3. Check code
+        if (doc.otpCode !== code.trim()) {
+            throw new Error('Incorrect code. Please check and try again.');
+        }
+
+        // 4. Mark verified and clear OTP fields
+        await databases.updateDocument(DB_ID, COLLECTIONS.USERS, doc.$id, {
+            isEmailVerified: true,
+            otpCode: '',
+            otpExpires: ''
+        });
+
+        console.log('✅ [OTP] Email verified for:', email);
+        return true;
+    },
+
+    /**
+     * Regenerates and resends an OTP for a parent who didn't receive the first one.
+     * Enforces a 60-second cooldown via otpExpires timestamp.
+     * @param {string} email  Parent's email
+     */
+    resendOTP: async function (email) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+
+        const result = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
+            Query.equal('email', email.toLowerCase().trim()),
+            Query.limit(1)
+        ]);
+        if (!result.documents.length) throw new Error('Account not found.');
+
+        const doc = result.documents[0];
+
+        // Cooldown: must wait at least 60s before resend
+        if (doc.otpExpires) {
+            const originalExpiry = new Date(doc.otpExpires);
+            const minResendTime = new Date(originalExpiry.getTime() - (10 * 60 * 1000) + (60 * 1000));
+            if (new Date() < minResendTime) {
+                const secsLeft = Math.ceil((minResendTime - new Date()) / 1000);
+                throw new Error(`Please wait ${secsLeft} seconds before requesting a new code.`);
+            }
+        }
+
+        return await this.generateAndSendOTP(email, doc.$id);
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PRIVATE GROUP CHAT
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Creates a new private group chat room.
+     * @param {string}   name        Display name of the group
+     * @param {Object}   creatorChild The child object creating the group
+     * @param {string[]} memberIds   Array of child $ids to invite (max 9 others)
+     */
+    createGroupChat: async function (name, creatorChild, memberIds) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+
+        if (!name || !name.trim()) throw new Error('Group name is required.');
+        const allMembers = [...new Set([creatorChild.$id, ...memberIds])].slice(0, 10);
+        if (allMembers.length < 2) throw new Error('You need at least one buddy to create a group.');
+
+        const doc = await databases.createDocument(DB_ID, COLLECTIONS.GROUP_CHATS, ID.unique(), {
+            name: name.trim().slice(0, 100),
+            creatorId: creatorChild.$id,
+            memberIds: allMembers,
+            createdAt: new Date().toISOString()
+        });
+
+        console.log('✅ [Group Chat] Created:', doc.$id);
+        return doc;
+    },
+
+    /**
+     * Fetches all group chats a specific child is a member of.
+     * @param {string} childId
+     */
+    getGroupChats: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.GROUP_CHATS, [
+                Query.contains('memberIds', [childId]),
+                Query.orderDesc('createdAt'),
+                Query.limit(50)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Group Chat] getGroupChats error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Fetches all group chats (Admin-only: no filter by member).
+     */
+    getAllGroupChats: async function () {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.GROUP_CHATS, [
+                Query.orderDesc('createdAt'),
+                Query.limit(200)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Admin] getAllGroupChats error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Fetches messages for a specific group chat.
+     * Uses groupId field on chat_messages collection.
+     * @param {string} groupId
+     * @param {number} limit
+     */
+    getGroupChatMessages: async function (groupId, limit = 50) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.CHAT_MESSAGES, [
+                Query.equal('groupId', groupId),
+                Query.orderAsc('sentAt'),
+                Query.limit(limit)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Group Chat] getGroupChatMessages error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Sends a message to a group chat (uses chat_messages collection with groupId set).
+     * @param {string} groupId
+     * @param {string} fromChildId
+     * @param {string} fromUsername
+     * @param {string} text
+     */
+    sendGroupMessage: async function (groupId, fromChildId, fromUsername, text) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+
+        return await databases.createDocument(DB_ID, COLLECTIONS.CHAT_MESSAGES, ID.unique(), {
+            conversationId: `group_${groupId}`, // Namespaced to avoid clash with buddy convos
+            groupId: groupId,
+            fromChildId: fromChildId,
+            fromUsername: fromUsername,
+            text: text.slice(0, 1000),
+            sentAt: new Date().toISOString()
+        });
+    },
+
+    /**
+     * Removes a child from a group chat and notifies their parent.
+     * @param {string} groupId
+     * @param {Object} childDoc  The leaving child's full document
+     */
+    leaveGroupChat: async function (groupId, childDoc) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+
+        // 1. Fetch the group
+        const group = await databases.getDocument(DB_ID, COLLECTIONS.GROUP_CHATS, groupId);
+        const updatedMembers = (group.memberIds || []).filter(id => id !== childDoc.$id);
+
+        // 2. Update member list (or delete group if last member)
+        if (updatedMembers.length < 1) {
+            await databases.deleteDocument(DB_ID, COLLECTIONS.GROUP_CHATS, groupId);
+            console.log('[Group Chat] Group deleted (no members left):', groupId);
+        } else {
+            await databases.updateDocument(DB_ID, COLLECTIONS.GROUP_CHATS, groupId, {
+                memberIds: updatedMembers
+            });
+        }
+
+        // 3. Notify parent of the leaving child
+        if (childDoc.parentId) {
+            await this._createParentNotification(childDoc.parentId, {
+                type: 'group_left',
+                childId: childDoc.$id,
+                message: `Your child ${childDoc.username || childDoc.name} left the group chat "${group.name}".`
+            });
+        }
+
+        console.log('[Group Chat] Child left group:', childDoc.$id, groupId);
+        return true;
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ADMIN GHOST MODE — AUDIT LOGGING
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Creates an audit log entry whenever a staff member uses Ghost Mode
+     * to view a private group chat. Required for accountability.
+     * @param {string} adminId    The admin's Users document $id
+     * @param {string} adminName  Display name for the log
+     * @param {string} groupId    The group being viewed
+     * @param {string} groupName  The group's display name
+     */
+    logAdminGhostMode: async function (adminId, adminName, groupId, groupName) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+        try {
+            await databases.createDocument(DB_ID, COLLECTIONS.ADMIN_AUDIT_LOGS, ID.unique(), {
+                adminId: adminId,
+                adminName: adminName,
+                groupId: groupId,
+                groupName: groupName,
+                action: 'ghost_mode_view',
+                timestamp: new Date().toISOString()
+            });
+            console.log('🔒 [Audit] Ghost Mode logged for admin:', adminName, 'on group:', groupName);
+        } catch (e) {
+            console.warn('[Audit] Failed to write audit log:', e.message);
+        }
     }
 };
 

@@ -148,6 +148,15 @@
                         <p class="text-slate-400 text-xs font-bold">Capture your selfie</p>
                     </div>
                 </div>
+
+                <!-- Step 4 (NEW) -->
+                <div class="flex items-center gap-5 w-full relative pl-16 opacity-60" id="stepTrack4">
+                    <div id="dot4" class="step-dot shrink-0">4</div>
+                    <div>
+                        <p id="label4" class="font-black text-slate-500 text-lg">Verify Email</p>
+                        <p class="text-slate-400 text-xs font-bold">Enter the 6-digit code</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -319,6 +328,39 @@
                 </div>
             </div>
 
+            <!-- ═══ STEP 4: Email OTP Verification (NEW) ═══ -->
+            <div id="step4Panel" class="hidden space-y-6">
+                <div>
+                    <h2 class="text-4xl font-black text-slate-800">Check Your Email! 📬</h2>
+                    <p class="text-slate-600 font-bold mt-2">We sent a <strong>6-digit code</strong> to <span id="otp-email-display" class="text-sky-600"></span>. Enter it below to verify your account.</p>
+                </div>
+
+                <!-- 6-digit OTP Input -->
+                <div class="flex justify-center gap-3" id="otp-input-group">
+                    <input id="otp-0" type="text" inputmode="numeric" maxlength="1" class="w-14 h-16 text-center text-2xl font-black border-4 border-sky-300 rounded-2xl focus:border-sky-500 focus:outline-none bg-white/70 text-slate-800 transition-all" autocomplete="one-time-code">
+                    <input id="otp-1" type="text" inputmode="numeric" maxlength="1" class="w-14 h-16 text-center text-2xl font-black border-4 border-sky-300 rounded-2xl focus:border-sky-500 focus:outline-none bg-white/70 text-slate-800 transition-all">
+                    <input id="otp-2" type="text" inputmode="numeric" maxlength="1" class="w-14 h-16 text-center text-2xl font-black border-4 border-sky-300 rounded-2xl focus:border-sky-500 focus:outline-none bg-white/70 text-slate-800 transition-all">
+                    <input id="otp-3" type="text" inputmode="numeric" maxlength="1" class="w-14 h-16 text-center text-2xl font-black border-4 border-sky-300 rounded-2xl focus:border-sky-500 focus:outline-none bg-white/70 text-slate-800 transition-all">
+                    <input id="otp-4" type="text" inputmode="numeric" maxlength="1" class="w-14 h-16 text-center text-2xl font-black border-4 border-sky-300 rounded-2xl focus:border-sky-500 focus:outline-none bg-white/70 text-slate-800 transition-all">
+                    <input id="otp-5" type="text" inputmode="numeric" maxlength="1" class="w-14 h-16 text-center text-2xl font-black border-4 border-sky-300 rounded-2xl focus:border-sky-500 focus:outline-none bg-white/70 text-slate-800 transition-all">
+                </div>
+
+                <!-- OTP Info + Resend -->
+                <div class="text-center">
+                    <p class="text-slate-500 font-semibold text-sm">Code expires in <strong>10 minutes</strong>.</p>
+                    <p class="mt-2 text-sm font-bold text-slate-500">Didn't receive it?
+                        <button id="resend-otp-btn" onclick="handleResendOTP()" class="text-sky-500 font-black underline cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">Resend Code</button>
+                        <span id="resend-countdown" class="text-slate-400 font-bold hidden"> (wait <span id="resend-secs">60</span>s)</span>
+                    </p>
+                </div>
+
+                <!-- Verify Button -->
+                <button id="verifyOtpBtn" type="button" onclick="handleVerifyOTP()"
+                    class="w-full bg-sky-400 text-white font-black text-xl py-4 rounded-full btn-continue border-2 border-sky-500 flex items-center justify-center gap-3 cursor-pointer">
+                    Verify Email <i class="fa-solid fa-shield-check"></i>
+                </button>
+            </div>
+
         </div>
     </div>
 
@@ -374,19 +416,21 @@
         // Step Navigation
         // ─────────────────────────────────────────────────────
         function goToStep(n) {
-            [1, 2, 3].forEach(i => {
-                document.getElementById(`step${i}Panel`).classList.add('hidden');
+            [1, 2, 3, 4].forEach(i => {
+                const panel = document.getElementById(`step${i}Panel`);
+                if (panel) panel.classList.add('hidden');
                 const dot = document.getElementById(`dot${i}`);
-                dot.classList.remove('active', 'done');
-                if (document.getElementById(`stepTrack${i}`)) {
-                    document.getElementById(`stepTrack${i}`).style.opacity = i <= n ? '1' : '0.6';
-                }
+                if (dot) dot.classList.remove('active', 'done');
+                const track = document.getElementById(`stepTrack${i}`);
+                if (track) track.style.opacity = i <= n ? '1' : '0.6';
             });
-            document.getElementById(`step${n}Panel`).classList.remove('hidden');
+            const target = document.getElementById(`step${n}Panel`);
+            if (target) target.classList.remove('hidden');
 
             // Update dots
-            for (let i = 1; i <= 3; i++) {
+            for (let i = 1; i <= 4; i++) {
                 const dot = document.getElementById(`dot${i}`);
+                if (!dot) continue;
                 if (i < n) dot.classList.add('done');
                 else if (i === n) dot.classList.add('active');
             }
@@ -673,16 +717,106 @@
                         : null
                 };
 
-                await DataService.registerParent(parentData);
+                const regDoc = await DataService.registerParent(parentData);
 
-                // 4. Show success screen
-                showSuccessScreen();
+                // 4. Generate & Send OTP, then show the OTP step
+                if (regDoc && regDoc.$id) {
+                    try {
+                        await DataService.generateAndSendOTP(parentData.email, regDoc.$id);
+                    } catch (otpErr) {
+                        console.warn('[OTP] Send warning:', otpErr.message);
+                    }
+                    // Store email for OTP verification
+                    window._regEmail = parentData.email;
+                    // Show OTP step
+                    document.getElementById('otp-email-display').textContent = parentData.email;
+                    goToStep(4);
+                    setupOtpInputs();
+                    startResendCooldown();
+                } else {
+                    showSuccessScreen();
+                }
 
             } catch (err) {
                 console.error('Registration error:', err);
                 showToast(err.message || 'Registration failed. Please try again.');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Submit Registration <i class="fa-solid fa-paper-plane"></i>';
+            }
+        }
+
+        // ─────────────────────────────────────────────────────
+        // OTP Input Auto-focus Logic
+        // ─────────────────────────────────────────────────────
+        function setupOtpInputs() {
+            for (let i = 0; i < 6; i++) {
+                const inp = document.getElementById(`otp-${i}`);
+                inp.addEventListener('input', () => {
+                    inp.value = inp.value.replace(/\D/g, '').slice(-1);
+                    if (inp.value && i < 5) document.getElementById(`otp-${i + 1}`).focus();
+                });
+                inp.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !inp.value && i > 0) {
+                        document.getElementById(`otp-${i - 1}`).focus();
+                    }
+                });
+            }
+            document.getElementById('otp-0').focus();
+        }
+
+        function getOtpValue() {
+            return [0,1,2,3,4,5].map(i => document.getElementById(`otp-${i}`).value).join('');
+        }
+
+        async function handleVerifyOTP() {
+            const code = getOtpValue();
+            if (code.length < 6) { showToast('Please enter all 6 digits.'); return; }
+            const btn = document.getElementById('verifyOtpBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Verifying...';
+            try {
+                await DataService.verifyOTP(window._regEmail, code);
+                showSuccessScreen();
+            } catch (err) {
+                showToast(err.message || 'Verification failed. Please try again.');
+                btn.disabled = false;
+                btn.innerHTML = 'Verify Email <i class="fa-solid fa-shield-check"></i>';
+            }
+        }
+
+        let _resendTimer = null;
+        function startResendCooldown() {
+            const btn = document.getElementById('resend-otp-btn');
+            const countdown = document.getElementById('resend-countdown');
+            const secsEl = document.getElementById('resend-secs');
+            let secs = 60;
+            btn.disabled = true;
+            countdown.classList.remove('hidden');
+            secsEl.textContent = secs;
+            clearInterval(_resendTimer);
+            _resendTimer = setInterval(() => {
+                secs--;
+                secsEl.textContent = secs;
+                if (secs <= 0) {
+                    clearInterval(_resendTimer);
+                    btn.disabled = false;
+                    countdown.classList.add('hidden');
+                }
+            }, 1000);
+        }
+
+        async function handleResendOTP() {
+            const btn = document.getElementById('resend-otp-btn');
+            btn.disabled = true;
+            try {
+                await DataService.resendOTP(window._regEmail);
+                showToast('A new code has been sent to your email! ✉️');
+                startResendCooldown();
+                [0,1,2,3,4,5].forEach(i => { document.getElementById(`otp-${i}`).value = ''; });
+                document.getElementById('otp-0').focus();
+            } catch (err) {
+                showToast(err.message || 'Could not resend. Please try again later.');
+                btn.disabled = false;
             }
         }
 

@@ -89,9 +89,11 @@ async function initAdminDashboard() {
             const staffMenu = document.getElementById('menu-staff');
             const manageMenu = document.getElementById('super-admin-manage');
             const viewsMenu = document.getElementById('super-admin-views');
+            const auditMenu = document.getElementById('nav-group-audit-item');
             if (staffMenu) staffMenu.classList.remove('hidden');
             if (manageMenu) manageMenu.classList.remove('hidden');
             if (viewsMenu) viewsMenu.classList.remove('hidden');
+            if (auditMenu) auditMenu.classList.remove('hidden');
         }
 
         await Promise.all([loadStats(), loadUserList()]);
@@ -399,11 +401,12 @@ window.exportPDF = async function () {
 const TAB_TITLES = {
     dashboard: 'Dashboard', users: 'User Management', content: 'Add Content',
     verification: 'Parent Verification', moderation: 'Chat Reports',
-    'video-review': 'Video Review', staff: 'Manage Staff'
+    'video-review': 'Video Review', staff: 'Manage Staff',
+    'group-audit': 'Group Chat Audit'
 };
 
 function switchView(tabName) {
-    if (tabName === 'staff' && (!currentUser || currentUser.role !== 'super_admin')) {
+    if ((tabName === 'staff' || tabName === 'group-audit') && (!currentUser || currentUser.role !== 'super_admin')) {
         alert('Access Denied: Super Admin only.');
         return;
     }
@@ -432,6 +435,7 @@ function switchView(tabName) {
     if (tabName === 'moderation') loadChatReports();
     if (tabName === 'video-review') loadPendingVideos();
     if (tabName === 'dashboard') loadDashboardCharts(currentPeriod);
+    if (tabName === 'group-audit') loadGroupAuditList();
 }
 
 function switchDashboardMode(mode) {
@@ -1303,5 +1307,144 @@ window.saveSettings = async function () {
         alert('Settings saved!');
     } catch (e) {
         alert('Error saving settings: ' + e.message);
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// GHOST MODE: GROUP CHAT AUDIT (Super Admin)
+// ─────────────────────────────────────────────────────────────────────────
+
+window.loadGroupAuditList = async function () {
+    const listEl = document.getElementById('group-audit-list');
+    const logEl = document.getElementById('ghost-audit-log');
+    if (!listEl) return;
+
+    // Load active groups
+    listEl.innerHTML = `<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-[#635BFF] text-3xl"></i></div>`;
+    try {
+        const groups = await DataService.getAllGroupChats();
+        if (!groups.length) {
+            listEl.innerHTML = `<p class="text-sm text-gray-500 text-center py-6">No group chats exist.</p>`;
+        } else {
+            listEl.innerHTML = groups.map(g => `
+                <div class="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl hover:bg-gray-100 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-[#635BFF]/10 text-[#635BFF] rounded-full flex items-center justify-center">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-gray-800">${escapeHtml(g.name)}</p>
+                            <p class="text-xs text-gray-500">${(g.memberIds || []).length} members • Created: ${new Date(g.createdAt).toLocaleDateString()}</p>
+                        </div>
+                    </div>
+                    <button onclick="openGhostMode('${g.$id}', '${escapeHtml(g.name)}')" class="bg-[#635BFF] hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-ghost"></i> View
+                    </button>
+                </div>
+            `).join('');
+        }
+    } catch (e) {
+        listEl.innerHTML = `<p class="text-sm text-red-500 font-bold p-4">Error loading groups: ${e.message}</p>`;
+    }
+
+    // Load audit logs
+    if (!logEl) return;
+    try {
+        const { databases, DB_ID, COLLECTIONS } = DataService._getServices();
+        const logs = await databases.listDocuments(DB_ID, COLLECTIONS.ADMIN_AUDIT_LOGS, [
+            Appwrite.Query.orderDesc('timestamp'),
+            Appwrite.Query.limit(20)
+        ]);
+        if (!logs.documents.length) {
+            logEl.innerHTML = `<p class="text-sm text-gray-400 font-semibold text-center py-4">No Ghost Mode sessions recorded yet.</p>`;
+        } else {
+            logEl.innerHTML = logs.documents.map(l => `
+                <div class="flex items-start gap-3 p-3 text-sm border-b border-gray-50 last:border-0">
+                    <i class="fa-solid fa-eye text-orange-400 mt-0.5"></i>
+                    <div>
+                        <p class="text-gray-700"><strong>${escapeHtml(l.adminName)}</strong> viewed group <strong>${escapeHtml(l.groupName)}</strong></p>
+                        <p class="text-[10px] text-gray-400 font-bold">${new Date(l.timestamp).toLocaleString()}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (e) {
+        logEl.innerHTML = `<p class="text-xs text-red-400">Could not load audit log.</p>`;
+    }
+};
+
+window.openGhostMode = async function (groupId, groupName) {
+    if (!confirm(`WARNING: Entering Ghost Mode for "${groupName}".\n\nThis action will be permanently logged in the audit trail. Do you want to proceed?`)) {
+        return;
+    }
+
+    // 1. Write to Audit Log
+    try {
+        await DataService.logAdminGhostMode(currentUser.$id, `${currentUser.firstName} ${currentUser.lastName}`, groupId, groupName);
+        loadGroupAuditList(); // Refresh log view
+    } catch (e) {
+        alert("Failed to create audit log entry. Access denied.");
+        return;
+    }
+
+    // 2. Build the temporary Ghost Mode modal
+    let modal = document.getElementById('ghost-mode-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'ghost-mode-modal';
+        modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center p-4 lg:p-10';
+        document.body.appendChild(modal);
+    }
+    modal.classList.remove('hidden');
+
+    modal.innerHTML = `
+        <div class="bg-gray-50 rounded-2xl w-full max-w-4xl h-full max-h-[85vh] flex flex-col shadow-2xl border-4 border-indigo-900 overflow-hidden relative">
+            <div class="bg-indigo-900 text-white px-5 py-3 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="bg-red-500 text-white text-xs font-black px-2 py-0.5 rounded uppercase animate-pulse flex items-center gap-1">
+                        <i class="fa-solid fa-ghost"></i> Ghost Mode
+                    </div>
+                    <h3 class="font-bold text-lg truncate w-64 md:w-auto">${groupName}</h3>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-indigo-200 text-xs font-bold hidden md:inline"><i class="fa-solid fa-eye"></i> Audit Logged</span>
+                    <button onclick="document.getElementById('ghost-mode-modal').classList.add('hidden')" class="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded text-xl transition-colors">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="ghost-messages" class="flex-1 overflow-y-auto p-6 space-y-4 bg-[#f8f9fa] custom-scrollbar">
+                <div class="text-center py-20"><i class="fa-solid fa-spinner fa-spin text-indigo-300 text-4xl"></i></div>
+            </div>
+        </div>
+    `;
+
+    const msgsEl = document.getElementById('ghost-messages');
+
+    // 3. Load the messages
+    try {
+        const messages = await DataService.getGroupChatMessages(groupId, 100);
+        if (!messages.length) {
+            msgsEl.innerHTML = `<div class="text-center py-20 text-gray-400 font-bold"><i class="fa-solid fa-comment-slash text-4xl mb-3 opacity-50 block"></i> No messages in this group yet.</div>`;
+        } else {
+            msgsEl.innerHTML = messages.map(m => `
+                <div class="flex items-start gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-500 font-black flex items-center justify-center shrink-0 uppercase text-xs">
+                        ${(m.fromUsername || '?')[0]}
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <span class="font-bold text-gray-800 text-sm">${escapeHtml(m.fromUsername || 'Unknown')}</span>
+                            <span class="text-[10px] text-gray-400 font-bold">${new Date(m.sentAt).toLocaleString()}</span>
+                            <span class="text-[9px] text-gray-300 ml-auto break-all">ID: ${m.fromChildId}</span>
+                        </div>
+                        <p class="text-gray-700 text-sm whitespace-pre-wrap">${escapeHtml(m.text)}</p>
+                    </div>
+                </div>
+            `).join('');
+            msgsEl.scrollTop = msgsEl.scrollHeight;
+        }
+    } catch (e) {
+        msgsEl.innerHTML = `<div class="text-center py-20 text-red-500 font-bold">Failed to load messages: ${e.message}</div>`;
     }
 };

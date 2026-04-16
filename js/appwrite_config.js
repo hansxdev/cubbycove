@@ -32,7 +32,9 @@ try {
         KID_PATH_STATUS: 'kid_path_status',
         CHAT_MESSAGES: 'chat_messages',
         NOTIFICATIONS: 'notifications',
-        BUDDIES: 'buddies'
+        BUDDIES: 'buddies',
+        GROUP_CHATS: 'group_chats',         // NEW: Private group chat rooms
+        ADMIN_AUDIT_LOGS: 'admin_audit_logs' // NEW: Ghost mode audit trail
     };
 
     // Storage Bucket IDs

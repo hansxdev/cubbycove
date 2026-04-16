@@ -485,3 +485,349 @@ function formatTime(isoStr) {
 // Safely terminates message polling when the user navigates away from the page.
 window.addEventListener('beforeunload', stopRealtimeChat);
 window.addEventListener('pagehide', stopRealtimeChat); // stopPolling was removed; realtime is the active transport
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GROUP CHAT — State
+// ─────────────────────────────────────────────────────────────────────────────
+let _activeGroupId   = '';
+let _activeGroupName = '';
+let _isGroupMode     = false; // true when viewing a group chat instead of a buddy chat
+let _pendingLeaveGroupId   = '';
+let _pendingLeaveGroupName = '';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GROUP CHAT — Sidebar
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Loads all groups the current child is in and renders them in the sidebar. */
+async function loadGroupSidebar() {
+    const container = $('chat-group-list');
+    if (!container || !_currentChild) return;
+    try {
+        const groups = await DataService.getGroupChats(_currentChild.$id);
+        if (!groups.length) {
+            container.innerHTML = `<p class="text-xs text-[#bda389] font-bold text-center py-3">No groups yet.<br>Create one above! 🏕️</p>`;
+            return;
+        }
+        container.innerHTML = groups.map(g => {
+            const isActive = g.$id === _activeGroupId;
+            return `
+            <div class="flex items-center gap-2 px-3 py-2.5 rounded-2xl cursor-pointer transition-all ${isActive ? 'bg-[#e3ae7d] border-[3px] border-[#9c6a38] shadow-[0_4px_0_#9c6a38] -translate-y-0.5' : 'bg-white border-[3px] border-[#f2cdab] hover:border-[#d6ad85]'}"
+                onclick="openGroupChat('${g.$id}', '${escapeHtml(g.name)}', ${(g.memberIds || []).length})">
+                <div class="w-9 h-9 rounded-full bg-[#9c6a38] flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-people-group text-white text-xs"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-black text-[#3d2510] truncate">${escapeHtml(g.name)}</p>
+                    <p class="text-[10px] text-[#8a5b2f] font-bold">${(g.memberIds || []).length} members</p>
+                </div>
+                <button onclick="event.stopPropagation(); openLeaveGroupModal('${g.$id}', '${escapeHtml(g.name)}')"
+                    class="text-[#bda389] hover:text-red-400 transition-colors text-xs ml-1 shrink-0" title="Leave group">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        console.warn('[Group Sidebar] Error:', e.message);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GROUP CHAT — Open / Close
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Switches the main chat area into group mode for the given group. */
+async function openGroupChat(groupId, groupName, memberCount) {
+    _activeGroupId   = groupId;
+    _activeGroupName = groupName;
+    _isGroupMode     = true;
+    _buddyId         = '';   // Clear buddy mode
+    _conversationId  = `group_${groupId}`;
+
+    // Update header
+    const avatarEl = $('chat-buddy-avatar');
+    if (avatarEl) {
+        avatarEl.src = `https://api.dicebear.com/7.x/identicon/svg?seed=${groupId}`;
+        avatarEl.style.backgroundColor = '#9c6a38';
+    }
+    const nameEl = $('chat-buddy-name');
+    if (nameEl) nameEl.textContent = groupName;
+    const statusEl = $('chat-status-label');
+    if (statusEl) statusEl.textContent = `${memberCount} members`;
+
+    // Show chat area
+    const nbs = $('no-buddy-state');
+    if (nbs) { nbs.classList.add('hidden'); nbs.classList.remove('flex'); }
+    const msgs = $('chat-messages');
+    if (msgs) { msgs.classList.remove('hidden'); msgs.classList.add('flex'); }
+
+    const sendBtn = $('send-btn');
+    if (sendBtn) sendBtn.disabled = false;
+    const msgInput = $('message-input');
+    if (msgInput) { msgInput.disabled = false; msgInput.placeholder = `Say something to ${groupName}...`; }
+
+    // Load messages
+    const loadingEl = $('chat-loading');
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    if (msgs) msgs.innerHTML = '';
+    msgs.appendChild(loadingEl || (() => {
+        const d = document.createElement('div'); d.id = 'chat-loading'; return d;
+    })());
+
+    _knownMessageIds.clear();
+    _lastRenderedMsg = null;
+    try {
+        const messages = await DataService.getGroupChatMessages(groupId, 50);
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (!messages.length) {
+            msgs.innerHTML = `<div class="flex flex-col items-center justify-center py-12 text-center"><h3 class="font-extrabold text-gray-700 text-lg mb-1">Be the first to say hi! 👋</h3></div>`;
+        } else {
+            msgs.innerHTML = '';
+            _lastRenderedMsg = null;
+            messages.forEach(msg => {
+                _knownMessageIds.add(msg.$id);
+                renderGroupMessage(msg);
+            });
+            _lastMessageTime = messages[messages.length - 1].sentAt;
+            scrollToBottom();
+        }
+    } catch (e) {
+        if (loadingEl) loadingEl.classList.add('hidden');
+        console.error('[Group Chat] Load error:', e.message);
+    }
+
+    // Start realtime for group messages
+    stopRealtimeChat();
+    startGroupRealtimeChat(groupId);
+
+    // Re-render sidebar to highlight active group
+    loadGroupSidebar();
+}
+
+/** Subscribes to realtime events for a specific group's messages. */
+function startGroupRealtimeChat(groupId) {
+    const { COLLECTIONS } = AppwriteService;
+    _unsubscribeChat = DataService.subscribeToCollection(COLLECTIONS.CHAT_MESSAGES, response => {
+        const isCreate = response.events.some(e => e.includes('.create'));
+        if (isCreate) {
+            const msg = response.payload;
+            if (msg.groupId === groupId && !_knownMessageIds.has(msg.$id)) {
+                _knownMessageIds.add(msg.$id);
+                const emptyCard = $('empty-chat-msg');
+                if (emptyCard) emptyCard.remove();
+                renderGroupMessage(msg);
+                scrollToBottom();
+            }
+        }
+    });
+}
+
+/** Renders a group message bubble, showing sender name above each run. */
+function renderGroupMessage(msg) {
+    if (!msg || !msg.text) return;
+    const isMe = msg.fromChildId === _currentChild.$id;
+    const container = $('chat-messages');
+    const prev = _lastRenderedMsg;
+    const gapMs = prev && msg.sentAt && prev.sentAt ? (new Date(msg.sentAt) - new Date(prev.sentAt)) : Infinity;
+    const isGrouped = prev && prev.fromChildId === msg.fromChildId && gapMs < GROUP_MS;
+
+    if (!prev || gapMs >= GROUP_MS) {
+        const sep = document.createElement('div');
+        sep.className = 'text-center my-3';
+        sep.innerHTML = `<span class="bg-gray-100 text-gray-400 text-[10px] font-bold px-3 py-1 rounded-full">${formatTime(msg.sentAt)}</span>`;
+        container.appendChild(sep);
+    }
+
+    const div = document.createElement('div');
+    div.className = `flex ${isMe ? 'justify-end' : 'gap-2 items-end'} mt-1 message-enter`;
+
+    if (isMe) {
+        div.innerHTML = `<div class="max-w-[75%] bg-cubby-green rounded-2xl rounded-br-none px-4 py-2 text-white text-sm font-medium break-words">${escapeHtml(msg.text)}</div>`;
+    } else {
+        const safeText = escapeHtml(msg.text);
+        const sender  = escapeHtml(msg.fromUsername || 'Friend');
+        const avatarHtml = isGrouped
+            ? `<div class="w-8 shrink-0"></div>`
+            : `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(sender)}" class="w-8 h-8 rounded-full bg-white border border-gray-200 shrink-0">`;
+        const senderLabel = isGrouped ? '' : `<p class="text-[10px] font-black text-[#9c6a38] mb-0.5 ml-1">${sender}</p>`;
+        div.innerHTML = `${avatarHtml}<div class="max-w-[75%]">${senderLabel}<div class="bg-white rounded-2xl rounded-bl-none px-4 py-2 shadow-sm text-gray-800 text-sm break-words">${safeText}</div></div>`;
+    }
+    container.appendChild(div);
+    _lastRenderedMsg = { fromChildId: msg.fromChildId, sentAt: msg.sentAt };
+}
+
+// Override sendMessage to support group mode
+const _originalSendMessage = sendMessage;
+window._sendGroupIntercepted = async function () {
+    if (!_isGroupMode || !_activeGroupId) {
+        return _originalSendMessage();
+    }
+    const input = $('message-input');
+    const sendBtn = $('send-btn');
+    const text = input.value.trim();
+    if (!text || _isSending) return;
+    _isSending = true;
+
+    try {
+        const muteStatus = await DataService.isChildMuted(_currentChild.$id);
+        if (muteStatus.muted) {
+            const durEl = $('mute-duration-text');
+            if (durEl) durEl.textContent = muteStatus.durationStr;
+            $('mute-modal').classList.remove('hidden');
+            _isSending = false;
+            return;
+        }
+    } catch (e) { /* ignore */ }
+
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>';
+
+    if (!(await analyzeMessageWithAI(text))) {
+        showSafetyWarning();
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i>';
+        _isSending = false;
+        return;
+    }
+
+    input.value = '';
+    input.style.height = 'auto';
+    const tempId = 'temp_' + Date.now();
+    _knownMessageIds.add(tempId);
+    renderGroupMessage({ $id: tempId, fromChildId: _currentChild.$id, fromUsername: _currentChild.username, groupId: _activeGroupId, text, sentAt: new Date().toISOString() });
+    scrollToBottom();
+
+    try {
+        const saved = await DataService.sendGroupMessage(_activeGroupId, _currentChild.$id, _currentChild.username || _currentChild.name, text);
+        if (saved?.$id) _knownMessageIds.add(saved.$id);
+        DataService.logActivity(_currentChild.$id, 'message_sent', `Sent a message in group ${_activeGroupName}`, { groupId: _activeGroupId }).catch(() => {});
+    } catch (e) {
+        showSafetyWarning('Could not send. Check your connection.');
+    } finally {
+        _isSending = false;
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i>';
+        input.focus();
+    }
+};
+
+// Patch send button to use group-aware version
+document.addEventListener('DOMContentLoaded', () => {
+    const realSend = () => _isGroupMode ? window._sendGroupIntercepted() : sendMessage();
+    const sb = $('send-btn');
+    if (sb) {
+        sb.removeEventListener('click', sendMessage);
+        sb.addEventListener('click', realSend);
+    }
+    const inp = $('message-input');
+    if (inp) {
+        inp.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); realSend(); }
+        });
+    }
+    // Load group sidebar after buddy sidebar loads
+    setTimeout(loadGroupSidebar, 1500);
+}, { once: true });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GROUP CHAT — Create Group Modal
+// ─────────────────────────────────────────────────────────────────────────────
+
+window.openCreateGroupModal = async function () {
+    $('create-group-modal').classList.remove('hidden');
+    $('new-group-name').value = '';
+    $('group-member-count').textContent = '';
+
+    const picker = $('group-buddy-picker');
+    picker.innerHTML = `<p class="text-xs text-[#bda389] font-bold">Loading your buddies...</p>`;
+
+    try {
+        const buddies = await DataService.getBuddies(_currentChild.$id);
+        if (!buddies.length) {
+            picker.innerHTML = `<p class="text-xs text-[#bda389] font-bold text-center">You have no buddies yet! Add some first.</p>`;
+            return;
+        }
+        picker.innerHTML = buddies.map(b => `
+            <label class="flex items-center gap-3 p-2 rounded-xl hover:bg-[#f2cdab] cursor-pointer transition-all">
+                <input type="checkbox" value="${b.childId}" class="group-buddy-check accent-[#9c6a38] w-4 h-4" onchange="updateGroupMemberCount()">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(b.username)}" class="w-7 h-7 rounded-full">
+                <span class="text-sm font-bold text-[#3d2510]">${escapeHtml(b.username)}</span>
+            </label>`).join('');
+    } catch (e) {
+        picker.innerHTML = `<p class="text-xs text-red-400 font-bold">Could not load buddies. Try again.</p>`;
+    }
+};
+
+window.closeCreateGroupModal = function () {
+    $('create-group-modal').classList.add('hidden');
+};
+
+window.updateGroupMemberCount = function () {
+    const checked = document.querySelectorAll('.group-buddy-check:checked').length;
+    const countEl = $('group-member-count');
+    if (countEl) countEl.textContent = checked > 0 ? `${checked} buddy selected (+ you = ${checked + 1} members)` : '';
+    // Enforce max 9 buddies
+    const all = document.querySelectorAll('.group-buddy-check');
+    all.forEach(cb => { if (!cb.checked) cb.disabled = checked >= 9; });
+};
+
+window.handleCreateGroup = async function () {
+    const name = $('new-group-name').value.trim();
+    if (!name) { alert('Please give your group a name!'); return; }
+
+    const selectedIds = [...document.querySelectorAll('.group-buddy-check:checked')].map(cb => cb.value);
+    if (!selectedIds.length) { alert('Pick at least one buddy to invite!'); return; }
+
+    const btn = $('create-group-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Creating...';
+
+    try {
+        const group = await DataService.createGroupChat(name, _currentChild, selectedIds);
+        closeCreateGroupModal();
+        await loadGroupSidebar();
+        openGroupChat(group.$id, group.name, (group.memberIds || []).length);
+    } catch (e) {
+        alert(e.message || 'Could not create group.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-rocket"></i> Create Group!';
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GROUP CHAT — Leave Group
+// ─────────────────────────────────────────────────────────────────────────────
+
+window.openLeaveGroupModal = function (groupId, groupName) {
+    _pendingLeaveGroupId   = groupId;
+    _pendingLeaveGroupName = groupName;
+    const nameEl = $('leave-group-name');
+    if (nameEl) nameEl.textContent = groupName;
+    $('leave-group-modal').classList.remove('hidden');
+};
+
+window.handleLeaveGroup = async function () {
+    const btn = $('confirm-leave-group-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Leaving...'; }
+    try {
+        await DataService.leaveGroupChat(_pendingLeaveGroupId, _currentChild);
+        $('leave-group-modal').classList.add('hidden');
+        // If currently viewing this group, go back to no-buddy state
+        if (_activeGroupId === _pendingLeaveGroupId) {
+            _activeGroupId = '';
+            _isGroupMode = false;
+            stopRealtimeChat();
+            updateChatHeader('', '');
+            const nbs = $('no-buddy-state');
+            if (nbs) { nbs.classList.remove('hidden'); nbs.classList.add('flex'); }
+            const msgs = $('chat-messages');
+            if (msgs) { msgs.classList.add('hidden'); msgs.classList.remove('flex'); }
+        }
+        loadGroupSidebar();
+    } catch (e) {
+        alert(e.message || 'Could not leave the group.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Yes, Leave'; }
+    }
+};

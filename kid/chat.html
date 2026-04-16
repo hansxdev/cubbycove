@@ -64,11 +64,27 @@
                 <div id="buddy-requests-list" class="hidden mt-3 space-y-2"></div>
             </div>
 
-            <div id="chat-buddy-list" class="flex-1 overflow-y-auto px-4 pb-6 space-y-3 pt-4 custom-scrollbar">
+            <div id="chat-buddy-list" class="flex-1 overflow-y-auto px-4 pb-2 space-y-3 pt-4 custom-scrollbar" style="max-height: 40vh;">
                 <!-- Buddy list populates here -->
                 <div class="text-center py-6 px-4">
                     <i class="fa-solid fa-spinner fa-spin text-[#c08d5d] text-3xl mb-2"></i>
                     <p class="text-xs text-[#8a5b2f] font-bold">Loading buddies...</p>
+                </div>
+            </div>
+
+            <!-- ── GROUPS SECTION ── -->
+            <div class="border-t-[4px] border-[#d6ad85] shrink-0">
+                <div class="flex items-center justify-between px-4 py-3 bg-[#f2cdab]/60">
+                    <h3 class="text-sm font-black text-[#5c3a21] flex items-center gap-2">
+                        <i class="fa-solid fa-people-group text-[#a06030]"></i> Groups
+                    </h3>
+                    <button onclick="openCreateGroupModal()"
+                        class="text-xs bg-[#5c3a21] text-white font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 hover:bg-[#3d2510] transition-colors shadow-sm" title="Create a new group">
+                        <i class="fa-solid fa-plus text-[10px]"></i> New
+                    </button>
+                </div>
+                <div id="chat-group-list" class="overflow-y-auto px-4 pb-4 space-y-2 custom-scrollbar" style="max-height: 30vh;">
+                    <p class="text-xs text-[#bda389] font-bold text-center py-3">No groups yet.</p>
                 </div>
             </div>
         </aside>
@@ -291,6 +307,65 @@
                 class="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">
                 OK, I understand
             </button>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         CREATE GROUP MODAL (NEW)
+    ══════════════════════════════════════════════════════════ -->
+    <div id="create-group-modal"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-[#fcf1db] rounded-3xl shadow-2xl w-full max-w-sm border-4 border-[#c08d5d] relative">
+            <!-- Header -->
+            <div class="bg-[#e3ae7d] rounded-t-3xl px-6 py-4 border-b-4 border-[#c08d5d] flex items-center justify-between">
+                <h3 class="text-lg font-black text-[#3d2510] flex items-center gap-2">
+                    <i class="fa-solid fa-people-group"></i> Create a Group
+                </h3>
+                <button onclick="closeCreateGroupModal()" class="text-[#5c3a21] hover:text-[#3d2510] text-xl">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <!-- Group Name -->
+                <div>
+                    <label class="block text-xs font-black text-[#5c3a21] uppercase tracking-wider mb-1.5">Group Name 🏕️</label>
+                    <input id="new-group-name" type="text" maxlength="50" placeholder="e.g. The Minecraft Squad"
+                        class="w-full bg-white border-[3px] border-[#d6ad85] rounded-2xl px-4 py-3 font-bold text-[#3d2510] placeholder-[#bda389] focus:outline-none focus:border-[#9c6a38] transition-colors">
+                </div>
+                <!-- Buddy Picker -->
+                <div>
+                    <label class="block text-xs font-black text-[#5c3a21] uppercase tracking-wider mb-1.5">Pick Buddies (max 9)</label>
+                    <div id="group-buddy-picker" class="bg-white border-[3px] border-[#d6ad85] rounded-2xl p-3 max-h-48 overflow-y-auto space-y-2 custom-scrollbar">
+                        <p class="text-xs text-[#bda389] font-bold">Loading your buddies...</p>
+                    </div>
+                </div>
+                <p id="group-member-count" class="text-xs font-bold text-[#8a5b2f] text-center"></p>
+                <!-- Create Button -->
+                <button id="create-group-btn" onclick="handleCreateGroup()"
+                    class="w-full bg-[#5c3a21] text-white font-black text-base py-3.5 rounded-2xl shadow-[0_5px_0_#3d2510] hover:bg-[#3d2510] active:translate-y-[5px] active:shadow-none transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rocket"></i> Create Group!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         LEAVE GROUP CONFIRM MODAL (NEW)
+    ══════════════════════════════════════════════════════════ -->
+    <div id="leave-group-modal"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xs p-7 text-center">
+            <div class="w-14 h-14 bg-orange-100 text-orange-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
+                <i class="fa-solid fa-door-open"></i>
+            </div>
+            <h3 class="text-lg font-extrabold text-gray-800 mb-1">Leave Group?</h3>
+            <p class="text-sm text-gray-500 mb-5">Are you sure you want to leave <strong id="leave-group-name"></strong>? Your parent will be notified.</p>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('leave-group-modal').classList.add('hidden')"
+                    class="flex-1 py-2.5 border-2 border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 text-sm">Cancel</button>
+                <button id="confirm-leave-group-btn" onclick="handleLeaveGroup()"
+                    class="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl text-sm">Yes, Leave</button>
+            </div>
         </div>
     </div>
 

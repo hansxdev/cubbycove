@@ -181,6 +181,7 @@ Stores chat messages between buddies. Powered by Appwrite Realtime.
 | Attribute | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `conversationId` | String (Size 120) | Yes | Stable ID: `[childIdA, childIdB].sort().join('_')`. |
+| `groupId` | String (Size 50) | No | ID of the group chat if this is a group message. |
 | `fromChildId` | String (Size 50) | Yes | Sender's child document ID. |
 | `fromUsername` | String (Size 50) | Yes | Sender's display name. |
 | `text` | String (Size 1000) | Yes | Message content (max 1000 chars). |
@@ -308,5 +309,31 @@ Tracks specific content and social interactions for granular history.
 | `metadata` | String (Size 5000) | No | JSON string containing deep links or specific IDs. |
 
 > **Permissions**: `create`: `any`; `read`: `any`; `update`: `any`; `delete`: `any`.
+
+#### Collection: `group_chats` (New)
+Private group chat rooms
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `name` | String (Size 100) | Yes | Display name of the group. |
+| `creatorId` | String (Size 50) | Yes | The child object ID creating the group. |
+| `memberIds` | String[] (Size 50) | Yes | Array of child $ids. |
+| `createdAt` | String (Size 50) | Yes | ISO timestamp. |
+
+> **Permissions**: `create`: `users`; `read`: `users`; `update`: `users`; `delete`: `users`.
+
+#### Collection: `admin_audit_logs` (New)
+Ghost mode audit trail
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `adminId` | String (Size 50) | Yes | ID of the admin. |
+| `adminName` | String (Size 100) | Yes | Name of the admin. |
+| `action` | String (Size 50) | Yes | Action performed. |
+| `targetId` | String (Size 50) | No | ID of the target. |
+| `details` | String (Size 1000) | No | Details of the action. |
+| `timestamp` | String (Size 50) | Yes | ISO timestamp. |
+
+> **Permissions**: `create`: `users`; `read`: `users`.
 
 

@@ -236,13 +236,15 @@ if (!API_KEY) {
             name: 'Chat Messages',
             attributes: [
                 { type: 'string', key: 'conversationId', required: true, size: 120 },
+                { type: 'string', key: 'groupId', required: false, size: 50 },
                 { type: 'string', key: 'fromChildId', required: true, size: 50 },
                 { type: 'string', key: 'fromUsername', required: true, size: 50 },
                 { type: 'string', key: 'text', required: true, size: 1000 },
                 { type: 'string', key: 'sentAt', required: true, size: 50 }
             ],
             indexes: [
-                { key: 'convo_idx', type: 'key', attributes: ['conversationId'] }
+                { key: 'convo_idx', type: 'key', attributes: ['conversationId'] },
+                { key: 'group_idx', type: 'key', attributes: ['groupId'] }
             ],
             permissions: [
                 // ✅ SECURITY: Chat messages must NOT be publicly readable — this is a child safety requirement.
@@ -443,6 +445,43 @@ if (!API_KEY) {
                 Permission.create(Role.users()),
                 Permission.update(Role.users()),
                 Permission.delete(Role.users()),
+            ]
+        },
+        // ── 18. GROUP CHATS ──
+        {
+            id: 'group_chats',
+            name: 'Group Chats',
+            attributes: [
+                { type: 'string', key: 'name', required: true, size: 100 },
+                { type: 'string', key: 'creatorId', required: true, size: 50 },
+                { type: 'string', key: 'memberIds', required: true, size: 50, array: true },
+                { type: 'string', key: 'createdAt', required: true, size: 50 }
+            ],
+            indexes: [
+                { key: 'creator_idx', type: 'key', attributes: ['creatorId'] }
+            ],
+            permissions: [
+                Permission.read(Role.users()),
+                Permission.create(Role.users()),
+                Permission.update(Role.users()),
+                Permission.delete(Role.users()),
+            ]
+        },
+        // ── 19. ADMIN AUDIT LOGS ──
+        {
+            id: 'admin_audit_logs',
+            name: 'Admin Audit Logs',
+            attributes: [
+                { type: 'string', key: 'adminId', required: true, size: 50 },
+                { type: 'string', key: 'adminName', required: true, size: 100 },
+                { type: 'string', key: 'action', required: true, size: 50 },
+                { type: 'string', key: 'targetId', required: false, size: 50 },
+                { type: 'string', key: 'details', required: false, size: 1000 },
+                { type: 'string', key: 'timestamp', required: true, size: 50 }
+            ],
+            permissions: [
+                Permission.read(Role.users()),
+                Permission.create(Role.users()),
             ]
         }
     ];

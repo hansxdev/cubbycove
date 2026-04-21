@@ -92,7 +92,7 @@
         <!-- MAIN CONTENT AREA -->
         <main class="flex-1 flex flex-col relative h-full w-full bg-gradient-to-b from-[#bdeaa6] to-[#e4ffd4]">
             
-            <button onclick="document.getElementById('sidebar').classList.remove('-translate-x-full')" class="absolute top-4 left-4 z-50 text-[#5c3a21] bg-[#d09e6c] border-[3px] border-[#9c6a38] p-2 rounded-xl lg:hidden shadow-md">
+            <button onclick="document.getElementById('chat-sidebar').classList.toggle('hidden'); document.getElementById('chat-sidebar').classList.toggle('absolute'); document.getElementById('chat-sidebar').classList.toggle('inset-y-0'); document.getElementById('chat-sidebar').classList.toggle('left-0');" class="absolute top-4 left-4 z-50 text-[#5c3a21] bg-[#d09e6c] border-[3px] border-[#9c6a38] p-2 rounded-xl lg:hidden shadow-md">
                 <i class="fa-solid fa-bars"></i>
             </button>
 

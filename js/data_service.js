@@ -192,11 +192,8 @@ const DataService = {
 
             console.log("✅ [Appwrite] Parent Registered:", doc.$id);
 
-            // SECURITY: Logout immediately after registration
-            // The user must wait for Admin Approval (status: 'pending')
-            // They cannot log in until an admin changes their status to 'active'
-            await account.deleteSession('current');
-
+            // Delay logout until the OTP flow is fully completed in register_parent.html
+            // to prevent 401 Unauthorized API blocks.
             return doc;
 
         } catch (error) {

@@ -820,9 +820,17 @@
             }
         }
 
-        function showSuccessScreen() {
+        async function showSuccessScreen() {
             // Hide all step panels
-            [1, 2, 3].forEach(i => document.getElementById(`step${i}Panel`).classList.add('hidden'));
+            [1, 2, 3, 4].forEach(i => {
+                const el = document.getElementById(`step${i}Panel`);
+                if(el) el.classList.add('hidden');
+            });
+
+            // Securely logout user now that OTP is finished. They can't login until admin approves.
+            try {
+                await AppwriteService.account.deleteSession('current');
+            } catch (ignore) {}
 
             // Insert success message
             const formArea = document.querySelector('.w-full.md\\:w-2\\/3');

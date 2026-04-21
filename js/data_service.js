@@ -2577,26 +2577,12 @@ const DataService = {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Generates a 6-digit OTP, stores it in the parent's Users document,
-     * and sends it via EmailJS. Call this right after registerParent().
+     * Dispatch an OTP code via EmailJS without requiring an active Appwrite session or user document.
      * @param {string} email   Parent's email address
-     * @param {string} docId   The Users document $id (same as auth userId)
+     * @param {string} code    The 6-digit JS generated local OTP code
      */
-    generateAndSendOTP: async function (email, docId) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-
-        // 1. Generate code & expiry
-        const code = String(Math.floor(100000 + Math.random() * 900000)); // 6-digit
-        const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // +10 min
-
-        // 2. Persist to DB
-        await databases.updateDocument(DB_ID, COLLECTIONS.USERS, docId, {
-            otpCode: code,
-            otpExpires: expires,
-            isEmailVerified: false
-        });
-
-        // 3. Send via EmailJS (reuses the same public key from admin_logic.js)
+    sendClientSideOTP: async function (email, code) {
+        // Send via EmailJS (reuses the same public key from admin_logic.js)
         const EMAILJS_PUBLIC_KEY  = 'bu5PysfqwXeXaEOhU';
         const EMAILJS_SERVICE_ID  = 'service_4sdis7b';
         const EMAILJS_OTP_TEMPLATE = 'template_otp_verify'; // Create this template in EmailJS
@@ -2611,85 +2597,11 @@ const DataService = {
                 );
                 console.log('📧 [OTP] Verification email sent to:', email);
             } else {
-                // Fallback: log to console in dev environments
                 console.warn('[OTP DEV] Code:', code, '— EmailJS not loaded, showing in console only.');
             }
         } catch (emailErr) {
             console.warn('[OTP] EmailJS send failed (will still work via console):', emailErr.message);
         }
-
-        return { code, expires }; // Return for dev testing
-    },
-
-    /**
-     * Verifies an OTP code submitted by the parent during registration.
-     * On success, sets isEmailVerified = true and clears the OTP fields.
-     * @param {string} email  Parent's email
-     * @param {string} code   6-digit code entered by the user
-     * @returns {Promise<boolean>} true if verified
-     */
-    verifyOTP: async function (email, code) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { Query } = Appwrite;
-
-        // 1. Look up parent document
-        const result = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
-            Query.equal('email', email.toLowerCase().trim()),
-            Query.limit(1)
-        ]);
-        if (!result.documents.length) throw new Error('Account not found.');
-
-        const doc = result.documents[0];
-
-        // 2. Check expiry
-        if (!doc.otpExpires || new Date() > new Date(doc.otpExpires)) {
-            throw new Error('Verification code has expired. Please request a new one.');
-        }
-
-        // 3. Check code
-        if (doc.otpCode !== code.trim()) {
-            throw new Error('Incorrect code. Please check and try again.');
-        }
-
-        // 4. Mark verified and clear OTP fields
-        await databases.updateDocument(DB_ID, COLLECTIONS.USERS, doc.$id, {
-            isEmailVerified: true,
-            otpCode: '',
-            otpExpires: ''
-        });
-
-        console.log('✅ [OTP] Email verified for:', email);
-        return true;
-    },
-
-    /**
-     * Regenerates and resends an OTP for a parent who didn't receive the first one.
-     * Enforces a 60-second cooldown via otpExpires timestamp.
-     * @param {string} email  Parent's email
-     */
-    resendOTP: async function (email) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { Query } = Appwrite;
-
-        const result = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
-            Query.equal('email', email.toLowerCase().trim()),
-            Query.limit(1)
-        ]);
-        if (!result.documents.length) throw new Error('Account not found.');
-
-        const doc = result.documents[0];
-
-        // Cooldown: must wait at least 60s before resend
-        if (doc.otpExpires) {
-            const originalExpiry = new Date(doc.otpExpires);
-            const minResendTime = new Date(originalExpiry.getTime() - (10 * 60 * 1000) + (60 * 1000));
-            if (new Date() < minResendTime) {
-                const secsLeft = Math.ceil((minResendTime - new Date()) / 1000);
-                throw new Error(`Please wait ${secsLeft} seconds before requesting a new code.`);
-            }
-        }
-
-        return await this.generateAndSendOTP(email, doc.$id);
     },
 
     // ─────────────────────────────────────────────────────────────────────────

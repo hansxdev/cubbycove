@@ -186,13 +186,24 @@
                     <input id="regEmail" type="email" placeholder="e.g., leo@email.com" class="input-reg" autocomplete="email">
                 </div>
 
-                <div>
-                    <label class="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">Password</label>
-                    <div class="relative">
-                        <input id="regPassword" type="password" placeholder="Create a strong password" class="input-reg pr-20" autocomplete="new-password">
-                        <button type="button" onclick="toggleRegPass()" class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 text-sky-400 hover:text-sky-600 font-bold text-sm cursor-pointer">
-                            show <i id="regPassIcon" class="fa-regular fa-eye"></i>
-                        </button>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1">
+                        <label class="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">Password</label>
+                        <div class="relative">
+                            <input id="regPassword" type="password" placeholder="Create a strong password" class="input-reg pr-20" autocomplete="new-password">
+                            <button type="button" onclick="toggleRegPass('regPassword', 'regPassIcon')" class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 text-sky-400 hover:text-sky-600 font-bold text-sm cursor-pointer">
+                                show <i id="regPassIcon" class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">Confirm Password</label>
+                        <div class="relative">
+                            <input id="regConfirmPassword" type="password" placeholder="Confirm your password" class="input-reg pr-20" autocomplete="new-password">
+                            <button type="button" onclick="toggleRegPass('regConfirmPassword', 'regConfirmPassIcon')" class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 text-sky-400 hover:text-sky-600 font-bold text-sm cursor-pointer">
+                                show <i id="regConfirmPassIcon" class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -383,6 +394,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js"></script>
     <!-- Appwrite SDK + DataService -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script src="../js/appwrite_config.js"></script>
     <script src="../js/data_service.js"></script>
     <!-- Face Recognition Service -->
@@ -457,9 +469,9 @@
             r('rule4', /[@#$]/.test(v));
         });
 
-        function toggleRegPass() {
-            const inp = document.getElementById('regPassword');
-            const ico = document.getElementById('regPassIcon');
+        function toggleRegPass(inputId, iconId) {
+            const inp = document.getElementById(inputId || 'regPassword');
+            const ico = document.getElementById(iconId || 'regPassIcon');
             if (inp.type === 'password') { inp.type = 'text'; ico.className = 'fa-regular fa-eye-slash'; }
             else { inp.type = 'password'; ico.className = 'fa-regular fa-eye'; }
         }
@@ -472,10 +484,12 @@
             const ln  = document.getElementById('regLastName').value.trim();
             const em  = document.getElementById('regEmail').value.trim();
             const pw  = document.getElementById('regPassword').value;
+            const cpw = document.getElementById('regConfirmPassword').value;
 
             if (!fn || !ln) return showToast('Please enter your first and last name.');
             if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return showToast('Please enter a valid email address.');
             if (pw.length < 8) return showToast('Password must be at least 8 characters.');
+            if (pw !== cpw) return showToast('Passwords do not match.');
             if (!/[A-Z]/.test(pw) || !/[a-z]/.test(pw)) return showToast('Password needs both uppercase and lowercase letters.');
             if (!/[0-9]/.test(pw)) return showToast('Password must contain a number.');
             if (!/[@#$]/.test(pw)) return showToast('Password must include a special symbol (@, #, or $).');
@@ -681,65 +695,43 @@
 
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting...';
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Sending OTP...';
 
             try {
-                const { storage, BUCKET_PARENT_DOCS } = AppwriteService;
-                const { ID } = Appwrite;
-
-                // 1. Upload ID to Appwrite Storage
-                let idDocumentId = null;
-                if (_idFile) {
-                    const idUploadFile = new File([_idFile], 'parent_id_' + Date.now() + '.' + _idFile.name.split('.').pop(), { type: _idFile.type });
-                    const idResult = await storage.createFile(BUCKET_PARENT_DOCS, ID.unique(), idUploadFile);
-                    idDocumentId = idResult.$id;
-                }
-
-                // 2. Upload selfie to Appwrite Storage
-                let faceId = null;
-                if (_selfieBlob) {
-                    const selfieFile = new File([_selfieBlob], 'parent_selfie_' + Date.now() + '.jpg', { type: 'image/jpeg' });
-                    const selfieResult = await storage.createFile(BUCKET_PARENT_DOCS, ID.unique(), selfieFile);
-                    faceId = selfieResult.$id;
-                }
-
-                // 3. Register parent via DataService
-                const parentData = {
+                // Prepare the payload (NO appwrite uploads yet!)
+                window._parentPayload = {
                     firstName:    document.getElementById('regFirstName').value.trim(),
                     lastName:     document.getElementById('regLastName').value.trim(),
                     email:        document.getElementById('regEmail').value.trim(),
                     password:     document.getElementById('regPassword').value,
-                    idDocumentId: idDocumentId,
-                    faceId:       faceId,
-                    // Store the face descriptor (base64) from the liveness check
-                    faceDescriptor: _faceDescriptor
-                        ? FaceRecognitionService.descriptorToBase64(_faceDescriptor)
-                        : null
+                    // Save file references to execute later
+                    idFile:       _idFile,
+                    selfieBlob:   _selfieBlob,
+                    faceDescriptor: _faceDescriptor ? FaceRecognitionService.descriptorToBase64(_faceDescriptor) : null
                 };
 
-                const regDoc = await DataService.registerParent(parentData);
+                // Generate OTP mathematically & set expiry to 10 min
+                const code = String(Math.floor(100000 + Math.random() * 900000));
+                const expires = new Date(Date.now() + 10 * 60 * 1000).getTime();
+                
+                window._expectedOtp = { code, expires };
+                window._regEmail = window._parentPayload.email;
 
-                // 4. Generate & Send OTP, then show the OTP step
-                if (regDoc && regDoc.$id) {
-                    try {
-                        await DataService.generateAndSendOTP(parentData.email, regDoc.$id);
-                    } catch (otpErr) {
-                        console.warn('[OTP] Send warning:', otpErr.message);
-                    }
-                    // Store email for OTP verification
-                    window._regEmail = parentData.email;
-                    // Show OTP step
-                    document.getElementById('otp-email-display').textContent = parentData.email;
-                    goToStep(4);
-                    setupOtpInputs();
-                    startResendCooldown();
-                } else {
-                    showSuccessScreen();
-                }
+                // Send EmailJS request
+                await DataService.sendClientSideOTP(window._regEmail, code);
+
+                // Show OTP step
+                document.getElementById('otp-email-display').textContent = window._regEmail;
+                goToStep(4);
+                setupOtpInputs();
+                startResendCooldown();
+
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Submit Registration <i class="fa-solid fa-paper-plane"></i>';
 
             } catch (err) {
-                console.error('Registration error:', err);
-                showToast(err.message || 'Registration failed. Please try again.');
+                console.error('OTP Send error:', err);
+                showToast(err.message || 'Could not send verification email. Please try again.');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Submit Registration <i class="fa-solid fa-paper-plane"></i>';
             }
@@ -771,14 +763,54 @@
         async function handleVerifyOTP() {
             const code = getOtpValue();
             if (code.length < 6) { showToast('Please enter all 6 digits.'); return; }
+            
             const btn = document.getElementById('verifyOtpBtn');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Verifying...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Verifying & Saving...';
+            
             try {
-                await DataService.verifyOTP(window._regEmail, code);
+                // 1. Validate Code Locally
+                if (!window._expectedOtp) throw new Error('No OTP session found. Please go back and resubmit.');
+                if (Date.now() > window._expectedOtp.expires) throw new Error('OTP has expired. Please resend.');
+                if (window._expectedOtp.code !== code.trim()) throw new Error('Incorrect OTP code.');
+
+                // 2. We Passed! Now upload files & create Appwrite User
+                const { storage, BUCKET_PARENT_DOCS } = AppwriteService;
+                const { ID } = Appwrite;
+                const p = window._parentPayload;
+
+                showToast('Email verified! Uploading secure documents...');
+
+                let idDocumentId = null;
+                if (p.idFile) {
+                    const idUploadFile = new File([p.idFile], 'parent_id_' + Date.now() + '.' + p.idFile.name.split('.').pop(), { type: p.idFile.type });
+                    const idResult = await storage.createFile(BUCKET_PARENT_DOCS, ID.unique(), idUploadFile);
+                    idDocumentId = idResult.$id;
+                }
+
+                let faceId = null;
+                if (p.selfieBlob) {
+                    const selfieFile = new File([p.selfieBlob], 'parent_selfie_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                    const selfieResult = await storage.createFile(BUCKET_PARENT_DOCS, ID.unique(), selfieFile);
+                    faceId = selfieResult.$id;
+                }
+
+                const finalData = {
+                    firstName: p.firstName,
+                    lastName: p.lastName,
+                    email: p.email,
+                    password: p.password,
+                    idDocumentId: idDocumentId,
+                    faceId: faceId,
+                    faceDescriptor: p.faceDescriptor,
+                    isEmailVerified: true // Set verified straight away
+                };
+
+                await DataService.registerParent(finalData);
+
                 showSuccessScreen();
             } catch (err) {
-                showToast(err.message || 'Verification failed. Please try again.');
+                showToast(err.message || 'Verification or Upload failed. Please try again.');
                 btn.disabled = false;
                 btn.innerHTML = 'Verify Email <i class="fa-solid fa-shield-check"></i>';
             }
@@ -809,7 +841,13 @@
             const btn = document.getElementById('resend-otp-btn');
             btn.disabled = true;
             try {
-                await DataService.resendOTP(window._regEmail);
+                // Make a new code locally
+                const code = String(Math.floor(100000 + Math.random() * 900000));
+                const expires = new Date(Date.now() + 10 * 60 * 1000).getTime();
+                window._expectedOtp = { code, expires };
+
+                await DataService.sendClientSideOTP(window._regEmail, code);
+
                 showToast('A new code has been sent to your email! ✉️');
                 startResendCooldown();
                 [0,1,2,3,4,5].forEach(i => { document.getElementById(`otp-${i}`).value = ''; });

@@ -54,7 +54,10 @@ if (!API_KEY) {
                 { type: 'string', key: 'children', required: false, size: 50, array: true },
                 { type: 'string', key: 'createdAt', required: false, size: 50 },
                 { type: 'boolean', key: 'isPremium', required: false, xdefault: false },
-                { type: 'string', key: 'staffId', required: false, size: 65535 }
+                { type: 'string', key: 'staffId', required: false, size: 65535 },
+                { type: 'string', key: 'otpCode', required: false, size: 10 },
+                { type: 'string', key: 'otpExpires', required: false, size: 50 },
+                { type: 'boolean', key: 'isEmailVerified', required: false, xdefault: false }
             ],
             indexes: [
                 { key: 'email_idx', type: 'unique', attributes: ['email'] },
@@ -309,6 +312,7 @@ if (!API_KEY) {
                 { type: 'string', key: 'videoIds', required: true, size: 255, array: true },
                 { type: 'integer', key: 'bonusPoints', required: false },
                 { type: 'string', key: 'createdAt', required: false, size: 50 },
+                { type: 'string', key: 'updatedAt', required: false, size: 50 },
                 { type: 'integer', key: 'bonusStars', required: false }
             ],
             permissions: [
@@ -477,7 +481,9 @@ if (!API_KEY) {
                 { type: 'string', key: 'action', required: true, size: 50 },
                 { type: 'string', key: 'targetId', required: false, size: 50 },
                 { type: 'string', key: 'details', required: false, size: 1000 },
-                { type: 'string', key: 'timestamp', required: true, size: 50 }
+                { type: 'string', key: 'timestamp', required: true, size: 50 },
+                { type: 'string', key: 'groupId', required: false, size: 50 },
+                { type: 'string', key: 'groupName', required: false, size: 100 }
             ],
             permissions: [
                 Permission.read(Role.users()),

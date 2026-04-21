@@ -41,6 +41,9 @@ Stores additional user information linked to the Appwrite Auth Account.
 | `createdAt` | String (Size 50) | No | Account creation timestamp. |
 | `isPremium` | Boolean | No | Premium account status. Default `false`. |
 | `staffId` | Text (Size 65535) | No | Legacy/alternative ID. |
+| `otpCode` | String (Size 10) | No | Email verification OTP code. |
+| `otpExpires` | String (Size 50) | No | Email verification OTP expiration ISO string. |
+| `isEmailVerified` | Boolean | No | Email verification status. Default `false`. |
 
 #### Collection: `Children`
 Stores profiles of children registered by parents.
@@ -232,6 +235,7 @@ Stores learning paths/series created by creators.
 | `videoIds` | String[] (Size 255) | Yes | Array of video document IDs. |
 | `bonusPoints` | Integer | No | Points awarded on finishing path. |
 | `createdAt` | String (Size 50) | No | ISO timestamp. |
+| `updatedAt` | String (Size 50) | No | ISO timestamp of last update. |
 | `bonusStars` | Integer | No | Original name for bonusPoints, fallback. |
 
 #### Collection: `kid_rewards` (New)
@@ -331,6 +335,8 @@ Ghost mode audit trail
 | `adminName` | String (Size 100) | Yes | Name of the admin. |
 | `action` | String (Size 50) | Yes | Action performed. |
 | `targetId` | String (Size 50) | No | ID of the target. |
+| `groupId` | String (Size 50) | No | Associated group ID. |
+| `groupName` | String (Size 100) | No | Associated group name. |
 | `details` | String (Size 1000) | No | Details of the action. |
 | `timestamp` | String (Size 50) | Yes | ISO timestamp. |
 

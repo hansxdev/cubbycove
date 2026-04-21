@@ -2589,18 +2589,18 @@ const DataService = {
 
         try {
             if (window.emailjs) {
+                window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
                 await window.emailjs.send(
                     EMAILJS_SERVICE_ID,
                     EMAILJS_OTP_TEMPLATE,
-                    { to_email: email, otp_code: code, expires_in: '10 minutes' },
-                    EMAILJS_PUBLIC_KEY
+                    { to_email: email, otp_code: code, expires_in: '10 minutes' }
                 );
                 console.log('📧 [OTP] Verification email sent to:', email);
             } else {
                 console.warn('[OTP DEV] Code:', code, '— EmailJS not loaded, showing in console only.');
             }
         } catch (emailErr) {
-            console.warn('[OTP] EmailJS send failed (will still work via console):', emailErr.message);
+            console.warn('[OTP] EmailJS send failed (will still work via console):', emailErr.text || emailErr.message || JSON.stringify(emailErr));
         }
     },
 

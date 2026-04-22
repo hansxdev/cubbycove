@@ -474,17 +474,22 @@
     <!-- KID SETTINGS / SHOP MODAL -->
     <div id="kid-settings-modal"
         class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-7 relative max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md relative max-h-[92vh] flex flex-col overflow-hidden">
             <button onclick="closeKidSettingsModal()"
-                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"><i
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl z-10"><i
                     class="fa-solid fa-times"></i></button>
-            <div class="text-center mb-5">
-                <div id="kid-avatar-preview"
-                    class="w-20 h-20 rounded-full mx-auto flex items-center justify-center text-4xl shadow-lg border-4 border-white"
-                    style="background:#60a5fa">
-                    🐻
+
+            <!-- Avatar Header -->
+            <div class="text-center pt-7 px-7 pb-4 shrink-0">
+                <!-- Avatar Canvas: 3-layer rendering (bg color + icon) -->
+                <div class="relative w-20 h-20 mx-auto mb-3">
+                    <div id="kid-avatar-preview"
+                        class="w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-lg border-4 border-white"
+                        style="background:#60a5fa">
+                        🐻
+                    </div>
                 </div>
-                <h3 class="text-lg font-extrabold text-gray-800 mt-3">My Profile ✨</h3>
+                <h3 class="text-lg font-extrabold text-gray-800">My Profile ✨</h3>
                 <!-- Star counter for the shop -->
                 <div class="mt-2 inline-flex items-center gap-2 bg-yellow-50 border-2 border-yellow-200 px-4 py-1.5 rounded-full">
                     <i class="fa-solid fa-star text-yellow-500 text-sm animate-pulse"></i>
@@ -492,199 +497,156 @@
                     <span class="text-yellow-600 text-xs font-bold">Stars</span>
                 </div>
             </div>
-            <div class="space-y-4">
-                <!-- Display Name -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Display Name</label>
-                    <input id="kid-display-name" type="text" maxlength="30"
-                        class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-cubby-blue transition-colors"
-                        placeholder="What should buddies call you?">
-                </div>
-                <!-- Avatar Color -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Avatar Color
-                        <span class="text-[10px] font-normal text-yellow-600 ml-1">🔒 = unlock with stars</span>
-                    </label>
-                    <div id="avatar-color-grid" class="flex flex-wrap gap-2">
-                        <!-- Free colors -->
-                        <button data-shop-id="color_ef4444" onclick="pickAvatarColor('color_ef4444')"
-                            class="relative w-9 h-9 rounded-full bg-red-500 hover:scale-110 transition-transform border-2 border-transparent">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="color_f97316" onclick="pickAvatarColor('color_f97316')"
-                            class="relative w-9 h-9 rounded-full bg-orange-500 hover:scale-110 transition-transform border-2 border-transparent">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="color_eab308" onclick="pickAvatarColor('color_eab308')"
-                            class="relative w-9 h-9 rounded-full bg-yellow-500 hover:scale-110 transition-transform border-2 border-transparent">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="color_22c55e" onclick="pickAvatarColor('color_22c55e')"
-                            class="relative w-9 h-9 rounded-full bg-green-500 hover:scale-110 transition-transform border-2 border-transparent">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <!-- Premium colors (50 stars) -->
-                        <button data-shop-id="color_3b82f6" onclick="pickAvatarColor('color_3b82f6')"
-                            class="relative w-9 h-9 rounded-full bg-blue-500 hover:scale-110 transition-transform border-2 border-transparent">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="color_8b5cf6" onclick="pickAvatarColor('color_8b5cf6')"
-                            class="relative w-9 h-9 rounded-full bg-violet-500 hover:scale-110 transition-transform border-2 border-transparent">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="color_ec4899" onclick="pickAvatarColor('color_ec4899')"
-                            class="relative w-9 h-9 rounded-full bg-pink-500 hover:scale-110 transition-transform border-2 border-transparent">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="color_14b8a6" onclick="pickAvatarColor('color_14b8a6')"
-                            class="relative w-9 h-9 rounded-full bg-teal-500 hover:scale-110 transition-transform border-2 border-transparent">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                    </div>
-                </div>
-                <!-- Avatar Icon -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Avatar Icon</label>
-                    <div id="avatar-icon-grid" class="flex flex-wrap gap-2">
-                        <!-- Free icons (1-4) -->
-                        <button data-shop-id="icon_1" onclick="pickAvatarIcon('icon_1')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (1).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="icon_2" onclick="pickAvatarIcon('icon_2')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (2).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="icon_3" onclick="pickAvatarIcon('icon_3')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (3).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="icon_4" onclick="pickAvatarIcon('icon_4')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (4).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <!-- Premium icons 5-9 (75 stars) -->
-                        <button data-shop-id="icon_5" onclick="pickAvatarIcon('icon_5')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (5).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="icon_6" onclick="pickAvatarIcon('icon_6')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (6).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="icon_7" onclick="pickAvatarIcon('icon_7')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (7).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="icon_8" onclick="pickAvatarIcon('icon_8')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (8).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="icon_9" onclick="pickAvatarIcon('icon_9')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (9).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <!-- Premium icons 10-14 (100 stars) -->
-                        <button data-shop-id="icon_10" onclick="pickAvatarIcon('icon_10')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (10).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="icon_11" onclick="pickAvatarIcon('icon_11')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (11).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="icon_12" onclick="pickAvatarIcon('icon_12')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (12).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="icon_13" onclick="pickAvatarIcon('icon_13')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (13).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="icon_14" onclick="pickAvatarIcon('icon_14')"
-                            class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors">
-                            <img src="../images/avatars/icon (14).png" class="w-full h-full object-contain">
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                    </div>
-                </div>
-                <!-- Cover Color (all free) -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Cover Color</label>
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="pickCoverColor('#3b82f6')"
-                            class="w-12 h-6 rounded-lg bg-blue-500 hover:scale-105 transition-transform"></button>
-                        <button onclick="pickCoverColor('#8b5cf6')"
-                            class="w-12 h-6 rounded-lg bg-violet-500 hover:scale-105 transition-transform"></button>
-                        <button onclick="pickCoverColor('#ec4899')"
-                            class="w-12 h-6 rounded-lg bg-pink-500 hover:scale-105 transition-transform"></button>
-                        <button onclick="pickCoverColor('#ef4444')"
-                            class="w-12 h-6 rounded-lg bg-red-500 hover:scale-105 transition-transform"></button>
-                        <button onclick="pickCoverColor('#f97316')"
-                            class="w-12 h-6 rounded-lg bg-orange-500 hover:scale-105 transition-transform"></button>
-                        <button onclick="pickCoverColor('#22c55e')"
-                            class="w-12 h-6 rounded-lg bg-green-500 hover:scale-105 transition-transform"></button>
-                    </div>
-                    <div id="cover-color-preview" class="mt-2 h-4 rounded-full w-full" style="background:#3b82f6"></div>
-                </div>
-                <!-- Bio -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">About Me</label>
-                    <textarea id="kid-bio" rows="2" maxlength="100"
-                        class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cubby-blue resize-none"
-                        placeholder="Tell your buddies about yourself!"></textarea>
-                    <p class="text-xs text-gray-400 text-right"><span id="kid-bio-count">0</span>/100</p>
-                </div>
-                <!-- Theme Selector (Sunflower is premium) -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Theme</label>
-                    <div class="grid grid-cols-4 gap-2">
-                        <button data-shop-id="theme_default" onclick="pickTheme('theme_default')"
-                            class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-blue-300 transition-colors">
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600"></div>
-                            <span class="text-[10px] font-bold text-gray-500">Default</span>
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="theme_cherry" onclick="pickTheme('theme_cherry')"
-                            class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-red-300 transition-colors">
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-pink-600"></div>
-                            <span class="text-[10px] font-bold text-gray-500">Cherry</span>
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <button data-shop-id="theme_blueberry" onclick="pickTheme('theme_blueberry')"
-                            class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-indigo-300 transition-colors">
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600"></div>
-                            <span class="text-[10px] font-bold text-gray-500">Blueberry</span>
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                        <!-- Premium: Sunflower (150 stars) -->
-                        <button data-shop-id="theme_sunflower" onclick="pickTheme('theme_sunflower')"
-                            class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-yellow-300 transition-colors">
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500"></div>
-                            <span class="text-[10px] font-bold text-gray-500">Sunflower</span>
-                            <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
-                        </button>
-                    </div>
-                </div>
-                <!-- Save -->
-                <button id="kid-save-btn" onclick="saveKidSettings()"
-                    class="w-full py-3 bg-cubby-blue hover:bg-blue-400 text-white font-extrabold rounded-xl transition-colors shadow-md text-sm">
-                    <i class="fa-solid fa-check mr-1"></i> Save My Profile!
+
+            <!-- Tab Bar -->
+            <div class="flex border-b border-gray-100 shrink-0 px-4">
+                <button id="tab-btn-profile" onclick="switchProfileTab('profile')"
+                    class="profile-tab-btn flex-1 py-2.5 text-xs font-black text-cubby-blue border-b-2 border-cubby-blue transition-colors">
+                    <i class="fa-solid fa-user mr-1"></i>Profile
+                </button>
+                <button id="tab-btn-badges" onclick="switchProfileTab('badges')"
+                    class="profile-tab-btn flex-1 py-2.5 text-xs font-black text-gray-400 border-b-2 border-transparent hover:text-gray-600 transition-colors">
+                    <i class="fa-solid fa-medal mr-1"></i>Badges
+                </button>
+                <button id="tab-btn-cosmetics" onclick="switchProfileTab('cosmetics')"
+                    class="profile-tab-btn flex-1 py-2.5 text-xs font-black text-gray-400 border-b-2 border-transparent hover:text-gray-600 transition-colors">
+                    <i class="fa-solid fa-shirt mr-1"></i>Cosmetics
                 </button>
             </div>
+
+            <!-- Tab Panels (scrollable area) -->
+            <div class="overflow-y-auto flex-1 px-7 py-4 space-y-4">
+
+                <!-- ── PROFILE TAB ── -->
+                <div id="tab-profile" class="space-y-4">
+                    <!-- Display Name -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Display Name</label>
+                        <input id="kid-display-name" type="text" maxlength="30"
+                            class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-cubby-blue transition-colors"
+                            placeholder="What should buddies call you?">
+                    </div>
+                    <!-- Avatar Color -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Avatar Color
+                            <span class="text-[10px] font-normal text-yellow-600 ml-1">🔒 = unlock with stars</span>
+                        </label>
+                        <div id="avatar-color-grid" class="flex flex-wrap gap-2">
+                            <button data-shop-id="color_ef4444" onclick="pickAvatarColor('color_ef4444')"
+                                class="relative w-9 h-9 rounded-full bg-red-500 hover:scale-110 transition-transform border-2 border-transparent">
+                                <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                            </button>
+                            <button data-shop-id="color_f97316" onclick="pickAvatarColor('color_f97316')"
+                                class="relative w-9 h-9 rounded-full bg-orange-500 hover:scale-110 transition-transform border-2 border-transparent">
+                                <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                            </button>
+                            <button data-shop-id="color_eab308" onclick="pickAvatarColor('color_eab308')"
+                                class="relative w-9 h-9 rounded-full bg-yellow-500 hover:scale-110 transition-transform border-2 border-transparent">
+                                <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                            </button>
+                            <button data-shop-id="color_22c55e" onclick="pickAvatarColor('color_22c55e')"
+                                class="relative w-9 h-9 rounded-full bg-green-500 hover:scale-110 transition-transform border-2 border-transparent">
+                                <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                            </button>
+                            <button data-shop-id="color_3b82f6" onclick="pickAvatarColor('color_3b82f6')"
+                                class="relative w-9 h-9 rounded-full bg-blue-500 hover:scale-110 transition-transform border-2 border-transparent">
+                                <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                            </button>
+                            <button data-shop-id="color_8b5cf6" onclick="pickAvatarColor('color_8b5cf6')"
+                                class="relative w-9 h-9 rounded-full bg-violet-500 hover:scale-110 transition-transform border-2 border-transparent">
+                                <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                            </button>
+                            <button data-shop-id="color_ec4899" onclick="pickAvatarColor('color_ec4899')"
+                                class="relative w-9 h-9 rounded-full bg-pink-500 hover:scale-110 transition-transform border-2 border-transparent">
+                                <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                            </button>
+                            <button data-shop-id="color_14b8a6" onclick="pickAvatarColor('color_14b8a6')"
+                                class="relative w-9 h-9 rounded-full bg-teal-500 hover:scale-110 transition-transform border-2 border-transparent">
+                                <span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Avatar Icon -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Avatar Icon</label>
+                        <div id="avatar-icon-grid" class="flex flex-wrap gap-2">
+                            <button data-shop-id="icon_1" onclick="pickAvatarIcon('icon_1')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (1).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_2" onclick="pickAvatarIcon('icon_2')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (2).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_3" onclick="pickAvatarIcon('icon_3')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (3).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_4" onclick="pickAvatarIcon('icon_4')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (4).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_5" onclick="pickAvatarIcon('icon_5')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (5).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_6" onclick="pickAvatarIcon('icon_6')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (6).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_7" onclick="pickAvatarIcon('icon_7')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (7).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_8" onclick="pickAvatarIcon('icon_8')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (8).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_9" onclick="pickAvatarIcon('icon_9')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (9).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_10" onclick="pickAvatarIcon('icon_10')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (10).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_11" onclick="pickAvatarIcon('icon_11')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (11).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_12" onclick="pickAvatarIcon('icon_12')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (12).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_13" onclick="pickAvatarIcon('icon_13')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (13).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="icon_14" onclick="pickAvatarIcon('icon_14')" class="relative w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 p-1 transition-colors"><img src="../images/avatars/icon (14).png" class="w-full h-full object-contain"><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                        </div>
+                    </div>
+                    <!-- Cover Color (all free) -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Cover Color</label>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="pickCoverColor('#3b82f6')" class="w-12 h-6 rounded-lg bg-blue-500 hover:scale-105 transition-transform"></button>
+                            <button onclick="pickCoverColor('#8b5cf6')" class="w-12 h-6 rounded-lg bg-violet-500 hover:scale-105 transition-transform"></button>
+                            <button onclick="pickCoverColor('#ec4899')" class="w-12 h-6 rounded-lg bg-pink-500 hover:scale-105 transition-transform"></button>
+                            <button onclick="pickCoverColor('#ef4444')" class="w-12 h-6 rounded-lg bg-red-500 hover:scale-105 transition-transform"></button>
+                            <button onclick="pickCoverColor('#f97316')" class="w-12 h-6 rounded-lg bg-orange-500 hover:scale-105 transition-transform"></button>
+                            <button onclick="pickCoverColor('#22c55e')" class="w-12 h-6 rounded-lg bg-green-500 hover:scale-105 transition-transform"></button>
+                        </div>
+                        <div id="cover-color-preview" class="mt-2 h-4 rounded-full w-full" style="background:#3b82f6"></div>
+                    </div>
+                    <!-- Bio -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">About Me</label>
+                        <textarea id="kid-bio" rows="2" maxlength="100"
+                            class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cubby-blue resize-none"
+                            placeholder="Tell your buddies about yourself!"></textarea>
+                        <p class="text-xs text-gray-400 text-right"><span id="kid-bio-count">0</span>/100</p>
+                    </div>
+                    <!-- Theme Selector -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Theme</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button data-shop-id="theme_default" onclick="pickTheme('theme_default')" class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-blue-300 transition-colors"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600"></div><span class="text-[10px] font-bold text-gray-500">Default</span><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="theme_cherry" onclick="pickTheme('theme_cherry')" class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-red-300 transition-colors"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-pink-600"></div><span class="text-[10px] font-bold text-gray-500">Cherry</span><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="theme_blueberry" onclick="pickTheme('theme_blueberry')" class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-indigo-300 transition-colors"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600"></div><span class="text-[10px] font-bold text-gray-500">Blueberry</span><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                            <button data-shop-id="theme_sunflower" onclick="pickTheme('theme_sunflower')" class="relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent hover:border-yellow-300 transition-colors"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500"></div><span class="text-[10px] font-bold text-gray-500">Sunflower</span><span class="shop-lock-badge hidden absolute -top-1 -right-1 bg-gray-800 text-white rounded-full px-1 flex items-center gap-0.5 z-10"></span></button>
+                        </div>
+                    </div>
+                    <!-- Save -->
+                    <button id="kid-save-btn" onclick="saveKidSettings()"
+                        class="w-full py-3 bg-cubby-blue hover:bg-blue-400 text-white font-extrabold rounded-xl transition-colors shadow-md text-sm">
+                        <i class="fa-solid fa-check mr-1"></i> Save My Profile!
+                    </button>
+                </div>
+
+                <!-- ── BADGES TAB ── -->
+                <div id="tab-badges" class="hidden">
+                    <p class="text-xs font-bold text-gray-400 uppercase mb-3">Earned by completing Learning Paths</p>
+                    <div id="badges-grid" class="grid grid-cols-3 gap-4">
+                        <div class="col-span-3 text-center py-8 text-gray-400">
+                            <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p class="text-sm font-bold">Loading badges...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── COSMETICS TAB ── -->
+                <div id="tab-cosmetics" class="hidden">
+                    <p class="text-xs font-bold text-gray-400 uppercase mb-3">Legendary rewards unlocked from paths</p>
+                    <div id="cosmetics-grid" class="grid grid-cols-3 gap-4">
+                        <div class="col-span-3 text-center py-8 text-gray-400">
+                            <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p class="text-sm font-bold">Loading cosmetics...</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- end scrollable area -->
         </div>
     </div>
 
@@ -736,6 +698,56 @@
             <!-- Decorative particles -->
             <div class="absolute -top-10 -left-10 w-20 h-20 bg-cubby-pink/20 rounded-full blur-xl animate-pulse"></div>
             <div class="absolute -bottom-10 -right-10 w-20 h-20 bg-cubby-yellow/20 rounded-full blur-xl animate-pulse"></div>
+        </div>
+    </div>
+
+    <!-- 🐾 Mascot Help Button — floating bottom-right (kids portal) -->
+    <button id="mascot-help-btn"
+        onclick="openKidHelpModal()"
+        title="Need help? Ask Cubby!"
+        class="fixed bottom-6 right-6 z-[9990] w-16 h-16 rounded-full bg-gradient-to-br from-[#28C7AE] to-[#20a88f] shadow-[0_6px_0_#178a75,0_0_20px_rgba(40,199,174,0.4)] hover:translate-y-[-3px] hover:shadow-[0_9px_0_#178a75,0_0_30px_rgba(40,199,174,0.5)] active:translate-y-1 active:shadow-[0_2px_0_#178a75] transition-all flex items-center justify-center border-4 border-white"
+        aria-label="Help">
+        <img src="../images/closedlogo.png" alt="Cubby" class="w-9 h-9 object-contain drop-shadow-sm">
+    </button>
+
+    <!-- Kid Help / Support Request Modal -->
+    <div id="kid-help-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9995] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <!-- Coloured header -->
+            <div class="bg-gradient-to-br from-[#28C7AE] to-[#20a88f] p-6 text-center">
+                <img src="../images/closedlogo.png" alt="Cubby" class="w-16 h-16 object-contain mx-auto mb-3 drop-shadow-md animate-bounce">
+                <h3 class="text-xl font-black text-white drop-shadow-sm">Need Help? 🐾</h3>
+                <p class="text-white/80 text-sm font-bold mt-1">Tell us what's wrong and we'll help you!</p>
+            </div>
+            <!-- Form -->
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">What's the problem?</label>
+                    <select id="kid-help-category" class="w-full bg-gray-50 border-2 border-gray-200 rounded-2xl px-4 py-3 font-bold text-gray-700 focus:outline-none focus:border-[#28C7AE] text-sm">
+                        <option value="login">I can't log in</option>
+                        <option value="video">A video won't play</option>
+                        <option value="reward">I didn't get my stars</option>
+                        <option value="friend">Problem with a friend</option>
+                        <option value="other">Something else</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Tell me more (optional)</label>
+                    <textarea id="kid-help-message" rows="3" maxlength="300"
+                        class="w-full bg-gray-50 border-2 border-gray-200 rounded-2xl px-4 py-2.5 text-sm font-bold text-gray-700 focus:outline-none focus:border-[#28C7AE] resize-none"
+                        placeholder="What happened?"></textarea>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="document.getElementById('kid-help-modal').classList.add('hidden')"
+                        class="flex-1 bg-gray-100 text-gray-600 font-bold py-3 rounded-2xl hover:bg-gray-200 transition-colors text-sm">
+                        Never mind!
+                    </button>
+                    <button id="kid-help-send-btn" onclick="submitKidHelpRequest()"
+                        class="flex-1 bg-[#28C7AE] text-white font-black py-3 rounded-2xl hover:bg-teal-500 transition-colors text-sm shadow-md active:scale-95">
+                        <i class="fa-solid fa-paper-plane mr-1"></i> Send!
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

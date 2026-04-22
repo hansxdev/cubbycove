@@ -2778,6 +2778,238 @@ const DataService = {
         } catch (e) {
             console.warn('[Audit] Failed to write audit log:', e.message);
         }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COSMETICS & REWARDS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    getCosmetics: async function () {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.COSMETICS);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Cosmetics] getCosmetics error:', e.message);
+            return [];
+        }
+    },
+
+    createCosmetic: async function (cosmeticData) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+        return await databases.createDocument(DB_ID, COLLECTIONS.COSMETICS, ID.unique(), cosmeticData);
+    },
+
+    purchaseCosmetic: async function (childId, cosmeticId, priceStars) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        
+        // Fetch current child to check stars
+        const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+        if (child.totalPoints < priceStars) {
+            throw new Error('Not enough stars!');
+        }
+
+        const unlockedCosmetics = child.unlockedCosmetics || [];
+        if (unlockedCosmetics.includes(cosmeticId)) {
+            throw new Error('Already owned!');
+        }
+
+        unlockedCosmetics.push(cosmeticId);
+
+        // Deduct stars and add to unlocked array
+        await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
+            totalPoints: child.totalPoints - priceStars,
+            unlockedCosmetics: unlockedCosmetics
+        });
+
+        return true;
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SUPPORT TICKETS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    getSupportTickets: async function (parentId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.SUPPORT_TICKETS, [
+                Query.equal('parentId', parentId),
+                Query.orderDesc('lastMessageAt')
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Support] getSupportTickets error:', e.message);
+            return [];
+        }
+    },
+
+    getAllSupportTickets: async function () {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.SUPPORT_TICKETS, [
+                Query.orderDesc('lastMessageAt')
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Support] getAllSupportTickets error:', e.message);
+            return [];
+        }
+    },
+
+    createSupportTicket: async function (parentId, subject, initialMessage) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+
+        const now = new Date().toISOString();
+        const ticket = await databases.createDocument(DB_ID, COLLECTIONS.SUPPORT_TICKETS, ID.unique(), {
+            parentId: parentId,
+            subject: subject,
+            status: 'open',
+            lastMessageAt: now,
+            createdAt: now
+        });
+
+        if (initialMessage) {
+            await this.sendSupportMessage(ticket.$id, parentId, false, initialMessage);
+        }
+
+        return ticket;
+    },
+
+    getSupportMessages: async function (ticketId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.SUPPORT_MESSAGES, [
+                Query.equal('ticketId', ticketId),
+                Query.orderAsc('sentAt')
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Support] getSupportMessages error:', e.message);
+            return [];
+        }
+    },
+
+    sendSupportMessage: async function (ticketId, senderId, isStaff, text) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+
+        const now = new Date().toISOString();
+        const msg = await databases.createDocument(DB_ID, COLLECTIONS.SUPPORT_MESSAGES, ID.unique(), {
+            ticketId: ticketId,
+            senderId: senderId,
+            isStaff: isStaff,
+            text: text,
+            sentAt: now
+        });
+
+        // Update the ticket LastMessageAt and Status
+        await databases.updateDocument(DB_ID, COLLECTIONS.SUPPORT_TICKETS, ticketId, {
+            lastMessageAt: now,
+            status: isStaff ? 'replied' : 'open'
+        });
+
+        return msg;
+    },
+
+    // ── Milestone 4: Badge Showcase & Cosmetics Wardrobe ─────────────────────
+    getPathStatusesByChild: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.PATH_STATUSES, [
+                Query.equal('childId', childId),
+                Query.limit(100)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[DataService] getPathStatusesByChild error:', e.message);
+            return [];
+        }
+    },
+
+    getPathById: async function (pathId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            return await databases.getDocument(DB_ID, COLLECTIONS.LEARNING_PATHS, pathId);
+        } catch (e) {
+            console.warn('[DataService] getPathById error:', e.message);
+            return null;
+        }
+    },
+
+    // ── Milestone 5: Support Tickets ─────────────────────────────────────────
+    createSupportTicket: async function (senderId, senderType, subject, category, bodyText) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+        const now = new Date().toISOString();
+        const doc = await databases.createDocument(DB_ID, COLLECTIONS.SUPPORT_TICKETS, ID.unique(), {
+            senderId,
+            senderType,   // 'parent' | 'child'
+            subject,
+            category,
+            status: 'open',
+            createdAt: now,
+            lastMessageAt: now
+        });
+        // Also create the first message body
+        await databases.createDocument(DB_ID, COLLECTIONS.SUPPORT_MESSAGES, ID.unique(), {
+            ticketId: doc.$id,
+            senderId,
+            isStaff: false,
+            text: bodyText,
+            sentAt: now
+        });
+        return doc;
+    },
+
+    getMyTickets: async function (senderId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const r = await databases.listDocuments(DB_ID, COLLECTIONS.SUPPORT_TICKETS, [
+                Query.equal('senderId', senderId),
+                Query.orderDesc('lastMessageAt'),
+                Query.limit(50)
+            ]);
+            return r.documents;
+        } catch (e) {
+            console.warn('[Support] getMyTickets error:', e.message);
+            return [];
+        }
+    },
+
+    getSupportMessages: async function (ticketId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const r = await databases.listDocuments(DB_ID, COLLECTIONS.SUPPORT_MESSAGES, [
+                Query.equal('ticketId', ticketId),
+                Query.orderAsc('sentAt')
+            ]);
+            return r.documents;
+        } catch (e) {
+            console.warn('[Support] getSupportMessages error:', e.message);
+            return [];
+        }
+    },
+
+    sendSupportMessage: async function (ticketId, senderId, isStaff, text) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+        const now = new Date().toISOString();
+        const msg = await databases.createDocument(DB_ID, COLLECTIONS.SUPPORT_MESSAGES, ID.unique(), {
+            ticketId, senderId, isStaff, text, sentAt: now
+        });
+        await databases.updateDocument(DB_ID, COLLECTIONS.SUPPORT_TICKETS, ticketId, {
+            lastMessageAt: now,
+            status: isStaff ? 'replied' : 'open'
+        });
+        return msg;
     }
 };
 

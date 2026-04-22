@@ -1197,11 +1197,65 @@ window.moveVideoInPath = function(index, direction) {
     renderSelectedVideos();
 };
 
+const POOF_API_KEY = 'pk_b6f1725da413fc43bbab7af14d8fd406';
+
+window.removeBackground = async function() {
+    const fileInput = document.getElementById('path-cosmetic-file');
+    const statusEl = document.getElementById('bg-remove-status');
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please select an image first.');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    
+    statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-purple-500 mr-1"></i> Removing background...';
+    statusEl.classList.remove('hidden');
+
+    try {
+        const formData = new FormData();
+        formData.append('image_file', file); // Try 'image_file' per Poof API convention or just 'file'. Some APIs use 'image'. Let's provide 'image_file'. Actually, let's just append 'image' or 'file'. Wait, poof API says 'image_file' usually for remove APIs? Let's use 'image_file'. If not 'image_file', let's use 'image'. I will append 'image' which is very common. Oh wait! Re-reading standard remove.bg or cutbot API: typically the form field is called 'image_file'. Let's use 'image_file'.
+
+        const response = await fetch('https://api.poof.bg/v1/remove', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${POOF_API_KEY}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('API Request Failed');
+        }
+
+        const blob = await response.blob();
+        
+        // Create a new File from the Blob
+        const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + "-transparent.png", { type: 'image/png' });
+        
+        // Replace the file input with the new file
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(newFile);
+        fileInput.files = dataTransfer.files;
+
+        statusEl.innerHTML = '<i class="fa-solid fa-check text-green-500 mr-1"></i> Background removed successfully!';
+    } catch (e) {
+        console.error('BG Remove error:', e);
+        statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-500 mr-1"></i> Failed to remove background.';
+    }
+};
+
 window.saveLearningPath = async function() {
     const title = document.getElementById('path-title').value.trim();
     const description = document.getElementById('path-description').value.trim();
     const type = document.getElementById('path-type').value;
     const bonus = parseInt(document.getElementById('path-bonus').value) || 0;
+
+    const badgeInput = document.getElementById('path-badge-file');
+    const cosmeticInput = document.getElementById('path-cosmetic-file');
+    const cosmeticTitle = document.getElementById('path-cosmetic-title').value.trim();
+    const cosmeticType = document.getElementById('path-cosmetic-type').value;
 
     if (!title) { alert('Please enter a title for the path.'); return; }
     if (selectedPathVideos.length === 0) { alert('Please add at least one video to the path.'); return; }
@@ -1210,7 +1264,44 @@ window.saveLearningPath = async function() {
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...';
 
+    // Helper to upload files to Cloudinary
+    const uploadToCloudinary = async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+        formData.append('resource_type', 'image');
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (!data.secure_url) throw new Error('Failed to upload image to CDN');
+        return data.secure_url;
+    };
+
     try {
+        let badgeImage = '';
+        let rewardCosmeticId = '';
+
+        // 1. Upload Badge if exists
+        if (badgeInput && badgeInput.files && badgeInput.files.length > 0) {
+            badgeImage = await uploadToCloudinary(badgeInput.files[0]);
+        }
+
+        // 2. Upload Cosmetic if exists and insert into cosmetics collection
+        if (cosmeticInput && cosmeticInput.files && cosmeticInput.files.length > 0) {
+            const cosmeticUrl = await uploadToCloudinary(cosmeticInput.files[0]);
+            
+            const newCosmetic = await DataService.createCosmetic({
+                title: cosmeticTitle || 'Custom Reward',
+                type: cosmeticType || 'head',
+                image: cosmeticUrl,
+                priceStars: 0,
+                isLegendary: true // Only earned via path
+            });
+            rewardCosmeticId = newCosmetic.$id;
+        }
+
         const pathData = {
             title,
             description,
@@ -1219,6 +1310,10 @@ window.saveLearningPath = async function() {
             videoIds: selectedPathVideos.map(v => v.$id),
             creatorEmail: currentUser.email
         };
+
+        // Add the optional reward IDs
+        if (badgeImage) pathData.badgeImage = badgeImage;
+        if (rewardCosmeticId) pathData.rewardCosmeticId = rewardCosmeticId;
 
         // FIX: Branch on editingPathId — use update for edits, add for new paths.
         if (editingPathId) {

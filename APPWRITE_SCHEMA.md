@@ -72,6 +72,9 @@ Stores profiles of children registered by parents.
 | `theme` | String (Size 50) | No | UI theme preference. |
 | `avatarIcon` | String (Size 50) | No | Selected avatar icon name. |
 | `parentEmail` | String (Size 255) | No | Email of the parent. |
+| `avatarParts` | String (Size 65535) | No | JSON string of equipped cosmetic IDs `{head: '...', body: '...', tail: '...'}`. |
+| `unlockedCosmetics` | String[] (Size 50) | No | Array of unlocked cosmetic document IDs. |
+| `unlockedThemes` | String[] (Size 50) | No | Array of unlocked theme document IDs. |
 
 #### Collection: `Videos` (Content Library)
 Stores video content metadata, approval status, and creator details.
@@ -237,6 +240,8 @@ Stores learning paths/series created by creators.
 | `createdAt` | String (Size 50) | No | ISO timestamp. |
 | `updatedAt` | String (Size 50) | No | ISO timestamp of last update. |
 | `bonusStars` | Integer | No | Original name for bonusPoints, fallback. |
+| `badgeImage` | String (Size 65535) | No | The ID or URL of the uploaded badge image. |
+| `rewardCosmeticId` | String (Size 50) | No | The ID of the cosmetic awarded upon completion. |
 
 #### Collection: `kid_rewards` (New)
 Ledger of point-earning events.
@@ -342,4 +347,41 @@ Ghost mode audit trail
 
 > **Permissions**: `create`: `users`; `read`: `users`.
 
+#### Collection: `cosmetics` (New)
+Shop items and rewards for the avatar builder.
 
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `title` | String (Size 255) | Yes | Display name of the cosmetic. |
+| `type` | String (Size 50) | Yes | Enum: `head`, `body`, `tail`. |
+| `image` | String (Size 65535) | Yes | URL or file ID for the transparent image. |
+| `priceStars` | Integer | No | Cost in Stars. `0` or null if legendary/reward. |
+| `isLegendary` | Boolean | No | If true, only obtainable via path completion. |
+
+> **Permissions**: `create`: `users`; `read`: `any`; `update`: `users`; `delete`: `users`.
+
+#### Collection: `support_tickets` (New)
+Parent-to-staff support queries.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `parentId` | String (Size 50) | Yes | Parent who created the ticket. |
+| `subject` | String (Size 255) | Yes | Subject or summary. |
+| `status` | String (Size 50) | Yes | Enum: `open`, `replied`, `closed`. |
+| `lastMessageAt` | String (Size 50) | Yes | ISO timestamp. |
+| `createdAt` | String (Size 50) | Yes | ISO timestamp. |
+
+> **Permissions**: `create`: `users`; `read`: `users`; `update`: `users`.
+
+#### Collection: `support_messages` (New)
+Individual messages within a ticket.
+
+| Attribute | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `ticketId` | String (Size 50) | Yes | Link to `support_tickets` document. |
+| `senderId` | String (Size 50) | Yes | ID of Parent or Staff member. |
+| `isStaff` | Boolean | Yes | True if sent by staff. |
+| `text` | String (Size 2000) | Yes | Message content. |
+| `sentAt` | String (Size 50) | Yes | ISO timestamp. |
+
+> **Permissions**: `create`: `users`; `read`: `users`.

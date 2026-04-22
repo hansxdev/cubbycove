@@ -34,7 +34,10 @@ try {
         NOTIFICATIONS: 'notifications',
         BUDDIES: 'buddies',
         GROUP_CHATS: 'group_chats',         // NEW: Private group chat rooms
-        ADMIN_AUDIT_LOGS: 'admin_audit_logs' // NEW: Ghost mode audit trail
+        ADMIN_AUDIT_LOGS: 'admin_audit_logs', // NEW: Ghost mode audit trail
+        COSMETICS: 'cosmetics',
+        SUPPORT_TICKETS: 'support_tickets',
+        SUPPORT_MESSAGES: 'support_messages'
     };
 
     // Storage Bucket IDs

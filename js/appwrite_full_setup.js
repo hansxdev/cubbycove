@@ -96,7 +96,10 @@ if (!API_KEY) {
                 { type: 'string', key: 'coverColor', required: false, size: 50 },
                 { type: 'string', key: 'theme', required: false, size: 50 },
                 { type: 'string', key: 'avatarIcon', required: false, size: 50 },
-                { type: 'string', key: 'parentEmail', required: false, size: 255 }
+                { type: 'string', key: 'parentEmail', required: false, size: 255 },
+                { type: 'string', key: 'avatarParts', required: false, size: 65535 },
+                { type: 'string', key: 'unlockedCosmetics', required: false, size: 50, array: true },
+                { type: 'string', key: 'unlockedThemes', required: false, size: 50, array: true }
             ],
             indexes: [
                 { key: 'parentId_idx', type: 'key', attributes: ['parentId'] },
@@ -313,7 +316,9 @@ if (!API_KEY) {
                 { type: 'integer', key: 'bonusPoints', required: false },
                 { type: 'string', key: 'createdAt', required: false, size: 50 },
                 { type: 'string', key: 'updatedAt', required: false, size: 50 },
-                { type: 'integer', key: 'bonusStars', required: false }
+                { type: 'integer', key: 'bonusStars', required: false },
+                { type: 'string', key: 'badgeImage', required: false, size: 65535 },
+                { type: 'string', key: 'rewardCosmeticId', required: false, size: 50 }
             ],
             permissions: [
                 Permission.read(Role.any()),
@@ -484,6 +489,57 @@ if (!API_KEY) {
                 { type: 'string', key: 'timestamp', required: true, size: 50 },
                 { type: 'string', key: 'groupId', required: false, size: 50 },
                 { type: 'string', key: 'groupName', required: false, size: 100 }
+            ],
+            permissions: [
+                Permission.read(Role.users()),
+                Permission.create(Role.users()),
+            ]
+        },
+        // ── 20. COSMETICS ──
+        {
+            id: 'cosmetics',
+            name: 'Cosmetics',
+            attributes: [
+                { type: 'string', key: 'title', required: true, size: 255 },
+                { type: 'string', key: 'type', required: true, size: 50 },
+                { type: 'string', key: 'image', required: true, size: 65535 },
+                { type: 'integer', key: 'priceStars', required: false },
+                { type: 'boolean', key: 'isLegendary', required: false, xdefault: false }
+            ],
+            permissions: [
+                Permission.read(Role.any()),
+                Permission.create(Role.users()),
+                Permission.update(Role.users()),
+                Permission.delete(Role.users()),
+            ]
+        },
+        // ── 21. SUPPORT TICKETS ──
+        {
+            id: 'support_tickets',
+            name: 'Support Tickets',
+            attributes: [
+                { type: 'string', key: 'parentId', required: true, size: 50 },
+                { type: 'string', key: 'subject', required: true, size: 255 },
+                { type: 'string', key: 'status', required: true, size: 50 },
+                { type: 'string', key: 'lastMessageAt', required: true, size: 50 },
+                { type: 'string', key: 'createdAt', required: true, size: 50 }
+            ],
+            permissions: [
+                Permission.read(Role.users()),
+                Permission.create(Role.users()),
+                Permission.update(Role.users()),
+            ]
+        },
+        // ── 22. SUPPORT MESSAGES ──
+        {
+            id: 'support_messages',
+            name: 'Support Messages',
+            attributes: [
+                { type: 'string', key: 'ticketId', required: true, size: 50 },
+                { type: 'string', key: 'senderId', required: true, size: 50 },
+                { type: 'boolean', key: 'isStaff', required: false, xdefault: false },
+                { type: 'string', key: 'text', required: true, size: 2000 },
+                { type: 'string', key: 'sentAt', required: true, size: 50 }
             ],
             permissions: [
                 Permission.read(Role.users()),

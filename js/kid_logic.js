@@ -22,6 +22,13 @@ let _rewardedVideoIds = new Set(); // Cache of completed videos for badges
 let _likedVideoIds = new Set();   // Per-session like guard (one like per video per session)
 let _dislikedVideoIds = new Set(); // Per-session dislike guard
 
+// ── Mini-Player State ─────────────────────────────────────────────────────────
+let _miniPlayerActive = false;
+let _miniPlayerDragging = false;
+let _miniPlayerOffsetX = 0;
+let _miniPlayerOffsetY = 0;
+let _currentVideoDuration = 0; // Track duration for star bar
+
 function _getPageCategory() {
     const path = window.location.pathname.toLowerCase();
     if (path.includes('game')) return 'games';
@@ -705,10 +712,41 @@ window.openKidVideoModal = async function (videoDocId, pathId = null) {
             <i class="fa-solid fa-times"></i>
         </button>
 
+        <!-- Mini-Player Toggle Button -->
+        <button id="kid-mini-player-btn" title="Mini Player" class="absolute top-4 right-20 z-50 text-white/80 hover:text-white hover:scale-110 transition-all bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-full w-12 h-12 flex items-center justify-center shadow-[0_4px_0_rgba(255,255,255,0.1)] active:translate-y-1 active:shadow-none">
+            <i class="fa-solid fa-window-restore text-base"></i>
+        </button>
+
         <!-- LEFT: Video Player (70%) -->
         <div class="w-full lg:w-[70%] flex flex-col p-4 lg:p-8 relative z-10 pt-20 lg:pt-8 min-h-[min-content]">
             <div class="w-full aspect-video bg-black rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] border-[4px] border-white/10 relative z-10">
                 ${playerHtml}
+            </div>
+
+            <!-- ⭐ Star Bar — Reward Progress Tracker -->
+            <div class="mt-4 px-1">
+                <div class="flex items-center justify-between mb-1.5">
+                    <div class="flex items-center gap-2 text-yellow-300 font-black text-sm drop-shadow-md">
+                        <i class="fa-solid fa-star animate-pulse"></i>
+                        <span>Star Progress</span>
+                    </div>
+                    <span id="kid-star-bar-label" class="text-white/60 text-xs font-bold">Watch 80% to earn stars!</span>
+                </div>
+                <div class="w-full h-4 bg-white/10 rounded-full border border-white/20 overflow-hidden backdrop-blur-sm relative">
+                    <div id="kid-star-bar-fill" class="h-full rounded-full transition-all duration-1000 ease-out"
+                         style="width:0%;background:linear-gradient(90deg,#f59e0b,#fde047,#f59e0b);background-size:200% 100%;animation:starBarShimmer 2s linear infinite;box-shadow:0 0 10px rgba(253,224,71,0.5);">
+                    </div>
+                </div>
+                <style>
+                    @keyframes starBarShimmer {
+                        0% { background-position: 200% 0; }
+                        100% { background-position: -200% 0; }
+                    }
+                    @keyframes starBarPop {
+                        0%,100% { transform: scale(1); }
+                        50% { transform: scale(1.08); }
+                    }
+                </style>
             </div>
 
             <!-- Video Info Glassmorphism Container -->
@@ -776,6 +814,7 @@ window.openKidVideoModal = async function (videoDocId, pathId = null) {
 
     // Close listeners
     document.getElementById('kid-modal-close-btn').addEventListener('click', _closeKidVideoModal);
+    document.getElementById('kid-mini-player-btn').addEventListener('click', _initMiniPlayer);
     modal.addEventListener('click', (e) => {
         if (e.target === modal) _closeKidVideoModal();
     });
@@ -848,6 +887,156 @@ function _closeKidVideoModal() {
     }
 }
 
+// ── Star Bar ─────────────────────────────────────────────────────────────────
+function _updateStarBar(progress, completed) {
+    const fill = document.getElementById('kid-star-bar-fill');
+    const label = document.getElementById('kid-star-bar-label');
+    if (!fill) return;
+
+    const pct = Math.round(progress * 100);
+    fill.style.width = `${pct}%`;
+
+    if (completed) {
+        fill.style.background = 'linear-gradient(90deg,#22c55e,#86efac,#22c55e)';
+        fill.style.animation = 'starBarPop 0.5s ease, starBarShimmer 2s linear infinite';
+        if (label) label.innerHTML = '<span style="color:#86efac">⭐ Stars earned!</span>';
+    } else if (pct >= 60) {
+        if (label) label.textContent = `Almost there! ${pct}%`;
+    } else {
+        if (label) label.textContent = `Watch 80% to earn stars! (${pct}%)`;
+    }
+}
+
+// ── Mini-Player ────────────────────────────────────────────────────────────────
+function _initMiniPlayer() {
+    const modal = document.getElementById('kid-video-modal');
+    if (!modal || _miniPlayerActive) return;
+    _miniPlayerActive = true;
+
+    // Save state to sessionStorage so it persists across nav
+    const session = _getChildSession();
+    const miniState = {
+        videoId: _currentVideoId,
+        pathId: _currentPathId,
+        elapsed: _elapsedPlayTime,
+        duration: _currentVideoDuration,
+        points: _currentPointsValue
+    };
+    sessionStorage.setItem('cubby_mini_player', JSON.stringify(miniState));
+
+    // Shrink the modal to a corner PIP card
+    modal.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        width: 320px;
+        height: 200px;
+        border-radius: 20px;
+        z-index: 9999;
+        overflow: hidden;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 0 3px rgba(255,255,255,0.15);
+        cursor: grab;
+        transition: box-shadow 0.2s;
+        background: #12072b;
+    `;
+    // Hide sidebar / recommendations & text panels — show only the player
+    modal.querySelectorAll('.lg\\:w-\\[30\\%\\], .mt-6, .mt-4.px-1, #kid-mini-player-btn').forEach(el => {
+        el.style.display = 'none';
+    });
+    // Restyle the player container to fill mini card
+    const playerCol = modal.querySelector('.lg\\:w-\\[70\\%\\]');
+    if (playerCol) {
+        playerCol.style.cssText = 'width:100%;height:100%;padding:0;display:flex;flex-direction:column;';
+    }
+    const playerWrapper = playerCol?.querySelector('.aspect-video');
+    if (playerWrapper) {
+        playerWrapper.style.cssText = 'width:100%;flex:1;aspect-ratio:unset;border-radius:0;border:none;';
+    }
+
+    // Add an expand + close button bar to the mini player
+    const bar = document.createElement('div');
+    bar.id = 'mini-player-bar';
+    bar.style.cssText = 'position:absolute;top:0;left:0;right:0;background:linear-gradient(to bottom,rgba(0,0,0,0.7),transparent);padding:6px 10px;display:flex;justify-content:space-between;align-items:center;z-index:100;';
+    bar.innerHTML = `
+        <span style="color:white;font-size:11px;font-weight:900;font-family:Nunito,sans-serif;">▶ Mini Player</span>
+        <div style="display:flex;gap:6px;">
+            <button onclick="_exitMiniPlayer()" title="Expand" style="background:rgba(255,255,255,0.15);border:none;color:white;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;">⛶</button>
+            <button onclick="_closeKidVideoModal()" title="Close" style="background:rgba(255,0,0,0.3);border:none;color:white;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+    `;
+    modal.appendChild(bar);
+
+    // Dragging logic
+    bar.addEventListener('mousedown', (e) => {
+        _miniPlayerDragging = true;
+        _miniPlayerOffsetX = e.clientX - modal.getBoundingClientRect().left;
+        _miniPlayerOffsetY = e.clientY - modal.getBoundingClientRect().top;
+        modal.style.cursor = 'grabbing';
+    });
+    document.addEventListener('mousemove', _onMiniPlayerDrag);
+    document.addEventListener('mouseup', _onMiniPlayerDragEnd);
+
+    // Touch drag
+    bar.addEventListener('touchstart', (e) => {
+        _miniPlayerDragging = true;
+        const t = e.touches[0];
+        _miniPlayerOffsetX = t.clientX - modal.getBoundingClientRect().left;
+        _miniPlayerOffsetY = t.clientY - modal.getBoundingClientRect().top;
+    }, { passive: true });
+    document.addEventListener('touchmove', (e) => {
+        if (!_miniPlayerDragging) return;
+        const t = e.touches[0];
+        modal.style.right = 'auto';
+        modal.style.bottom = 'auto';
+        modal.style.left = (t.clientX - _miniPlayerOffsetX) + 'px';
+        modal.style.top = (t.clientY - _miniPlayerOffsetY) + 'px';
+    }, { passive: true });
+    document.addEventListener('touchend', () => { _miniPlayerDragging = false; });
+
+    // Restore body scroll so content underneath is scrollable
+    document.body.style.overflow = '';
+}
+
+function _onMiniPlayerDrag(e) {
+    if (!_miniPlayerDragging) return;
+    const modal = document.getElementById('kid-video-modal');
+    if (!modal) return;
+    modal.style.right = 'auto';
+    modal.style.bottom = 'auto';
+    modal.style.left = (e.clientX - _miniPlayerOffsetX) + 'px';
+    modal.style.top = (e.clientY - _miniPlayerOffsetY) + 'px';
+}
+
+function _onMiniPlayerDragEnd() {
+    _miniPlayerDragging = false;
+    const modal = document.getElementById('kid-video-modal');
+    if (modal) modal.style.cursor = 'grab';
+}
+
+window._exitMiniPlayer = function() {
+    if (!_miniPlayerActive) return;
+    _miniPlayerActive = false;
+    document.removeEventListener('mousemove', _onMiniPlayerDrag);
+    document.removeEventListener('mouseup', _onMiniPlayerDragEnd);
+    sessionStorage.removeItem('cubby_mini_player');
+    const modal = document.getElementById('kid-video-modal');
+    if (!modal) return;
+    // Remove mini bar
+    document.getElementById('mini-player-bar')?.remove();
+    // Restore full-screen modal styles
+    modal.removeAttribute('style');
+    modal.className = 'fixed inset-0 z-[100] flex flex-col lg:flex-row overflow-auto bg-gradient-to-br from-[#2b1055] via-[#4c2273] to-[#12072b]';
+    // Re-show hidden elements
+    modal.querySelectorAll('.lg\\:w-\\[30\\%\\], .mt-6, .mt-4.px-1, #kid-mini-player-btn').forEach(el => {
+        el.style.display = '';
+    });
+    const playerCol = modal.querySelector('.lg\\:w-\\[70\\%\\]');
+    if (playerCol) playerCol.removeAttribute('style');
+    const playerWrapper = playerCol?.querySelector('.aspect-video');
+    if (playerWrapper) playerWrapper.removeAttribute('style');
+    document.body.style.overflow = 'hidden';
+};
+
 // ── Reward Logic Implementation ──────────────────────────────────────────────
 // FIX: Accept an optional playerType argument ('youtube' | 'native') to choose
 // the correct play-state check without hardcoding isPlaying = true.
@@ -857,15 +1046,15 @@ async function _startRewardTracking(videoId, duration, points, pathId = null, pl
     _currentPointsValue = points;
     _elapsedPlayTime = 0;
     _isRewardClaimed = _rewardedVideoIds.has(videoId);
+    _currentVideoDuration = duration;
 
     if (_isRewardClaimed) {
         console.log('Video already rewarded. No tracking needed.');
+        // Still show star bar as full/completed
+        _updateStarBar(1, true);
         return;
     }
 
-    // Bug 2 Fix: The 30-second fallback has been removed. If duration is unavailable
-    // or zero, we cannot reliably enforce the 80% threshold, so we skip reward tracking
-    // for this video to prevent exploitation.
     if (!duration || duration <= 0) {
         console.warn('[Rewards] Video duration unavailable. Reward tracking skipped for this video to prevent exploitation.');
         return;
@@ -874,18 +1063,14 @@ async function _startRewardTracking(videoId, duration, points, pathId = null, pl
     const thresholdSeconds = duration * _completionThreshold;
     console.log(`🎯 Tracking reward for ${videoId} (${playerType}). Need ${Math.round(thresholdSeconds)}s of watch time.`);
 
-    // Reset the global YouTube play-state flag
     window._ytIsPlaying = false;
 
     _rewardInterval = setInterval(() => {
-        // FIX: Choose the correct play-state detection based on player type.
         let isPlaying = false;
 
         if (playerType === 'youtube') {
-            // Driven by YT.PlayerState events set on window._ytIsPlaying
             isPlaying = !!window._ytIsPlaying;
         } else {
-            // Native <video> element
             const player = document.getElementById('kid-modal-player');
             if (!player) return;
             isPlaying = !player.paused && !player.ended;
@@ -893,14 +1078,19 @@ async function _startRewardTracking(videoId, duration, points, pathId = null, pl
 
         if (isPlaying) {
             _elapsedPlayTime++;
+
+            // ⭐ Update Star Bar every tick
+            const progress = Math.min(_elapsedPlayTime / thresholdSeconds, 1);
+            _updateStarBar(progress, false);
+
             if (_elapsedPlayTime >= thresholdSeconds && !_isRewardClaimed) {
                 _isRewardClaimed = true;
+                _updateStarBar(1, true);
                 _claimReward();
             }
         }
     }, 1000);
 
-    // Heartbeat every 10s to ensure active session
     _heartbeatInterval = setInterval(_heartbeat, 10000);
 }
 
@@ -916,6 +1106,8 @@ function _stopRewardTracking() {
         try { _ytPlayer.destroy(); } catch (e) {}
         _ytPlayer = null;
     }
+    // Exit mini-player if active
+    _exitMiniPlayer();
 }
 
 function _heartbeat() {
@@ -2261,7 +2453,151 @@ window.openKidSettingsModal = async function () {
 
 window.closeKidSettingsModal = function () {
     document.getElementById('kid-settings-modal')?.classList.add('hidden');
+    // Reset back to profile tab on close
+    switchProfileTab('profile');
 };
+
+// ── Profile Modal Tabs ─────────────────────────────────────────────────────────
+window.switchProfileTab = function(tab) {
+    // Toggle panels
+    ['profile', 'badges', 'cosmetics'].forEach(t => {
+        document.getElementById(`tab-${t}`)?.classList.toggle('hidden', t !== tab);
+    });
+    // Toggle tab button styles
+    ['profile', 'badges', 'cosmetics'].forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (!btn) return;
+        if (t === tab) {
+            btn.classList.remove('text-gray-400', 'border-transparent');
+            btn.classList.add('text-cubby-blue', 'border-cubby-blue');
+        } else {
+            btn.classList.remove('text-cubby-blue', 'border-cubby-blue');
+            btn.classList.add('text-gray-400', 'border-transparent');
+        }
+    });
+
+    // Lazy-load content for the activated tab
+    if (tab === 'badges') _loadBadgeShowcase();
+    if (tab === 'cosmetics') _loadCosmeticsWardrobe();
+};
+
+async function _loadBadgeShowcase() {
+    const container = document.getElementById('badges-grid');
+    if (!container) return;
+
+    const session = _getChildSession();
+    if (!session?.$id) {
+        container.innerHTML = '<p class="col-span-3 text-center text-xs text-gray-400 py-6">Log in to see your badges.</p>';
+        return;
+    }
+
+    container.innerHTML = '<div class="col-span-3 text-center py-6 text-gray-400"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>';
+
+    try {
+        // Fetch all completed path statuses for this child
+        const statuses = await DataService.getPathStatusesByChild(session.$id);
+        const completed = statuses.filter(s => s.currentStatus === 'completed');
+
+        if (completed.length === 0) {
+            container.innerHTML = `
+                <div class="col-span-3 text-center py-8">
+                    <div class="text-5xl mb-3">🏅</div>
+                    <p class="text-sm font-bold text-gray-400">No badges yet!</p>
+                    <p class="text-xs text-gray-400 mt-1">Complete learning paths to earn badges.</p>
+                </div>`;
+            return;
+        }
+
+        // Fetch path details to get badge images
+        const pathIds = completed.map(s => s.pathId);
+        const pathDetails = await Promise.all(
+            pathIds.map(id => DataService.getPathById(id).catch(() => null))
+        );
+
+        const badgeHtml = pathDetails
+            .filter(p => p && p.badgeImage)
+            .map(p => `
+                <div class="flex flex-col items-center gap-2 p-2">
+                    <div class="relative">
+                        <img src="${p.badgeImage}" alt="${p.title}"
+                            class="w-20 h-20 rounded-2xl object-contain border-4 border-yellow-200 bg-yellow-50 shadow-md hover:scale-110 transition-transform"
+                            title="${p.title}">
+                        <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow border-2 border-white">
+                            <i class="fa-solid fa-star text-white text-[9px]"></i>
+                        </div>
+                    </div>
+                    <p class="text-[10px] font-black text-gray-600 text-center line-clamp-2 leading-tight">${p.title}</p>
+                </div>`).join('');
+
+        // Also show placeholder slots for paths completed without badges
+        const withoutBadge = completed.length - pathDetails.filter(p => p?.badgeImage).length;
+        const placeholders = Array(withoutBadge).fill(`
+            <div class="flex flex-col items-center gap-2 p-2 opacity-50">
+                <div class="w-20 h-20 rounded-2xl bg-gray-100 border-4 border-gray-200 flex items-center justify-center">
+                    <i class="fa-solid fa-question text-gray-300 text-2xl"></i>
+                </div>
+                <p class="text-[10px] font-bold text-gray-400 text-center">Path Badge</p>
+            </div>`).join('');
+
+        container.innerHTML = badgeHtml + placeholders || `<div class="col-span-3 text-center py-6 text-xs text-gray-400">Completed paths have no badge artwork yet.</div>`;
+
+    } catch (e) {
+        console.warn('[BadgeShowcase] error:', e.message);
+        container.innerHTML = '<p class="col-span-3 text-center text-xs text-red-400 py-6">Could not load badges.</p>';
+    }
+}
+
+async function _loadCosmeticsWardrobe() {
+    const container = document.getElementById('cosmetics-grid');
+    if (!container) return;
+
+    const session = _getChildSession();
+    if (!session?.$id) {
+        container.innerHTML = '<p class="col-span-3 text-center text-xs text-gray-400 py-6">Log in to see your cosmetics.</p>';
+        return;
+    }
+
+    container.innerHTML = '<div class="col-span-3 text-center py-6 text-gray-400"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>';
+
+    try {
+        // Get the child doc to read unlockedCosmetics array
+        const childDoc = await DataService.getChildWithPrefs(session.$id);
+        const unlockedIds = childDoc?.unlockedCosmetics || [];
+
+        if (unlockedIds.length === 0) {
+            container.innerHTML = `
+                <div class="col-span-3 text-center py-8">
+                    <div class="text-5xl mb-3">🎭</div>
+                    <p class="text-sm font-bold text-gray-400">No cosmetics yet!</p>
+                    <p class="text-xs text-gray-400 mt-1">Complete learning paths to unlock legendary cosmetics.</p>
+                </div>`;
+            return;
+        }
+
+        // Fetch cosmetic docs
+        const { databases, DB_ID, COLLECTIONS } = window.AppwriteService;
+        const cosmeticDocs = await Promise.all(
+            unlockedIds.map(id => databases.getDocument(DB_ID, COLLECTIONS.COSMETICS, id).catch(() => null))
+        );
+
+        const slotColors = { head: 'bg-purple-100 border-purple-200', body: 'bg-blue-100 border-blue-200', tail: 'bg-green-100 border-green-200' };
+        const slotLabel = { head: '🎩 Head', body: '👕 Body', tail: '🐾 Tail' };
+
+        container.innerHTML = cosmeticDocs.filter(Boolean).map(c => `
+            <div class="flex flex-col items-center gap-2 p-2">
+                <div class="relative w-20 h-20 rounded-2xl ${slotColors[c.type] || 'bg-gray-100 border-gray-200'} border-4 flex items-center justify-center overflow-hidden hover:scale-110 transition-transform shadow-md">
+                    <img src="${c.image}" alt="${c.title}" class="w-full h-full object-contain p-1">
+                    <div class="absolute -top-1 -right-1 text-[9px] font-black bg-indigo-500 text-white px-1.5 py-0.5 rounded-full shadow">★</div>
+                </div>
+                <p class="text-[10px] font-black text-gray-600 text-center line-clamp-1">${c.title}</p>
+                <span class="text-[9px] font-bold text-gray-400">${slotLabel[c.type] || c.type}</span>
+            </div>`).join('') || '<p class="col-span-3 text-center text-xs text-gray-400 py-6">No cosmetic data found.</p>';
+
+    } catch (e) {
+        console.warn('[CosmeticsWardrobe] error:', e.message);
+        container.innerHTML = '<p class="col-span-3 text-center text-xs text-red-400 py-6">Could not load cosmetics.</p>';
+    }
+}
 
 /**
  * Public pick functions now check the Shop catalog before applying.
@@ -2392,3 +2728,65 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('theme-' + session.prefs.theme);
     }
 });
+
+// ── Milestone 5: Mascot Help (Kid Side) ──────────────────────────────────────
+window.openKidHelpModal = function () {
+    const modal = document.getElementById('kid-help-modal');
+    if (!modal) return;
+    const catEl  = document.getElementById('kid-help-category');
+    const msgEl  = document.getElementById('kid-help-message');
+    if (catEl) catEl.value = 'other';
+    if (msgEl) msgEl.value = '';
+    modal.classList.remove('hidden');
+};
+
+window.submitKidHelpRequest = async function () {
+    const modal   = document.getElementById('kid-help-modal');
+    const catEl   = document.getElementById('kid-help-category');
+    const msgEl   = document.getElementById('kid-help-message');
+    const sendBtn = document.getElementById('kid-help-send-btn');
+
+    const category = catEl?.value || 'other';
+    const message  = msgEl?.value?.trim() || '';
+    const session  = _getChildSession();
+
+    if (!session?.$id) {
+        alert('Please log in to send a help request.');
+        return;
+    }
+
+    const categoryLabels = {
+        login:  "I can't log in",
+        video:  "A video won't play",
+        reward: "I didn't get my stars",
+        friend: "Problem with a friend",
+        other:  "Something else"
+    };
+
+    const subject  = `[Kid Help] ${categoryLabels[category] || category}`;
+    const bodyText = message || `Category: ${categoryLabels[category] || category}\n(No additional details provided.)`;
+
+    if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sending...';
+    }
+
+    try {
+        await DataService.createSupportTicket(session.$id, 'child', subject, category, bodyText);
+        modal?.classList.add('hidden');
+        // Show friendly confirmation
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-28 right-6 z-[9999] bg-[#28C7AE] text-white font-black px-5 py-3 rounded-2xl shadow-lg text-sm flex items-center gap-2 animate-bounce';
+        toast.innerHTML = '<i class="fa-solid fa-check-circle"></i> Got it! We\'ll help you soon 🐾';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+    } catch (e) {
+        console.warn('[KidHelp] Submit error:', e.message);
+        alert('Oops! Could not send. Please try again.');
+    } finally {
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i> Send!';
+        }
+    }
+};

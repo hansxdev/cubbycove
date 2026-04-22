@@ -2311,3 +2311,239 @@ window.loadDashboardData = async function () {
     if (_origLoadDashboardForPurge) await _origLoadDashboardForPurge.apply(this, arguments);
     purgeOldSafetyLogs();
 };
+
+// ── Tab Switching ─────────────────────────────────────────────────────────────
+// Tabs: dashboard | activity | reports | support
+// .tab-panel { display: none } and .tab-panel.active { display: block }  — CSS in dashboard.html
+window.switchTab = function (tab) {
+    const TABS = ['dashboard', 'activity', 'reports', 'support'];
+
+    // update panels
+    TABS.forEach(t => {
+        document.getElementById(`tab-${t}`)?.classList.toggle('active', t === tab);
+    });
+
+    // update nav pills
+    TABS.forEach(t => {
+        const el = document.getElementById(`nav-${t}`);
+        if (!el) return;
+        if (t === tab) {
+            el.classList.add('active');
+        } else {
+            el.classList.remove('active');
+        }
+    });
+
+    // update page heading
+    const headings = {
+        dashboard: 'Child Profiles',
+        activity:  'Activity Log',
+        reports:   'Reports',
+        support:   'Support Inbox'
+    };
+    const h = document.getElementById('page-heading');
+    if (h) h.textContent = headings[tab] || tab;
+
+    // lazy-load support inbox on first visit
+    if (tab === 'support') _loadSupportTickets();
+};
+
+// ── Support Inbox (Parent Side) ───────────────────────────────────────────────
+let _activeTicketId   = null;
+let _threadPollTimer  = null;
+let _supportSenderId  = null;  // parent user.$id, set on first load
+
+async function _getParentId() {
+    if (_supportSenderId) return _supportSenderId;
+    try {
+        const user = await DataService.getCurrentUser();
+        _supportSenderId = user?.$id || null;
+    } catch { _supportSenderId = null; }
+    return _supportSenderId;
+}
+
+async function _loadSupportTickets() {
+    const container = document.getElementById('support-ticket-list');
+    if (!container) return;
+
+    const parentId = await _getParentId();
+    if (!parentId) {
+        container.innerHTML = '<p class="text-center text-sm text-gray-400 py-8 font-bold">Please log in to view tickets.</p>';
+        return;
+    }
+
+    container.innerHTML = '<div class="flex items-center justify-center py-8 text-gray-400 font-bold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading...</div>';
+
+    const tickets = await DataService.getMyTickets(parentId);
+
+    // Hide unread badge once loaded
+    document.getElementById('support-unread-badge')?.classList.add('hidden');
+
+    if (tickets.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-12">
+                <div class="text-5xl mb-4">🎧</div>
+                <p class="font-black text-gray-500 text-base">No tickets yet</p>
+                <p class="text-sm text-gray-400 font-bold mt-2">Click <strong>New Ticket</strong> to get help from our team.</p>
+            </div>`;
+        return;
+    }
+
+    const statusStyles = {
+        open:     { bg: 'bg-blue-50',   text: 'text-blue-600',   label: 'Open'    },
+        replied:  { bg: 'bg-green-50',  text: 'text-green-600',  label: 'Replied' },
+        closed:   { bg: 'bg-gray-100',  text: 'text-gray-500',   label: 'Closed'  }
+    };
+
+    container.innerHTML = tickets.map(t => {
+        const style = statusStyles[t.status] || statusStyles.open;
+        const when = t.lastMessageAt
+            ? new Date(t.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : '';
+        return `
+            <div data-ticket-id="${t.$id}" data-ticket-status="${t.status}"
+                 class="ticket-row flex items-center gap-4 p-4 bg-white rounded-2xl border-2 border-gray-100 hover:border-[#28C7AE] hover:shadow-md transition-all cursor-pointer group">
+                <div class="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center text-teal-600 shrink-0 group-hover:bg-teal-200 transition-colors">
+                    <i class="fa-solid fa-ticket text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-extrabold text-gray-800 truncate text-sm">${escHtml(t.subject)}</p>
+                    <p class="text-[11px] font-bold text-gray-400 mt-0.5 uppercase tracking-wider">${when}</p>
+                </div>
+                <span class="text-[10px] font-black px-2.5 py-1 rounded-full ${style.bg} ${style.text} shrink-0">${style.label}</span>
+                <i class="fa-solid fa-chevron-right text-gray-300 text-xs group-hover:text-[#28C7AE] transition-colors shrink-0"></i>
+            </div>`;
+    }).join('');
+
+    // Store for click lookup (avoids inline onclick quoting issues)
+    window._ticketsCache = Object.fromEntries(tickets.map(t => [t.$id, t]));
+
+    // Delegate clicks from ticket rows
+    container.onclick = (e) => {
+        const row = e.target.closest('.ticket-row');
+        if (!row) return;
+        const id = row.dataset.ticketId;
+        const ticket = window._ticketsCache?.[id];
+        if (ticket) openTicketThread(id, ticket.subject, ticket.status);
+    };
+}
+
+window.openTicketThread = async function (ticketId, subject, status) {
+    _activeTicketId = ticketId;
+
+    const modal = document.getElementById('ticket-thread-modal');
+    const subjectEl = document.getElementById('thread-ticket-subject');
+    const messagesEl = document.getElementById('thread-messages');
+    const input = document.getElementById('thread-reply-input');
+    const sendBtn = document.getElementById('thread-send-btn');
+
+    if (!modal || !messagesEl) return;
+    if (subjectEl) subjectEl.textContent = subject;
+    if (input) { input.value = ''; input.disabled = status === 'closed'; }
+    if (sendBtn) sendBtn.disabled = status === 'closed';
+
+    modal.classList.remove('hidden');
+    await _renderThreadMessages(ticketId);
+
+    // Poll for new replies every 10 seconds while thread is open
+    clearInterval(_threadPollTimer);
+    _threadPollTimer = setInterval(() => _renderThreadMessages(ticketId), 10000);
+};
+
+window.closeTicketThread = function () {
+    document.getElementById('ticket-thread-modal')?.classList.add('hidden');
+    clearInterval(_threadPollTimer);
+    _threadPollTimer = null;
+    _activeTicketId = null;
+};
+
+async function _renderThreadMessages(ticketId) {
+    const container = document.getElementById('thread-messages');
+    if (!container) return;
+
+    const parentId = await _getParentId();
+    const messages = await DataService.getSupportMessages(ticketId);
+
+    if (messages.length === 0) {
+        container.innerHTML = '<p class="text-center text-sm text-gray-400 font-bold py-4">No messages yet.</p>';
+        return;
+    }
+
+    container.innerHTML = messages.map(m => {
+        const isMe = !m.isStaff;
+        const time = new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const bubble = isMe
+            ? `<div class="flex justify-end">
+                <div class="max-w-[80%]">
+                    <div class="bg-[#28C7AE] text-white rounded-2xl rounded-br-sm px-4 py-3 text-sm font-bold shadow-sm">${escHtml(m.text)}</div>
+                    <p class="text-[10px] text-gray-400 text-right mt-1 font-bold">${time}</p>
+                </div>
+               </div>`
+            : `<div class="flex gap-3 items-end">
+                <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-xs shrink-0">🛡️</div>
+                <div class="max-w-[80%]">
+                    <div class="bg-gray-100 text-gray-700 rounded-2xl rounded-bl-sm px-4 py-3 text-sm font-bold shadow-sm">${escHtml(m.text)}</div>
+                    <p class="text-[10px] text-gray-400 mt-1 font-bold">Support · ${time}</p>
+                </div>
+               </div>`;
+        return bubble;
+    }).join('');
+
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+}
+
+window.sendThreadReply = async function () {
+    if (!_activeTicketId) return;
+
+    const input = document.getElementById('thread-reply-input');
+    const btn = document.getElementById('thread-send-btn');
+    const text = input?.value?.trim();
+    if (!text) return;
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>'; }
+
+    try {
+        const parentId = await _getParentId();
+        await DataService.sendSupportMessage(_activeTicketId, parentId, false, text);
+        if (input) input.value = '';
+        await _renderThreadMessages(_activeTicketId);
+    } catch (e) {
+        alert('Could not send message: ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i>'; }
+    }
+};
+
+window.openNewTicketModal = function () {
+    document.getElementById('new-ticket-modal')?.classList.remove('hidden');
+    document.getElementById('ticket-subject').value = '';
+    document.getElementById('ticket-body').value = '';
+};
+
+window.closeNewTicketModal = function () {
+    document.getElementById('new-ticket-modal')?.classList.add('hidden');
+};
+
+window.submitSupportTicket = async function () {
+    const subject  = document.getElementById('ticket-subject')?.value?.trim();
+    const category = document.getElementById('ticket-category')?.value;
+    const body     = document.getElementById('ticket-body')?.value?.trim();
+    const btn      = document.getElementById('submit-ticket-btn');
+
+    if (!subject || !body) { alert('Please fill in the subject and describe the issue.'); return; }
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sending...'; }
+
+    try {
+        const parentId = await _getParentId();
+        await DataService.createSupportTicket(parentId, 'parent', subject, category, body);
+        closeNewTicketModal();
+        await _loadSupportTickets();
+        alert('✅ Ticket submitted! Our team will get back to you within 24 hours.');
+    } catch (e) {
+        alert('Error submitting ticket: ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i> Send'; }
+    }
+};

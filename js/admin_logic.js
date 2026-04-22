@@ -1310,6 +1310,14 @@ window.saveSettings = async function () {
     }
 };
 
+// Converts raw text into a safe HTML string to prevent script injection.
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // GHOST MODE: GROUP CHAT AUDIT (Super Admin)
 // ─────────────────────────────────────────────────────────────────────────

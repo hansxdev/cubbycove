@@ -1643,30 +1643,7 @@ window.saveParentProfile = async function () {
 
 let _activeTab = 'dashboard';
 
-window.switchTab = function (tabName) {
-    _activeTab = tabName;
-
-    // Update nav pills
-    ['dashboard', 'activity', 'reports'].forEach(t => {
-        const navEl = document.getElementById(`nav-${t}`);
-        const panelEl = document.getElementById(`tab-${t}`);
-        if (navEl) navEl.classList.toggle('active', t === tabName);
-        if (navEl) navEl.classList.toggle('text-gray-500', t !== tabName);
-        if (navEl) navEl.classList.toggle('hover:bg-white/50', t !== tabName);
-        if (panelEl) panelEl.classList.toggle('active', t === tabName);
-    });
-
-    // Update heading
-    const headings = { dashboard: 'Child Profiles', activity: 'Activity Log', reports: 'Reports & Insights' };
-    const headEl = document.getElementById('page-heading');
-    if (headEl) headEl.textContent = headings[tabName] || 'Dashboard';
-
-    // Lazy-load the tab content
-    if (tabName === 'activity') renderFullActivityLog();
-    if (tabName === 'reports') renderReports();
-
-    return false; // prevent anchor jump
-};
+// switchTab function merged below to handle all tabs
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ACTIVITY LOG — Unified Smart Feed
@@ -2316,6 +2293,7 @@ window.loadDashboardData = async function () {
 // Tabs: dashboard | activity | reports | support
 // .tab-panel { display: none } and .tab-panel.active { display: block }  — CSS in dashboard.html
 window.switchTab = function (tab) {
+    _activeTab = tab;
     const TABS = ['dashboard', 'activity', 'reports', 'support'];
 
     // update panels
@@ -2329,8 +2307,10 @@ window.switchTab = function (tab) {
         if (!el) return;
         if (t === tab) {
             el.classList.add('active');
+            el.classList.remove('text-gray-500', 'hover:bg-white/50');
         } else {
             el.classList.remove('active');
+            el.classList.add('text-gray-500', 'hover:bg-white/50');
         }
     });
 
@@ -2344,8 +2324,12 @@ window.switchTab = function (tab) {
     const h = document.getElementById('page-heading');
     if (h) h.textContent = headings[tab] || tab;
 
-    // lazy-load support inbox on first visit
+    // lazy-load content
+    if (tab === 'activity') renderFullActivityLog();
+    if (tab === 'reports') renderReports();
     if (tab === 'support') _loadSupportTickets();
+    
+    return false;
 };
 
 // ── Support Inbox (Parent Side) ───────────────────────────────────────────────

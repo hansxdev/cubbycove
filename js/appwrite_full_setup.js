@@ -153,7 +153,7 @@ if (!API_KEY) {
                 { type: 'string', key: 'reporterChildId', required: false, size: 50 },
                 { type: 'string', key: 'reporterChildName', required: false, size: 100 },
                 { type: 'string', key: 'reporterParentEmail', required: false, size: 255 },
-                { type: 'reportedChildId', key: 'reportedChildId', required: false, size: 50 },
+                { type: 'string', key: 'reportedChildId', required: false, size: 50 },
                 { type: 'string', key: 'reportedChildName', required: false, size: 100 },
                 { type: 'string', key: 'reportedParentEmail', required: false, size: 255 },
                 { type: 'string', key: 'messageContent', required: false, size: 2000 },
@@ -425,6 +425,10 @@ if (!API_KEY) {
                 { type: 'string', key: 'category', required: false, size: 50 },
                 { type: 'string', key: 'detail', required: false, size: 500 },
                 { type: 'string', key: 'timestamp', required: false, size: 50 }
+            ],
+            indexes: [
+                { key: 'childId_idx', type: 'key', attributes: ['childId'] },
+                { key: 'timestamp_idx', type: 'key', attributes: ['timestamp'] }
             ],
             permissions: [
                 // ✅ SECURITY: Screen time data is private — only parents/staff should see it.

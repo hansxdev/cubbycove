@@ -2179,12 +2179,17 @@ const DataService = {
     getPathStatusesByChild: async function (childId) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         const { Query } = Appwrite;
-        const result = await databases.listDocuments(DB_ID, COLLECTIONS.KID_PATH_STATUS, [
-            Query.equal('childId', childId),
-            Query.orderDesc('updatedAt'),
-            Query.limit(50)
-        ]);
-        return result.documents;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.KID_PATH_STATUS, [
+                Query.equal('childId', childId),
+                Query.orderDesc('updatedAt'),
+                Query.limit(50)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[DataService] getPathStatusesByChild error:', e.message);
+            return [];
+        }
     },
 
     /**
@@ -2859,21 +2864,26 @@ const DataService = {
         }
     },
 
-    createSupportTicket: async function (parentId, subject, initialMessage) {
+    createSupportTicket: async function (senderId, senderType, subject, category, bodyText) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         const { ID } = Appwrite;
-
         const now = new Date().toISOString();
-        const ticket = await databases.createDocument(DB_ID, COLLECTIONS.SUPPORT_TICKETS, ID.unique(), {
-            parentId: parentId,
+
+        // Map senderId → parentId (the DB field). senderType and category are optional.
+        const ticketData = {
+            parentId: senderId,
             subject: subject,
             status: 'open',
             lastMessageAt: now,
             createdAt: now
-        });
+        };
 
-        if (initialMessage) {
-            await this.sendSupportMessage(ticket.$id, parentId, false, initialMessage);
+        const ticket = await databases.createDocument(
+            DB_ID, COLLECTIONS.SUPPORT_TICKETS, ID.unique(), ticketData
+        );
+
+        if (bodyText) {
+            await this.sendSupportMessage(ticket.$id, senderId, false, bodyText);
         }
 
         return ticket;
@@ -2916,63 +2926,13 @@ const DataService = {
         return msg;
     },
 
-    // ── Milestone 4: Badge Showcase & Cosmetics Wardrobe ─────────────────────
-    getPathStatusesByChild: async function (childId) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { Query } = Appwrite;
-        try {
-            const result = await databases.listDocuments(DB_ID, COLLECTIONS.PATH_STATUSES, [
-                Query.equal('childId', childId),
-                Query.limit(100)
-            ]);
-            return result.documents;
-        } catch (e) {
-            console.warn('[DataService] getPathStatusesByChild error:', e.message);
-            return [];
-        }
-    },
-
-    getPathById: async function (pathId) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        try {
-            return await databases.getDocument(DB_ID, COLLECTIONS.LEARNING_PATHS, pathId);
-        } catch (e) {
-            console.warn('[DataService] getPathById error:', e.message);
-            return null;
-        }
-    },
-
-    // ── Milestone 5: Support Tickets ─────────────────────────────────────────
-    createSupportTicket: async function (senderId, senderType, subject, category, bodyText) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { ID } = Appwrite;
-        const now = new Date().toISOString();
-        const doc = await databases.createDocument(DB_ID, COLLECTIONS.SUPPORT_TICKETS, ID.unique(), {
-            senderId,
-            senderType,   // 'parent' | 'child'
-            subject,
-            category,
-            status: 'open',
-            createdAt: now,
-            lastMessageAt: now
-        });
-        // Also create the first message body
-        await databases.createDocument(DB_ID, COLLECTIONS.SUPPORT_MESSAGES, ID.unique(), {
-            ticketId: doc.$id,
-            senderId,
-            isStaff: false,
-            text: bodyText,
-            sentAt: now
-        });
-        return doc;
-    },
-
-    getMyTickets: async function (senderId) {
+    // ── getMyTickets — retrieve support tickets by parentId ──────────────────
+    getMyTickets: async function (parentId) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         const { Query } = Appwrite;
         try {
             const r = await databases.listDocuments(DB_ID, COLLECTIONS.SUPPORT_TICKETS, [
-                Query.equal('senderId', senderId),
+                Query.equal('parentId', parentId),
                 Query.orderDesc('lastMessageAt'),
                 Query.limit(50)
             ]);
@@ -2981,35 +2941,6 @@ const DataService = {
             console.warn('[Support] getMyTickets error:', e.message);
             return [];
         }
-    },
-
-    getSupportMessages: async function (ticketId) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { Query } = Appwrite;
-        try {
-            const r = await databases.listDocuments(DB_ID, COLLECTIONS.SUPPORT_MESSAGES, [
-                Query.equal('ticketId', ticketId),
-                Query.orderAsc('sentAt')
-            ]);
-            return r.documents;
-        } catch (e) {
-            console.warn('[Support] getSupportMessages error:', e.message);
-            return [];
-        }
-    },
-
-    sendSupportMessage: async function (ticketId, senderId, isStaff, text) {
-        const { databases, DB_ID, COLLECTIONS } = this._getServices();
-        const { ID } = Appwrite;
-        const now = new Date().toISOString();
-        const msg = await databases.createDocument(DB_ID, COLLECTIONS.SUPPORT_MESSAGES, ID.unique(), {
-            ticketId, senderId, isStaff, text, sentAt: now
-        });
-        await databases.updateDocument(DB_ID, COLLECTIONS.SUPPORT_TICKETS, ticketId, {
-            lastMessageAt: now,
-            status: isStaff ? 'replied' : 'open'
-        });
-        return msg;
     }
 };
 

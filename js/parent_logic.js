@@ -114,21 +114,27 @@ function stopNotifPolling() {
 }
 
 async function checkLoginRequests() {
-    const user = await DataService.getCurrentUser();
-    if (!user || !user.email) return;
+    try {
+        const user = await DataService.getCurrentUser();
+        if (!user || !user.email) return;
 
-    const [pending, handled, buddyNotifs] = await Promise.all([
-        DataService.getPendingLoginRequests(user.email),
-        DataService.getHandledLoginRequests(user.email),
-        DataService.getParentNotifications(user.$id, false)
-    ]);
+        const [pending, handled, buddyNotifs] = await Promise.all([
+            DataService.getPendingLoginRequests(user.email),
+            DataService.getHandledLoginRequests(user.email),
+            DataService.getParentNotifications(user.$id, false)
+        ]);
+        
+        // --- Added: Console logging if something seems stuck but there are pending requests ---
+        if (pending.length > 0) {
+            console.log(`[Notif System] Found ${pending.length} pending login requests. Banner should display.`);
+        }
 
-    // ── 1. Bell panel (tile) — login history + buddy notifications ────────────
-    const notifList = document.getElementById('notif-list');
-    if (notifList) {
-        const loginItems = handled.map(req => {
-            const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const isApproved = req.status === 'approved';
+        // ── 1. Bell panel (tile) — login history + buddy notifications ────────────
+        const notifList = document.getElementById('notif-list');
+        if (notifList) {
+            const loginItems = handled.map(req => {
+                const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const isApproved = req.status === 'approved';
             return {
                 ts: req.requestedAt,
                 html: `
@@ -213,8 +219,49 @@ async function checkLoginRequests() {
             </div>
         `;
     }).join('');
+    } catch (err) {
+        console.error('[Notif System] Error checking login requests:', err);
+    }
 }
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ── Mock Helper for Testing (Console Usage) ──────────────────────────────────
+window.mockKidLoginRequest = async function(childUsername = 'DemoKid') {
+    console.log(`[Mock] Simulating kid login request for ${childUsername}...`);
+    try {
+        const user = await DataService.getCurrentUser();
+        if (!user) throw new Error("Parent not logged in.");
+        
+        // Find dummy child info to build request
+        const kids = window._currentChildren || [];
+        const childId = kids.length > 0 ? kids[0].$id : 'dummy_child_id';
+        const childName = kids.length > 0 ? kids[0].name : childUsername;
+        
+        const { databases, DB_ID, COLLECTIONS } = AppwriteService;
+        const { ID } = Appwrite;
+        
+        const now = new Date().toISOString();
+        const expires = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+        
+        const doc = await databases.createDocument(DB_ID, COLLECTIONS.LOGIN_REQUESTS, ID.unique(), {
+            childUsername: childUsername,
+            parentEmail: user.email,
+            status: 'pending',
+            requestedAt: now,
+            expiresAt: expires,
+            deviceInfo: 'Mock Test Console',
+            childName: childName,
+            childId: childId,
+            parentId: user.$id
+        });
+        
+        console.log(`✅ [Mock] Fake login request created: ${doc.$id}. The banner should appear shortly!`);
+        checkLoginRequests(); // force refresh immediately
+        return doc;
+    } catch (e) {
+        console.error("❌ [Mock] Failed to simulate request: ", e);
+    }
+};
 
 document.addEventListener('DOMContentLoaded', () => {
 

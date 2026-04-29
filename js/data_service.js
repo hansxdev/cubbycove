@@ -404,7 +404,7 @@ const DataService = {
             const { account } = this._getServices();
             await account.createAnonymousSession();
         } catch (e) {
-            // Safe to ignore: user already has an active session
+            console.warn('[Kid Login] Using existing active session instead of creating an anonymous one.');
         }
 
         // ── 1. Find child by username ────────────────────────────────────────────
@@ -417,6 +417,7 @@ const DataService = {
             if (childList.documents.length === 0) throw new Error(GENERIC_ERROR);
             child = childList.documents[0];
         } catch (e) {
+            console.error('[Kid Login] Step 1 Error:', e);
             if (e.message === GENERIC_ERROR) throw e;
             throw new Error(GENERIC_ERROR);
         }
@@ -469,7 +470,7 @@ const DataService = {
 
         const doc = await databases.createDocument(DB_ID, 'login_requests', ID.unique(), {
             childUsername: username,
-            parentEmail: parentEmail,
+            parentEmail: parent.email, // Use normalized DB email for case-sensitive queries
             status: 'pending',
             requestedAt: now,
             expiresAt: expires,

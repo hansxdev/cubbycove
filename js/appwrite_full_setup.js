@@ -381,6 +381,9 @@ if (!API_KEY) {
                 { type: 'string', key: 'childId', required: false, size: 50 },
                 { type: 'string', key: 'parentId', required: false, size: 50 }
             ],
+            indexes: [
+                { key: 'parentEmail_idx', type: 'key', attributes: ['parentEmail'] }
+            ],
             permissions: [
                 // ✅ SECURITY: Login requests must be readable/creatable by guests
                 // (kids are unauthenticated) but updates MUST be authenticated-only

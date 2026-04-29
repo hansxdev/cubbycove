@@ -29,6 +29,16 @@ if (idUpload) {
 async function startWebcam() {
     try {
         if (!webcamElement) return;
+
+        // Ensure permission handling works through Capacitor's API
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera) {
+            try {
+                await window.Capacitor.Plugins.Camera.requestPermissions();
+            } catch (pluginErr) {
+                console.warn("Capacitor camera request failed:", pluginErr);
+            }
+        }
+
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
         webcamElement.srcObject = stream;
     } catch (err) {

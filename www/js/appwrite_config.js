@@ -11,7 +11,7 @@ try {
 
     const client = new Client()
         .setEndpoint('https://sgp.cloud.appwrite.io/v1') // Updated from .env
-        .setProject('69904f4900396667cf4c'); // Updated from .env
+        .setProject('69b554060007d12c46ee'); // Updated from .env
 
     const account = new Account(client);
     const databases = new Databases(client);
@@ -19,22 +19,28 @@ try {
     const functions = new Functions(client);
 
     // Database & Collection IDs (Constants)
-    const DB_ID = '699054e500210206c665'; // REPLACE with your Database ID
+    const DB_ID = '69b5543d0007695488c5'; // REACHED NEW DB ID
     const COLLECTIONS = {
         USERS: 'users',
         CHILDREN: 'children',
         VIDEOS: 'videos',
         THREAT_LOGS: 'threat_logs',
         ACCESS_LOGS: 'access_logs',
-        PENDING_STAFF: 'pending_staff'   // lightweight public-read collection for staff claiming
+        PENDING_STAFF: 'pending_staff',
+        PATHS: 'paths',
+        KID_REWARDS: 'kid_rewards',
+        KID_PATH_STATUS: 'kid_path_status',
+        CHAT_MESSAGES: 'chat_messages',
+        NOTIFICATIONS: 'notifications',
+        BUDDIES: 'buddies'
     };
 
     // Storage Bucket IDs
-    const BUCKET_PARENT_DOCS = 'parent_docs'; // Create this bucket in your Appwrite project
-    const BUCKET_PROFILE_PICS = 'profile_pics';
+    const BUCKET_PARENT_DOCS = '69b578300038f9545b4f'; // Verified bucket ID from Appwrite Console
+    const BUCKET_PROFILE_PICS = '69b578300038f9545b4f';
 
     // Function IDs
-    const FUNCTION_GEMINI_FILTER = 'gemini_filter_id'; // REPLACE with your Function ID
+    const FUNCTION_GEMINI_FILTER = '69aed56d0034b1b68f9e'; // REPLACE with your Function ID
 
     // Expose creating services globally
     window.AppwriteService = {

@@ -1,13 +1,14 @@
 // CUBBYCHAT LOGIC — Handles the real-time chat interface for kids.
-let _currentChild = null;
+// _currentChild is declared in buddy_logic.js or kid_logic.js
 let _buddyId = '';
 let _buddyName = '';
 let _buddyDocId = '';
 let _conversationId = '';
-let _pollInterval = null;
+let _unsubscribeChat = null;
 let _lastMessageTime = null;
 let _knownMessageIds = new Set();
 let _lastRenderedMsg = null;
+let _isSending = false; // Guard against double-send (e.g., two AI APIs resolving)
 
 // Report state
 let _pendingReportMsgId = '';
@@ -32,13 +33,22 @@ async function analyzeMessageWithAI(text) {
     const lowerText = text.toLowerCase();
     if (TAGALOG_BAD_WORDS.some(w => lowerText.includes(w))) return false;
 
+    const promptText = `You are a strict content moderator for a platform used by elementary school students. 
+Check the following message for profanity, cyberbullying, or inappropriate content.
+
+Message: "${text}"
+
+Return a JSON object with exactly two fields:
+1. "isSafe" (boolean): true if the message is completely safe, false if it contains profanity or bullying.
+2. "reason" (string): a very brief reason for your decision.`;
+
     // Call the secure Appwrite Function instead of exposing the API key
     try {
         const { functions, FUNCTION_GEMINI_FILTER } = window.AppwriteService;
 
         const execution = await functions.createExecution(
             FUNCTION_GEMINI_FILTER,
-            JSON.stringify({ action: 'filter_message', text: text }),
+            JSON.stringify({ prompt: promptText }),
             false,
             '/',
             'POST'
@@ -55,10 +65,14 @@ async function analyzeMessageWithAI(text) {
             return !BAD_WORDS.some(w => lowerText.includes(w));
         }
 
-        // Debug log for the reason
-        console.log("Gemini Moderation:", responseData.result);
+        // Gemini returns the markdown JSON string in responseData.result
+        const evaluationStr = responseData.result.replace(/```json|```/g, '').trim();
+        const evaluation = JSON.parse(evaluationStr);
 
-        return responseData.result.isSafe;
+        // Debug log for the reason
+        console.log("Gemini Moderation:", evaluation);
+
+        return evaluation.isSafe;
 
     } catch (e) {
         console.warn("Appwrite Function failed, falling back to local list:", e.message);
@@ -95,8 +109,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     updateChatHeader(_buddyId, _buddyName);
     _conversationId = DataService._buildConversationId(_currentChild.$id, _buddyId);
+    
+    // UI toggle logic applied via TDD:
+    const nbs = $('no-buddy-state');
+    if (nbs) { nbs.classList.add('hidden'); nbs.classList.remove('flex'); }
+    const msgs = $('chat-messages');
+    if (msgs) { msgs.classList.remove('hidden'); msgs.classList.add('flex'); }
+    
+    // Explicitly enable typing
+    const sendBtn = $('send-btn');
+    if (sendBtn) sendBtn.disabled = false;
+    const msgInput = $('message-input');
+    if (msgInput) { msgInput.disabled = false; msgInput.placeholder = 'Write a message...'; }
+
     await loadMessageHistory();
-    startPolling();
+    startRealtimeChat();
 
     $('send-btn').addEventListener('click', sendMessage);
     $('message-input').addEventListener('keydown', e => {
@@ -108,6 +135,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     $('message-input').focus();
     $('buddy-search')?.addEventListener('input', filterBuddySidebar);
+    
+    $('emoji-btn')?.addEventListener('click', () => {
+        alert("Emoji picker feature coming soon! 🍄");
+    });
 });
 
 // Updates the chat header with the current buddy's avatar and name.
@@ -172,12 +203,12 @@ async function loadChatBuddySidebar() {
 
             return `
             <a href="chat.html?buddyId=${encodeURIComponent(buddy.childId)}&buddyName=${encodeURIComponent(buddy.username)}&buddyDocId=${encodeURIComponent(buddy.buddyDocId)}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all buddy-item ${isActive ? 'bg-cubby-green/10' : 'hover:bg-gray-50'}"
+               class="flex items-center gap-3 px-4 py-3 cursor-pointer transition-all buddy-item rounded-2xl ${isActive ? 'bg-[#e3ae7d] border-[3px] border-[#9c6a38] shadow-[0_4px_0_#9c6a38] translate-y-[-2px]' : 'hover:bg-[#d2a373] border-[3px] border-transparent'}"
                data-name="${buddy.username.toLowerCase()}">
                 ${avatarHtml}
-                <div class="flex-1 min-w-0 info">
-                    <h4 class="font-bold ${isActive ? 'text-cubby-green' : 'text-gray-800'} truncate text-sm">${buddy.username}</h4>
-                    <p class="text-xs text-gray-400 truncate">${isActive ? 'Chatting now' : 'Tap to chat'}</p>
+                <div class="flex-1 min-w-0 info mt-1">
+                    <h4 class="${isActive ? 'text-[#3b2414] font-black' : 'text-[#5c3a21] font-bold'} truncate text-sm leading-tight">${escapeHtml(buddy.username)}</h4>
+                    <p class="text-xs ${isActive ? 'text-[#3b2414] font-bold opacity-80' : 'text-[#8c5a2c]'} truncate drop-shadow-sm">${isActive ? 'Chatting now' : 'Tap to chat'}</p>
                 </div>
             </a>`;
         }).join('');
@@ -219,37 +250,37 @@ async function loadMessageHistory() {
     }
 }
 
-// Begins the recurring poll for new incoming chat messages.
-function startPolling() {
-    stopPolling();
-    _pollInterval = setInterval(pollNewMessages, POLL_MS);
+// Begins the push-based subscription for new incoming chat messages.
+function startRealtimeChat() {
+    stopRealtimeChat();
+    const { COLLECTIONS } = AppwriteService;
+    _unsubscribeChat = DataService.subscribeToCollection(COLLECTIONS.CHAT_MESSAGES, response => {
+        // Appwrite Realtime response contains: events[], payload{}
+        const isCreate = response.events.some(e => e.includes('.create'));
+        if (isCreate) {
+            const msg = response.payload;
+            // Verify message is for this conversation and not already rendered
+            if (msg.conversationId === _conversationId && !_knownMessageIds.has(msg.$id)) {
+                _knownMessageIds.add(msg.$id);
+                const emptyCard = $('empty-chat-msg');
+                if (emptyCard) emptyCard.remove();
+                renderMessage(msg);
+                scrollToBottom();
+            }
+        }
+    });
 }
 
-// Stops the recurring poll for new chat messages.
-function stopPolling() {
-    if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
-}
-
-// Checks the server for new messages that haven't been rendered yet.
-async function pollNewMessages() {
-    if (!_conversationId) return;
-    try {
-        const messages = await DataService.getChatMessages(_conversationId, 25);
-        let addedAny = false;
-        messages.forEach(msg => {
-            if (_knownMessageIds.has(msg.$id)) return;
-            _knownMessageIds.add(msg.$id);
-            const emptyCard = $('empty-chat-msg');
-            if (emptyCard) emptyCard.remove();
-            renderMessage(msg);
-            addedAny = true;
-            if (!_lastMessageTime || msg.sentAt > _lastMessageTime) _lastMessageTime = msg.sentAt;
-        });
-        if (addedAny) scrollToBottom();
-    } catch (e) {
-        console.warn('[CubbyChat] Poll error:', e.message);
+// Terminates the Realtime subscription.
+function stopRealtimeChat() {
+    if (_unsubscribeChat) {
+        _unsubscribeChat(); // client.subscribe returns an unsubscribe function
+        _unsubscribeChat = null;
     }
 }
+
+// Deprecated: pollNewMessages is no longer used but kept for logic reference if needed
+// function pollNewMessages() { ... }
 
 // Renders a single message bubble into the chat message container.
 function renderMessage(msg) {
@@ -289,6 +320,8 @@ async function sendMessage() {
     const sendBtn = $('send-btn');
     const text = input.value.trim();
     if (!text || !_conversationId || !_currentChild) return;
+    if (_isSending) return; // Prevent double-send from duplicate AI API resolutions
+    _isSending = true;
 
     // ── MUTE CHECK ──────────────────────────────────────────────
     try {
@@ -297,6 +330,10 @@ async function sendMessage() {
             const durEl = $('mute-duration-text');
             if (durEl) durEl.textContent = muteStatus.durationStr;
             $('mute-modal').classList.remove('hidden');
+            // Reset the send guard before early return — otherwise the lock stays
+            // set permanently and the next send sees _isSending = true even though
+            // nothing is actually in-flight, causing the first real send to be missed.
+            _isSending = false;
             return;
         }
     } catch (e) {
@@ -327,6 +364,7 @@ async function sendMessage() {
     } catch (e) {
         showSafetyWarning('Could not send. Check your connection.');
     } finally {
+        _isSending = false;
         sendBtn.disabled = false;
         sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i>';
         input.focus();
@@ -431,5 +469,5 @@ function formatTime(isoStr) {
 }
 
 // Safely terminates message polling when the user navigates away from the page.
-window.addEventListener('beforeunload', stopPolling);
-window.addEventListener('pagehide', stopPolling);
+window.addEventListener('beforeunload', stopRealtimeChat);
+window.addEventListener('pagehide', stopRealtimeChat); // stopPolling was removed; realtime is the active transport

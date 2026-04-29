@@ -5,7 +5,7 @@
 
 let _currentChild = null;
 let _foundBuddyTarget = null; // the child doc found by search
-let _buddyPollInterval = null;
+let _unsubscribeBuddies = null;
 
 // ── Bootstrap ────────────────────────────────────────────────────────────────
 
@@ -30,9 +30,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await refreshBuddyUI();
 
-    // Poll for new buddy requests every 15 seconds
-    _buddyPollInterval = setInterval(refreshBuddyUI, 15000);
+    // Push-based updates for buddy requests and list changes
+    startBuddyRealtime();
 });
+
+// Begins the Realtime subscription for buddy events.
+function startBuddyRealtime() {
+    stopBuddyRealtime();
+    const { COLLECTIONS } = AppwriteService;
+    _unsubscribeBuddies = DataService.subscribeToCollection(COLLECTIONS.BUDDIES, response => {
+        const payload = response.payload;
+        // Only refresh if the event involves the current child
+        if (payload.toChildId === _currentChild?.$id || payload.fromChildId === _currentChild?.$id) {
+            refreshBuddyUI();
+        }
+    });
+}
+
+// Terminates the Realtime subscription.
+function stopBuddyRealtime() {
+    if (_unsubscribeBuddies) {
+        _unsubscribeBuddies();
+        _unsubscribeBuddies = null;
+    }
+}
+
+// Safely terminates Realtime when the user navigates away.
+window.addEventListener('beforeunload', stopBuddyRealtime);
+window.addEventListener('pagehide', stopBuddyRealtime);
 
 // ── Main refresh ─────────────────────────────────────────────────────────────
 
@@ -44,8 +69,8 @@ async function refreshBuddyUI() {
         DataService.getIncomingBuddyRequests(_currentChild.$id)
     ]);
 
-    // Limit to the 3 most recently interacted with buddies
-    const topBuddies = buddies.slice(0, 3);
+    // Limit to the 4 most recently interacted with buddies for 2x2 grid
+    const topBuddies = buddies.slice(0, 4);
 
     renderBuddyList(topBuddies);
     renderIncomingRequests(incoming);
@@ -59,13 +84,13 @@ function renderBuddyList(buddies) {
 
     if (buddies.length === 0) {
         container.innerHTML = `
-            <div class="text-center py-6">
-                <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <i class="fa-solid fa-user-group text-gray-300 text-xl"></i>
+            <div class="col-span-2 text-center py-2">
+                <div class="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-2 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] border-[3px] border-white text-gray-300 text-2xl">
+                    <i class="fa-solid fa-user-group"></i>
                 </div>
-                <p class="text-xs text-gray-400 font-semibold">No buddies yet</p>
+                <p class="text-xs text-gray-500 font-bold mb-2">No buddies yet</p>
                 <button onclick="openAddBuddyModal()"
-                    class="mt-2 text-xs text-cubby-blue font-bold hover:underline">Add Buddies!</button>
+                    class="text-xs bg-white text-blue-500 font-bold rounded-full px-4 py-2 shadow-sm hover:bg-blue-50 transition-all border border-blue-100">Add!</button>
             </div>
         `;
         return;
@@ -73,30 +98,34 @@ function renderBuddyList(buddies) {
 
     container.innerHTML = buddies.map(buddy => {
         let avatarHtml = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(buddy.username)}"
-            class="w-8 h-8 rounded-full bg-gray-200 border border-white shadow-sm shrink-0">`;
+            class="w-14 h-14 rounded-full bg-gray-200 p-0 shadow-inner border-[3px] border-white object-cover">`;
 
         if (buddy.avatarImage) {
             const bgStr = buddy.avatarBgColor ? `style="background-color: ${buddy.avatarBgColor}"` : 'bg-gray-200';
-            avatarHtml = `<img src="${buddy.avatarImage}" ${bgStr} class="w-8 h-8 rounded-full border border-white shadow-sm shrink-0 object-contain p-0.5">`;
+            avatarHtml = `<img src="${buddy.avatarImage}" ${bgStr} class="w-14 h-14 rounded-full shadow-inner border-[3px] border-white object-contain p-1">`;
         }
 
         return `
-        <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-xl transition-colors group relative"
-             title="Chat with ${buddy.username}">
-            <button onclick="event.stopPropagation(); viewBuddyProfile('${buddy.childId}', '${encodeURIComponent(buddy.username)}')"
-                class="shrink-0 text-gray-300 hover:text-cubby-blue text-xs p-1 rounded-lg hover:bg-blue-50 transition-colors"
-                title="View Profile">
-                <i class="fa-solid fa-user-circle"></i>
+        <div class="flex flex-col items-center cursor-pointer group relative"
+             title="Chat with ${buddy.username}" onclick="location.href='chat.html?buddyId=${encodeURIComponent(buddy.childId)}&buddyName=${encodeURIComponent(buddy.username)}&buddyDocId=${encodeURIComponent(buddy.buddyDocId)}'">
+            
+            <!-- Quick View Profile Button -->
+            <button onclick="event.stopPropagation(); viewBuddyProfile('${buddy.childId}', '${encodeURIComponent(buddy.username)}')" 
+                class="absolute -top-1 -right-1 z-10 w-6 h-6 bg-white border border-gray-100 text-gray-300 hover:text-cubby-blue rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-sm flex items-center justify-center transform hover:scale-110">
+                <i class="fa-solid fa-user-circle text-xs"></i>
             </button>
-            <a href="chat.html?buddyId=${encodeURIComponent(buddy.childId)}&buddyName=${encodeURIComponent(buddy.username)}&buddyDocId=${encodeURIComponent(buddy.buddyDocId)}"
-               class="flex items-center gap-2 flex-1 min-w-0">
+            
+            <div class="w-14 h-14 rounded-full flex items-center justify-center mb-1 relative transition-transform group-hover:scale-105">
                 ${avatarHtml}
-                <span class="font-bold text-gray-700 group-hover:text-cubby-blue text-sm truncate">${buddy.username}</span>
-            </a>
-            <button onclick="unfriendBuddy('${buddy.buddyDocId}', '${encodeURIComponent(buddy.username)}')"
-                class="opacity-0 group-hover:opacity-100 transition-opacity ml-1 shrink-0 text-gray-300 hover:text-red-500 text-xs p-1 rounded-lg hover:bg-red-50"
+                <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-400 border-2 border-white rounded-full"></div>
+            </div>
+            
+            <span class="text-xs text-gray-500 font-bold group-hover:text-cubby-blue truncate w-full text-center">${buddy.username}</span>
+            
+            <button onclick="event.stopPropagation(); unfriendBuddy('${buddy.buddyDocId}', '${encodeURIComponent(buddy.username)}')"
+                class="absolute -bottom-1 -left-1 z-10 w-5 h-5 bg-white border border-gray-100 text-gray-300 hover:text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-sm flex items-center justify-center transform hover:scale-110"
                 title="Unfriend ${buddy.username}">
-                <i class="fa-solid fa-user-xmark"></i>
+                <i class="fa-solid fa-user-xmark text-[8px]"></i>
             </button>
         </div>
     `}).join('');
@@ -154,6 +183,8 @@ window.acceptBuddyReq = async function (buddyDocId, btn) {
     if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
     try {
         await DataService.acceptBuddyRequest(buddyDocId, _currentChild);
+        // Log as activity
+        DataService.logActivity(_currentChild.$id, 'buddy_add', `Accepted a new buddy!`, { buddyDocId });
         await refreshBuddyUI();
     } catch (e) {
         alert('Could not accept: ' + e.message);
@@ -266,6 +297,8 @@ window.sendBuddyRequest = async function () {
         await DataService.sendBuddyRequest(fromChild, _foundBuddyTarget);
         sendBtn.innerHTML = '<i class="fa-solid fa-check"></i> Sent!';
         sendBtn.className = 'bg-green-500 text-white font-bold px-4 py-2 rounded-xl text-sm';
+        // Log buddy request as activity
+        DataService.logActivity(_currentChild.$id, 'buddy_add', `Sent a buddy request to ${_foundBuddyTarget.username || _foundBuddyTarget.name}`, { targetId: _foundBuddyTarget.$id });
         setTimeout(closeAddBuddyModal, 1500);
     } catch (e) {
         alert(e.message);

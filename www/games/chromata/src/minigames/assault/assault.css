@@ -1,0 +1,532 @@
+/* General Body and HTML styles */
+body,
+html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #0a0a10;
+    color: #e0e0e0;
+    font-family: 'Exo 2', sans-serif, 'Courier New', Courier, monospace;
+    height: 100%;
+}
+
+/* Main game container layout */
+#game-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: stretch;
+    width: 100%;
+    height: 100vh;
+    padding: 10px;
+    box-sizing: border-box;
+    gap: 10px;
+}
+
+/* Canvas wrapper for the p5.js canvas */
+#canvas-wrapper {
+    position: relative;
+    border: 1.5px solid #00FFFF;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.15);
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 0;
+}
+
+/* p5.js canvas element styles */
+canvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* General UI panel styles */
+.ui-panel {
+    background: rgba(10, 25, 35, 0.95);
+    border: 1.5px solid #00FFFF;
+    border-radius: 5px;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    width: 300px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+/* Info Panel Styles (for selected towers, nexus, hexes) */
+#info-panel,
+#hex-info-panel,
+#nexus-info-panel {
+    border: 1.5px solid #FFD300;
+    border-radius: 4px;
+    margin-top: 15px;
+    padding: 10px;
+    background: rgba(20, 40, 50, 0.5);
+    display: none;
+    /* Hidden by default */
+    flex-direction: column;
+    gap: 8px;
+}
+
+#hex-info-panel {
+    border-color: #e74c3c;
+}
+
+#hex-info-panel.pure {
+    border-color: #fff;
+}
+
+#hex-info-panel.neutral {
+    border-color: #888;
+}
+
+
+#info-panel h3,
+#hex-info-panel h3,
+#nexus-info-panel h3 {
+    margin: 0;
+    color: #FFD300;
+    text-shadow: 0 0 4px #FFD300;
+}
+
+#hex-info-panel h3 {
+    color: #e74c3c;
+    text-shadow: 0 0 4px #e74c3c;
+}
+
+#hex-info-panel.pure h3 {
+    color: #fff;
+    text-shadow: none;
+}
+
+#hex-info-panel.neutral h3 {
+    color: #888;
+    text-shadow: none;
+}
+
+
+#info-panel p,
+#hex-info-panel p,
+#nexus-info-panel p {
+    margin: 0;
+    font-size: 14px;
+    color: #ccc;
+}
+
+#info-status {
+    font-style: italic;
+    color: #00FFFF !important;
+}
+
+#info-warning {
+    color: #e74c3c;
+    font-weight: bold;
+    display: none;
+}
+
+#info-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+#info-stats span {
+    color: #fff;
+}
+
+.info-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* Action buttons within info panels */
+.action-button {
+    background: rgba(0, 20, 30, 0.9);
+    border: 1.5px solid #00FFFF;
+    color: #F0F0F0;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 14px;
+    text-shadow: 0 0 3px #00FFFF;
+    transition: all 0.2s;
+    pointer-events: auto;
+    position: relative;
+}
+
+.action-button:hover:not(:disabled) {
+    background: rgba(20, 50, 70, 0.95);
+    box-shadow: 0 0 10px #00FFFF;
+}
+
+.action-button:disabled {
+    border-color: #555;
+    color: #555;
+    cursor: not-allowed;
+    text-shadow: none;
+}
+
+.action-button .shortcut {
+    position: absolute;
+    top: 2px;
+    right: 5px;
+    font-size: 10px;
+    color: #888;
+    z-index: 10;
+}
+
+#destroy-button,
+#abandon-button {
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+#destroy-button:hover,
+#abandon-button:hover {
+    background: #e74c3c;
+    color: #000;
+}
+
+#toggle-active-button.active {
+    border-color: #39FF14;
+    color: #39FF14;
+}
+
+#toggle-active-button.active:hover {
+    background: #39FF14;
+    color: #000;
+}
+
+.action-button.mode-active {
+    border-color: #39FF14;
+    color: #39FF14;
+}
+
+
+/* UI Panel Headers */
+.ui-panel h2,
+.ui-panel h3 {
+    text-align: center;
+    color: #FFD300;
+    margin-top: 0;
+    margin-bottom: 10px;
+    text-shadow: 0 0 5px #FFD300;
+}
+
+/* General stat display styles */
+.stat-display {
+    margin: 5px 0;
+    font-size: 16px;
+}
+
+#light-income-indicator {
+    text-align: center;
+    font-size: 14px;
+    height: auto;
+    margin-bottom: 2px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.positive {
+    color: #39FF14;
+}
+
+.negative {
+    color: #e74c3c;
+}
+
+/* Resource Bar styles */
+.bar-container {
+    width: 100%;
+    height: 24px;
+    background-color: rgba(0, 20, 30, 0.9);
+    border: 1.5px solid #00FFFF;
+    border-radius: 4px;
+    margin-top: 5px;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.2s ease-out;
+}
+
+#light-bar-fill {
+    background-color: #FFFFFF;
+}
+
+#shield-bar-fill {
+    background-color: #ADFF2F;
+}
+
+.bar-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+#light-bar-text {
+    color: #000;
+    text-shadow: 0 0 2px #fff;
+}
+
+#shield-bar-text {
+    color: #000;
+    text-shadow: 0 0 2px #fff;
+}
+
+.bar-label {
+    font-size: 12px;
+    color: #00FFFF;
+    margin-bottom: 2px;
+}
+
+/* Build Menu Buttons */
+.build-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.build-button {
+    background: rgba(0, 20, 30, 0.9);
+    border: 1.5px solid #00FFFF;
+    color: #F0F0F0;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 14px;
+    text-shadow: 0 0 3px #00FFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    transition: all 0.2s;
+    position: relative;
+    pointer-events: auto;
+}
+
+.build-button .shortcut {
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    font-size: 10px;
+    color: #888;
+    z-index: 10;
+}
+
+.build-button.selected {
+    border-color: #39FF14;
+    box-shadow: 0 0 10px #39FF14;
+}
+
+.build-button:hover:not(:disabled) {
+    background: rgba(20, 50, 70, 0.95);
+    color: #fff;
+    box-shadow: 0 0 10px #00FFFF;
+}
+
+.build-button:disabled {
+    border-color: #555;
+    color: #555;
+    cursor: not-allowed;
+    text-shadow: none;
+}
+
+.build-button svg {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 5px;
+}
+
+/* Win/Lose screen overlays */
+.win-screen,
+.lose-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 100;
+}
+
+.win-screen h1 {
+    color: #39FF14;
+    text-shadow: 0 0 10px #39FF14;
+}
+
+.lose-screen h1 {
+    color: #e74c3c;
+    text-shadow: 0 0 10px #e74c3c;
+}
+
+/* Modal styles for confirmations */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+}
+
+.modal-content {
+    background: rgba(10, 25, 35, 0.98);
+    border: 1.5px solid #e74c3c;
+    padding: 20px;
+    border-radius: 5px;
+    text-align: center;
+    width: 300px;
+}
+
+.modal-content h4 {
+    margin-top: 0;
+    color: #e74c3c;
+}
+
+.modal-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-around;
+}
+
+.modal-actions button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Exo 2', sans-serif;
+    border: 1.5px solid #00FFFF;
+    background: rgba(0, 20, 30, 0.9);
+    color: #F0F0F0;
+}
+
+#abandon-confirm-yes {
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+#abandon-confirm-yes:hover {
+    background: #e74c3c;
+    color: #000;
+}
+
+#abandon-confirm-no:hover {
+    background: rgba(20, 50, 70, 0.95);
+}
+
+#pause-button {
+    flex-direction: row;
+}
+
+/* Pause button animation */
+#pause-button.paused {
+    animation: flash-gold 1.5s infinite;
+    border-color: #FFD300;
+}
+
+#pause-button .shortcut {
+    left: auto;
+    right: 5px;
+}
+
+@keyframes flash-gold {
+
+    0%,
+    100% {
+        background-color: rgba(100, 80, 0, 0.9);
+        box-shadow: 0 0 10px #FFD300;
+    }
+
+    50% {
+        background-color: rgba(20, 50, 70, 0.95);
+        box-shadow: none;
+    }
+}
+
+@keyframes blink-red {
+
+    0%,
+    100% {
+        border-color: #e74c3c;
+    }
+
+    50% {
+        border-color: #6a2016;
+    }
+}
+
+#hex-info-panel.blinking {
+    animation: blink-red 1.5s infinite;
+}
+
+.game-timer-display {
+    background: rgba(0, 20, 30, 0.9);
+    border: 1.5px solid #00FFFF;
+    color: #F0F0F0;
+    padding: 8px;
+    border-radius: 4px;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 14px;
+    text-align: center;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    box-sizing: border-box;
+}
+
+/* Style for Stabilizer target buttons */
+#stabilizer-set-target-button,
+#stabilizer-clear-target-button {
+    border-color: #FFD300;
+    /* Gold/Yellow */
+    color: #FFD300;
+}
+
+#stabilizer-set-target-button:hover:not(:disabled),
+#stabilizer-clear-target-button:hover:not(:disabled) {
+    background: #FFD300;
+    color: #000;
+}
+
+#stabilizer-set-target-button.mode-active {
+    border-color: #39FF14;
+    color: #39FF14;
+}
+
+/* --- STAGE 5 INVASION UI --- */
+/* Hide the invasion panel by default */
+#invasion-build-panel {
+    display: none;
+}

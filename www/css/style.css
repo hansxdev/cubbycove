@@ -31,3 +31,88 @@ html {
     background-color: #4CC9F0; /* Cubby Blue */
     color: white;
 }
+
+/* 4. Capacitor Safe Area & Responsive Android Fixes */
+body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+}
+
+* {
+    max-width: 100%;
+}
+
+/* 5. Mobile Overlap Prevention & Advanced Scaling */
+@media (max-width: 768px) {
+    /* Ensure flex containers stack if content overflows */
+    .flex:not(nav), .flex-row:not(nav, nav .flex-row) {
+        flex-wrap: wrap !important;
+    }
+    
+    /* Force grids to output single columns on small screens */
+    .grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Prevent text overflow in cards */
+    h1, h2, h3, h4, p, span {
+        word-break: break-word; /* Allows long words to break */
+        word-wrap: break-word;
+        white-space: normal !important;
+    }
+
+    /* Reduce global paddings to give UI elements breathing room */
+    .p-6, .p-8, .p-12 {
+        padding: 1rem !important;
+    }
+
+    /* Force images/videos to scale responsively and not break containers */
+    img, video {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+    
+    /* Fix Navigation Bar constraints */
+    nav {
+        flex-wrap: nowrap !important;
+        overflow: hidden !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        gap: 0.5rem !important;
+    }
+    
+    /* Hide massive search bar on tiny screens completely */
+    nav .flex-1, nav .hidden.sm\\:flex {
+        display: none !important; 
+    }
+    
+    /* Ensure the logo container scales down and doesn't push buttons out */
+    #logo-container {
+        width: 120px !important;
+        height: 40px !important;
+    }
+    #logo-long, #logo-closed {
+        height: 100% !important;
+        width: 100% !important;
+        object-fit: contain !important;
+    }
+
+    /* 6. Touch Targets & Native Feel */
+    button, a, input {
+        min-height: 48px !important;
+        /* Ensure minimum touch target size */
+    }
+
+    body {
+        /* Prevents pull-to-refresh zoom issues on Android */
+        touch-action: pan-y;
+        -webkit-tap-highlight-color: transparent;
+    }
+}

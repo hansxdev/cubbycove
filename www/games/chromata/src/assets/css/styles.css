@@ -1,0 +1,113 @@
+/* LOCAL FONT DEFINITIONS */
+
+@font-face {
+    font-family: 'Exo 2';
+    font-style: normal;
+    font-weight: 400;
+    /* This assumes you placed Exo2-Regular.ttf in a 'fonts' subfolder */
+    src: local('Exo 2 Regular'),
+        url('../fonts/Exo2-Regular.ttf') format('truetype');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Exo 2';
+    font-style: normal;
+    font-weight: 700;
+    src: local('Exo 2 Bold'),
+        url('../fonts/Exo2-Bold.ttf') format('truetype');
+    font-display: swap;
+}
+
+/*  GLOBAL STYLES (Starts the existing body and input rules) */
+
+body {
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    background-color: #000000;
+    /* Ensure the font-family declaration is here and correctly targets the defined font */
+    font-family: 'Exo 2', sans-serif;
+    color: #f0f0f0;
+}
+
+canvas {
+    display: block;
+    margin: auto;
+}
+
+/* --- General Input Styling --- */
+input {
+    background-color: rgba(0, 20, 30, 0.9);
+    color: #F0F0F0;
+    border: 1.5px solid #00FFFF;
+    border-radius: 4px;
+    font-family: 'Exo 2', sans-serif;
+    text-align: center;
+    padding: 5px;
+    box-sizing: border-box;
+}
+
+input:focus {
+    outline: none;
+    box-shadow: 0 0 10px #00FFFF;
+}
+
+/* --- Number Input Specifics (Hide Spinners) --- */
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* --- Range Slider Styling --- */
+input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+/* Track Styling (Chrome, Safari, Edge) */
+input[type=range]::-webkit-slider-runnable-track {
+    background: rgba(0, 20, 30, 0.9);
+    border: 1.5px solid #00FFFF;
+    border-radius: 5px;
+    height: 10px;
+}
+
+/* Thumb Styling (Chrome, Safari, Edge) */
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    margin-top: -7px;
+    /* Center thumb on track */
+    background-color: #FFFFFF;
+    border: 2px solid #00FFFF;
+    border-radius: 50%;
+    height: 20px;
+    width: 20px;
+    box-shadow: 0 0 8px #00FFFF;
+}
+
+/* Track Styling (Firefox) */
+input[type=range]::-moz-range-track {
+    background: rgba(0, 20, 30, 0.9);
+    border: 1.5px solid #00FFFF;
+    border-radius: 5px;
+    height: 10px;
+}
+
+/* Thumb Styling (Firefox) */
+input[type=range]::-moz-range-thumb {
+    background-color: #FFFFFF;
+    border: 2px solid #00FFFF;
+    border-radius: 50%;
+    height: 20px;
+    width: 20px;
+    box-shadow: 0 0 8px #00FFFF;
+}

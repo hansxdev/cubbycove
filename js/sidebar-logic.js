@@ -3,9 +3,16 @@ function initSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
     const mainContent = document.getElementById('main-content');
+    const topNav = document.getElementById('top-nav');
     const body = document.body;
 
-    if (!menuBtn || !sidebar) return;
+    if (!sidebar) return;
+
+    // Hide hamburger menu button on desktop since we're using hover logic now
+    if (menuBtn) {
+        menuBtn.classList.remove('lg:flex', 'lg:bg-white/40', 'lg:backdrop-blur-md', 'lg:w-11', 'lg:h-11', 'lg:items-center', 'lg:justify-center', 'lg:border', 'lg:border-white/50', 'lg:shadow-sm', 'lg:text-indigo-900/60', 'lg:hover:text-indigo-900', 'lg:hover:bg-white/60', 'lg:hover:scale-105');
+        menuBtn.classList.add('lg:hidden');
+    }
 
     // Initialize Logo Paths
     const logoLong = document.getElementById('logo-long');
@@ -24,198 +31,184 @@ function initSidebar() {
     function updateLogo(isClosed) {
         const logoLong = document.getElementById('logo-long');
         const logoClosed = document.getElementById('logo-closed');
-        const logoContainer = document.getElementById('logo-container');
 
-        if (logoLong && logoClosed && logoContainer) {
+        if (logoLong && logoClosed) {
             if (isClosed) {
                 // Show Closed, Hide Long
-                logoLong.classList.add('opacity-0');
-                logoLong.classList.remove('opacity-100');
+                logoLong.classList.add('opacity-0', 'scale-50');
+                logoLong.classList.remove('opacity-100', 'scale-100');
 
-                logoClosed.classList.add('opacity-100', 'delay-100');
-                logoClosed.classList.remove('opacity-0');
-
-                if (logoContainer) {
-                    logoContainer.classList.remove('w-48');
-                    logoContainer.classList.add('w-14');
-                }
+                logoClosed.classList.add('opacity-100', 'scale-100');
+                logoClosed.classList.remove('opacity-0', 'scale-50');
             } else {
                 // Show Long, Hide Closed
-                logoLong.classList.add('opacity-100', 'delay-100');
-                logoLong.classList.remove('opacity-0');
+                logoLong.classList.add('opacity-100', 'scale-100');
+                logoLong.classList.remove('opacity-0', 'scale-50');
 
-                logoClosed.classList.add('opacity-0');
-                logoClosed.classList.remove('opacity-100', 'delay-100');
-
-                // Adjust Container Width (approximate width for full logo)
-                if (logoContainer) {
-                    logoContainer.classList.remove('w-14');
-                    logoContainer.classList.add('w-48');
-                }
+                logoClosed.classList.add('opacity-0', 'scale-50');
+                logoClosed.classList.remove('opacity-100', 'scale-100');
             }
         }
     }
 
-    function toggleMenu() {
-        const isDesktop = window.innerWidth >= 1024;
+    function setExpandedStyles() {
+        const labels = sidebar.querySelectorAll('.sidebar-label');
+        const headers = sidebar.querySelectorAll('.sidebar-header');
+        const promos = sidebar.querySelectorAll('.sidebar-promo');
+        const links = sidebar.querySelectorAll('.sidebar-link');
+        const status = sidebar.querySelectorAll('.sidebar-status');
+        const hideMini = sidebar.querySelectorAll('.sidebar-hide-mini');
 
-        if (isDesktop) {
-            // Desktop: Toggle Width (Mini vs Full)
-            const isFullWidth = sidebar.classList.contains('w-64');
+        labels.forEach(el => el.classList.remove('w-0', 'opacity-0', 'translate-x-[-10px]', 'hidden'));
+        [...headers, ...promos].forEach(el => el.classList.remove('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0', 'overflow-hidden'));
+        hideMini.forEach(el => el.classList.remove('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0', 'overflow-hidden'));
+        
+        sidebar.querySelectorAll('.space-y-4').forEach(el => {
+            el.classList.remove('mx-1.5');
+            el.classList.add('mx-6');
+        });
 
-            const labels = sidebar.querySelectorAll('.sidebar-label');
-            const headers = sidebar.querySelectorAll('.sidebar-header');
-            const promos = sidebar.querySelectorAll('.sidebar-promo');
-            const links = sidebar.querySelectorAll('.sidebar-link');
-            const status = sidebar.querySelectorAll('.sidebar-status');
-            const hideMini = sidebar.querySelectorAll('.sidebar-hide-mini');
+        links.forEach(el => {
+            el.classList.remove('justify-center', 'px-0', 'aspect-square', 'w-[4.5rem]', 'mx-auto');
+            el.classList.add('gap-3', 'pr-4', 'pl-1.5');
+        });
 
-            if (isFullWidth) {
-                // COLLAPSE
-                sidebar.classList.remove('w-64');
-                sidebar.classList.add('w-20');
+        status.forEach(el => el.classList.remove('opacity-0', 'w-0'));
+    }
 
-                if (mainContent && mainContent.classList.contains('lg:ml-64')) {
-                    mainContent.classList.remove('lg:ml-64');
-                    mainContent.classList.add('lg:ml-20');
-                }
+    function collapseDesktop() {
+        if (!sidebar.classList.contains('w-[17.5rem]') && !sidebar.classList.contains('w-full')) return;
 
-                // Animate Labels Out
-                labels.forEach(el => {
-                    el.classList.add('w-0', 'opacity-0', 'translate-x-[-10px]');
-                });
+        sidebar.classList.remove('w-[17.5rem]');
+        sidebar.classList.add('w-[6rem]');
 
-                // Hide Headers & Promos (Collapse Height)
-                [...headers, ...promos].forEach(el => {
-                    el.classList.add('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0');
-                    // Handle HRs if needed or just let them stay? 
-                    // HRs usually have margin, so we might want to hide them too or give them a class.
-                    // For now, let's just accept HRs might look weird or just hide promos.
-                });
+        if (mainContent) {
+            mainContent.classList.remove('lg:ml-[17.5rem]', 'lg:ml-64');
+            mainContent.classList.add('lg:ml-[6rem]');
+            // Crucial: remove position absolute overlapping so it pushes
+            mainContent.classList.remove('absolute', 'w-full'); 
+        }
 
-                // Completely hide specific sections (like friends list container)
-                hideMini.forEach(el => {
-                    el.classList.add('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0');
-                });
+        if (topNav) {
+            topNav.classList.remove('lg:left-[18.25rem]');
+            topNav.classList.add('lg:left-[6.75rem]');
+        }
 
-                // Center Icons by removing gap and padding
-                links.forEach(el => {
-                    el.classList.remove('gap-4', 'px-4');
-                    el.classList.add('justify-center', 'px-0');
-                });
+        // Animate Labels Out
+        sidebar.querySelectorAll('.sidebar-label').forEach(el => {
+            el.classList.add('w-0', 'opacity-0', 'translate-x-[-10px]', 'hidden');
+        });
 
-                // Hide status dots
-                status.forEach(el => el.classList.add('opacity-0', 'w-0'));
+        // Hide Headers & Promos (Collapse Height)
+        [...sidebar.querySelectorAll('.sidebar-header'), ...sidebar.querySelectorAll('.sidebar-promo')].forEach(el => {
+            el.classList.add('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0', 'overflow-hidden');
+        });
 
-                updateLogo(true);
-            } else {
-                // EXPAND
-                sidebar.classList.remove('w-20');
-                sidebar.classList.add('w-64');
+        sidebar.querySelectorAll('.sidebar-hide-mini').forEach(el => {
+            el.classList.add('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0', 'overflow-hidden');
+        });
 
-                if (mainContent && mainContent.classList.contains('lg:ml-20')) {
-                    mainContent.classList.remove('lg:ml-20');
-                    mainContent.classList.add('lg:ml-64');
-                }
+        sidebar.querySelectorAll('.space-y-4').forEach(el => {
+            el.classList.remove('mx-6');
+            el.classList.add('mx-1.5');
+        });
 
-                // Animate Labels In
-                labels.forEach(el => {
-                    el.classList.remove('w-0', 'opacity-0', 'translate-x-[-10px]');
-                });
+        sidebar.querySelectorAll('.sidebar-link').forEach(el => {
+            el.classList.remove('gap-3', 'pr-4', 'pl-1.5');
+            el.classList.add('justify-center', 'px-0', 'aspect-square', 'w-[4.5rem]', 'mx-auto');
+        });
 
-                // Show Headers & Promos
-                [...headers, ...promos].forEach(el => {
-                    el.classList.remove('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0');
-                });
+        sidebar.querySelectorAll('.sidebar-status').forEach(el => el.classList.add('opacity-0', 'w-0'));
 
-                // Show hidden mini sections
-                hideMini.forEach(el => {
-                    el.classList.remove('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0');
-                });
+        updateLogo(true);
+    }
 
-                // Restore Links
-                links.forEach(el => {
-                    el.classList.remove('justify-center', 'px-0');
-                    el.classList.add('gap-4', 'px-4');
-                });
+    function expandDesktop() {
+        if (sidebar.classList.contains('w-[17.5rem]')) return;
 
-                // Show status dots
-                status.forEach(el => el.classList.remove('opacity-0', 'w-0'));
+        sidebar.classList.remove('w-[6rem]');
+        sidebar.classList.add('w-[17.5rem]');
 
-                updateLogo(false);
-            }
+        // When expanding on hover, we don't want to push the main content, 
+        // we want the sidebar to float over. 
+        if (mainContent) {
+            mainContent.classList.remove('lg:ml-[17.5rem]');
+            mainContent.classList.add('lg:ml-[6rem]'); 
+        }
+
+        if (topNav) {
+            topNav.classList.remove('lg:left-[6.75rem]');
+            topNav.classList.add('lg:left-[18.25rem]');
+        }
+
+        setExpandedStyles();
+        updateLogo(false);
+    }
+
+    function toggleMobileMenu() {
+        const isHidden = sidebar.classList.contains('-translate-x-full');
+        if (isHidden) {
+            // Open
+            sidebar.classList.remove('-translate-x-full');
+            if (overlay) overlay.classList.remove('hidden');
+            body.style.overflow = 'hidden';
+            setExpandedStyles();
+            updateLogo(false);
         } else {
-            // Mobile: Toggle overlay
-            const isHidden = sidebar.classList.contains('-translate-x-full');
-            if (isHidden) {
-                // Open
-                sidebar.classList.remove('-translate-x-full');
-                if (overlay) overlay.classList.remove('hidden');
-                body.style.overflow = 'hidden';
-            } else {
-                // Close
-                sidebar.classList.add('-translate-x-full');
-                if (overlay) overlay.classList.add('hidden');
-                body.style.overflow = 'auto';
-            }
+            // Close
+            sidebar.classList.add('-translate-x-full');
+            if (overlay) overlay.classList.add('hidden');
+            body.style.overflow = 'auto';
         }
     }
 
-    menuBtn.addEventListener('click', toggleMenu);
-    if (overlay) overlay.addEventListener('click', toggleMenu);
+    if (menuBtn) menuBtn.addEventListener('click', toggleMobileMenu);
+    if (overlay) overlay.addEventListener('click', toggleMobileMenu);
+
+    // Initial state on load
+    if (window.innerWidth >= 1024) {
+        // Run setTimeout slightly so it doesn't fight DOMContentLoaded weirdly, or just run sync
+        collapseDesktop();
+    }
+
+    // Hover listeners for desktop expanding/collapsing
+    sidebar.addEventListener('mouseenter', () => {
+        if (window.innerWidth >= 1024) {
+            expandDesktop();
+        }
+    });
+
+    sidebar.addEventListener('mouseleave', () => {
+        if (window.innerWidth >= 1024) {
+            collapseDesktop();
+        }
+    });
 
     // Resize Reset
     window.addEventListener('resize', () => {
         if (window.innerWidth >= 1024) {
-            // Desktop Reset: Ensure visible and full width
-            sidebar.classList.remove('-translate-x-full'); // Remove mobile hiding
-
-            // Just ensure it's in a valid state (Full)
-            if (!sidebar.classList.contains('w-64') && !sidebar.classList.contains('w-20')) {
-                sidebar.classList.add('w-64');
-            }
-
-            // If we want to force reset to full on resize:
-            /*
-            sidebar.classList.add('w-64');
-            sidebar.classList.remove('w-20');
-            if (mainContent) {
-                mainContent.classList.add('lg:ml-64');
-                mainContent.classList.remove('lg:ml-20');
-            }
-            sidebar.querySelectorAll('.sidebar-label, .sidebar-header, .sidebar-promo, .sidebar-status').forEach(el => el.classList.remove('hidden'));
-            sidebar.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('justify-center'));
-            updateLogo(false);
-            */
+            // Desktop Reset: Ensure visible and collapsed
+            sidebar.classList.remove('-translate-x-full');
+            collapseDesktop();
 
             if (overlay) overlay.classList.add('hidden');
             body.style.overflow = 'auto';
         } else {
             // Mobile Reset: Hide sidebar
             sidebar.classList.add('-translate-x-full');
-            sidebar.classList.remove('w-20');
-            sidebar.classList.add('w-64');
+            sidebar.classList.remove('w-[6rem]');
+            sidebar.classList.add('w-[17.5rem]');
 
-            // Clean up mini-sidebar artifacts
-            const labels = sidebar.querySelectorAll('.sidebar-label');
-            const headers = sidebar.querySelectorAll('.sidebar-header');
-            const promos = sidebar.querySelectorAll('.sidebar-promo');
-            const links = sidebar.querySelectorAll('.sidebar-link');
-            const status = sidebar.querySelectorAll('.sidebar-status');
-            const hideMini = sidebar.querySelectorAll('.sidebar-hide-mini');
-
-            labels.forEach(el => el.classList.remove('w-0', 'opacity-0', 'translate-x-[-10px]'));
-            [...headers, ...promos].forEach(el => el.classList.remove('max-h-0', 'opacity-0', 'mt-0', 'mb-0', 'p-0', 'border-0'));
-            hideMini.forEach(el => el.classList.remove('max-h-0', 'opacity-0', 'p-0', 'border-0', 'mt-0', 'mb-0'));
-            links.forEach(el => {
-                el.classList.remove('justify-center', 'px-0');
-                el.classList.add('gap-4', 'px-4');
-            });
-            status.forEach(el => el.classList.remove('opacity-0', 'w-0'));
+            setExpandedStyles();
+            updateLogo(false);
 
             if (mainContent) {
-                mainContent.classList.remove('lg:ml-20');
-                mainContent.classList.add('lg:ml-64');
+                mainContent.classList.remove('lg:ml-[6rem]');
+                mainContent.classList.add('lg:ml-[17.5rem]');
+            }
+            if (topNav) {
+                topNav.classList.remove('lg:left-[6.75rem]');
+                topNav.classList.add('lg:left-[18.25rem]');
             }
 
             if (overlay) overlay.classList.add('hidden');
@@ -225,3 +218,4 @@ function initSidebar() {
 }
 
 document.addEventListener('DOMContentLoaded', initSidebar);
+

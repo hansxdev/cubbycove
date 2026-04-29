@@ -1,207 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CubbyChat - Safe Friends</title>
     <link rel="icon" type="image/png" href="../images/closedlogo.png">
-
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="../js/tailwind-config.js"></script>
-
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/kid_theme.css">
-
     <style>
-        /* Chat Bubble Animations */
-        .message-enter {
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes popIn {
-            from {
-                opacity: 0;
-                transform: scale(0.8) translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        /* Typing indicator */
-        .typing-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #94a3b8;
-            animation: typingBounce 1s infinite;
-        }
-
-        .typing-dot:nth-child(2) {
-            animation-delay: 0.15s;
-        }
-
-        .typing-dot:nth-child(3) {
-            animation-delay: 0.3s;
-        }
-
-        @keyframes typingBounce {
-
-            0%,
-            80%,
-            100% {
-                transform: translateY(0);
-            }
-
-            40% {
-                transform: translateY(-6px);
-            }
-        }
-
-        /* Chat area scrollbar */
-        #chat-messages::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        #chat-messages::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        #chat-messages::-webkit-scrollbar-thumb {
-            background: #e5e7eb;
-            border-radius: 4px;
-        }
+        body { font-family: 'Nunito', sans-serif; }
+        .message-enter { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.8) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .typing-dot { width: 6px; height: 6px; border-radius: 50%; background: #9c6a38; animation: typingBounce 1s infinite; }
+        .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes typingBounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
+        #chat-messages::-webkit-scrollbar { width: 6px; }
+        #chat-messages::-webkit-scrollbar-track { background: transparent; }
+        #chat-messages::-webkit-scrollbar-thumb { background: #9c6a38; border-radius: 6px; }
     </style>
 </head>
+<body class="bg-[#e4ffd4] text-[#4d3822] antialiased overflow-hidden h-screen flex flex-col relative select-none">
+    
+    <!-- Background Trees -->
+    <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+         <div class="absolute top-0 inset-x-0 h-48 bg-gradient-to-b from-[#8cefa4] to-transparent opacity-40"></div>
+         <!-- Tree borders left right -->
+         <div class="absolute -left-16 top-0 bottom-0 w-32 bg-[#4c8a2e] blur-3xl opacity-20"></div>
+         <div class="absolute -right-16 top-0 bottom-0 w-32 bg-[#4c8a2e] blur-3xl opacity-20"></div>
+    </div>
 
-<body class="bg-gray-50 text-gray-800 antialiased overflow-hidden h-screen flex flex-col">
-
-    <!-- TOP NAVIGATION BAR -->
-    <nav class="bg-white shadow-md z-50 h-16 flex-shrink-0 flex items-center justify-between px-4 lg:px-6">
-
-        <!-- Left: Logo & Menu Toggle -->
-        <div class="flex items-center gap-4">
-            <button id="menu-btn"
-                class="text-2xl text-gray-600 hover:text-cubby-blue p-2 rounded-full hover:bg-gray-100 transition-colors">
-                <i class="fa-solid fa-bars"></i>
-            </button>
-            <a href="home_logged_in.html" class="flex items-center gap-2 cursor-pointer">
-                <div
-                    class="bg-cubby-green text-white p-2 rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
-                    <i class="fa-solid fa-comments text-xl"></i>
-                </div>
-                <span class="text-2xl font-extrabold tracking-tight text-gray-700 hidden sm:block">
-                    Cubby<span class="text-cubby-green">Chat</span>
-                </span>
-            </a>
-        </div>
-
-        <!-- Center: Current Chat Info (dynamic) -->
-        <div class="flex items-center gap-3">
-            <div class="relative">
-                <img id="chat-buddy-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=friend"
-                    class="w-10 h-10 rounded-full bg-gray-200 border-2 border-white shadow-sm">
-                <span
-                    class="absolute bottom-0 right-0 w-3 h-3 bg-cubby-green border-2 border-white rounded-full"></span>
-            </div>
-            <div class="hidden sm:block">
-                <h3 id="chat-buddy-name" class="font-bold text-gray-800 leading-tight">Loading...</h3>
-                <p class="text-xs text-cubby-green font-bold" id="chat-status-label">Online</p>
-            </div>
-        </div>
-
-        <!-- Right: Actions -->
-        <div class="flex items-center gap-3">
-            <button id="report-btn"
-                class="w-10 h-10 bg-red-100 text-red-500 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors"
-                title="Report Chat">
-                <i class="fa-solid fa-flag"></i>
-            </button>
-            <a href="home_logged_in.html"
-                class="w-10 h-10 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
-                <i class="fa-solid fa-house text-lg"></i>
-            </a>
-        </div>
-    </nav>
-
-    <div class="flex flex-1 overflow-hidden relative">
-
-        <!-- SIDEBAR (Buddy List) -->
-        <aside id="sidebar"
-            class="absolute lg:relative top-0 left-0 h-full w-64 bg-white border-r border-gray-100 transform -translate-x-full lg:translate-x-0 transition-all duration-300 ease-in-out z-40 flex flex-col overflow-x-hidden">
-            <div
-                class="p-4 border-b border-gray-100 bg-gray-50 sidebar-hide-mini transition-all duration-300 overflow-hidden">
-                <h3 class="font-extrabold text-gray-400 uppercase text-xs tracking-wider mb-2 sidebar-header">My Buddies
-                </h3>
-                <!-- Search Friends -->
-                <div class="relative">
-                    <input type="text" id="buddy-search" placeholder="Search friends..."
-                        class="w-full bg-white border border-gray-200 rounded-full py-1.5 pl-8 pr-4 text-sm focus:outline-none focus:border-cubby-green">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2 text-gray-400 text-xs"></i>
-                </div>
-            </div>
-
-            <!-- Buddy list — populated by JS -->
-            <div class="flex-1 overflow-y-auto p-2 space-y-1" id="chat-buddy-list">
-                <div class="text-center py-6 text-sm text-gray-400">
-                    <i class="fa-solid fa-spinner fa-spin mb-2 text-xl"></i>
-                    <p>Loading buddies...</p>
-                </div>
-            </div>
-
-            <!-- Add buddy shortcut -->
-            <div class="p-3 border-t border-gray-100">
-                <a href="home_logged_in.html"
-                    class="flex items-center gap-2 px-3 py-2 text-cubby-blue font-bold text-sm hover:bg-blue-50 rounded-xl transition-colors">
-                    <i class="fa-solid fa-plus"></i> Add Buddy
+    <div class="flex flex-1 h-screen overflow-hidden z-10">
+        
+        <!-- CHAT BUDDY LIST SIDEBAR -->
+        <aside id="chat-sidebar" class="w-[18rem] bg-[#fcf1db] border-r-[6px] border-[#d6ad85] flex flex-col hidden lg:flex relative z-30 shrink-0">
+            <div class="h-20 bg-[#e3ae7d] border-b-[6px] border-[#c08d5d] flex items-center justify-center relative shrink-0">
+                <a href="home_logged_in.html" class="absolute left-4 w-10 h-10 bg-white border-[3px] border-[#c08d5d] rounded-2xl flex items-center justify-center hover:bg-orange-50 shadow-[0_4px_0_#c08d5d] active:translate-y-1 active:shadow-none transition-all" title="Back to Home">
+                    <i class="fa-solid fa-house text-[#8a5b2f]"></i>
                 </a>
+                <h2 class="text-2xl font-black text-[#5c3a21] drop-shadow-sm">Buddies</h2>
+                <button onclick="openAddBuddyModal()" class="absolute right-4 w-10 h-10 bg-white border-[3px] border-[#c08d5d] rounded-full flex items-center justify-center hover:bg-orange-50 shadow-[0_4px_0_#c08d5d] active:translate-y-1 active:shadow-none transition-all">
+                    <i class="fa-solid fa-plus text-[#8a5b2f]"></i>
+                </button>
+            </div>
+            
+            <div class="p-4 shrink-0 border-b-[3px] border-[#f2cdab]">
+                <div class="relative">
+                    <input type="text" id="buddy-search" placeholder="Search buddies..." class="w-full bg-white border-[3px] border-[#d6ad85] rounded-full py-2.5 pl-10 pr-4 text-sm font-bold text-[#5c3a21] placeholder-[#bda389] focus:outline-none focus:border-[#c08d5d]">
+                    <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-[#cca075]"></i>
+                </div>
+            </div>
+
+            <!-- Incoming Requests Badge -->
+            <div id="buddy-requests-section" class="hidden px-4 pt-3">
+                <button onclick="toggleBuddyRequests()" class="w-full flex items-center justify-between bg-pink-100 border-[3px] border-pink-300 text-pink-700 rounded-2xl px-4 py-2.5 font-bold text-sm shadow-[0_4px_0_#f9a8d4] active:translate-y-1 active:shadow-none transition-all hover:bg-pink-200">
+                    <span class="flex items-center gap-2"><i class="fa-solid fa-user-plus"></i> Requests</span>
+                    <span id="buddy-req-count" class="bg-pink-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-sm">0</span>
+                </button>
+                <div id="buddy-requests-list" class="hidden mt-3 space-y-2"></div>
+            </div>
+
+            <div id="chat-buddy-list" class="flex-1 overflow-y-auto px-4 pb-2 space-y-3 pt-4 custom-scrollbar" style="max-height: 40vh;">
+                <!-- Buddy list populates here -->
+                <div class="text-center py-6 px-4">
+                    <i class="fa-solid fa-spinner fa-spin text-[#c08d5d] text-3xl mb-2"></i>
+                    <p class="text-xs text-[#8a5b2f] font-bold">Loading buddies...</p>
+                </div>
+            </div>
+
+            <!-- ── GROUPS SECTION ── -->
+            <div class="border-t-[4px] border-[#d6ad85] shrink-0">
+                <div class="flex items-center justify-between px-4 py-3 bg-[#f2cdab]/60">
+                    <h3 class="text-sm font-black text-[#5c3a21] flex items-center gap-2">
+                        <i class="fa-solid fa-people-group text-[#a06030]"></i> Groups
+                    </h3>
+                    <button onclick="openCreateGroupModal()"
+                        class="text-xs bg-[#5c3a21] text-white font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 hover:bg-[#3d2510] transition-colors shadow-sm" title="Create a new group">
+                        <i class="fa-solid fa-plus text-[10px]"></i> New
+                    </button>
+                </div>
+                <div id="chat-group-list" class="overflow-y-auto px-4 pb-4 space-y-2 custom-scrollbar" style="max-height: 30vh;">
+                    <p class="text-xs text-[#bda389] font-bold text-center py-3">No groups yet.</p>
+                </div>
             </div>
         </aside>
 
-        <!-- OVERLAY -->
-        <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 flex flex-col relative h-full w-full bg-gradient-to-b from-[#bdeaa6] to-[#e4ffd4]">
+            
+            <button onclick="document.getElementById('chat-sidebar').classList.toggle('hidden'); document.getElementById('chat-sidebar').classList.toggle('absolute'); document.getElementById('chat-sidebar').classList.toggle('inset-y-0'); document.getElementById('chat-sidebar').classList.toggle('left-0');" class="absolute top-4 left-4 z-50 text-[#5c3a21] bg-[#d09e6c] border-[3px] border-[#9c6a38] p-2 rounded-xl lg:hidden shadow-md">
+                <i class="fa-solid fa-bars"></i>
+            </button>
 
-        <!-- CHAT AREA -->
-        <main id="main-content"
-            class="flex-1 flex flex-col bg-gray-50 relative w-full lg:w-auto transition-all duration-300 ease-in-out">
+            <!-- Top Header Branch -->
+            <header class="relative z-20 w-full h-20 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+                <div class="absolute inset-x-0 top-0 h-full bg-[#c39061] border-b-[6px] border-[#8a5b2f] flex items-center px-4 lg:px-8 justify-between">
+                    
+                    <div class="w-10 lg:w-0"></div> <!-- Placeholder for mobile menu button -->
+                    
+                    <!-- Center Profile Frame -->
+                    <div class="bg-[#fcf1db] border-[4px] border-[#a17145] rounded-2xl px-5 py-2 flex items-center gap-3 shadow-[0_4px_0_rgba(161,113,69,0.5)] transform -rotate-1 mx-auto absolute left-1/2 -translate-x-1/2">
+                        <span class="text-2xl drop-shadow-md hidden sm:inline">🐿️</span>
+                        <div class="flex items-center gap-2 sm:border-l-2 border-[#d6ad85] sm:pl-3">
+                            <div class="relative">
+                                <img id="chat-buddy-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=friend" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white border-2 border-[#a17145] shadow-sm">
+                                <span class="absolute bottom-0 right-0 w-3 h-3 bg-[#4ade80] border-2 border-white rounded-full"></span>
+                            </div>
+                            <div class="flex flex-col">
+                                <span id="chat-buddy-name" class="font-extrabold text-[#5c3a21] text-sm sm:text-base leading-tight">No buddy selected</span>
+                                <span id="chat-status-label" class="text-[10px] sm:text-xs text-[#4ade80] font-black uppercase">Online</span>
+                            </div>
+                        </div>
+                    </div>
 
-            <!-- No buddy selected state -->
-            <div id="no-buddy-state" class="hidden flex-1 flex flex-col items-center justify-center text-center p-8">
-                <div
-                    class="w-20 h-20 bg-cubby-green/10 text-cubby-green rounded-full flex items-center justify-center text-4xl mb-4">
-                    <i class="fa-solid fa-comments"></i>
+                    <!-- Right actions -->
+                    <div class="flex items-center gap-3 ml-auto">
+                        <button id="report-btn" class="w-11 h-11 bg-[#ffb3b3] border-[3px] border-[#e64c4c] rounded-2xl flex items-center justify-center text-[#e64c4c] text-xl shadow-[0_4px_0_#e64c4c] hover:bg-[#ff9999] cursor-pointer rotate-2 active:translate-y-1 active:shadow-none transition-all hidden" title="Report">
+                            <i class="fa-solid fa-flag"></i>
+                        </button>
+                    </div>
                 </div>
-                <h3 class="text-xl font-extrabold text-gray-700 mb-2">Pick a Buddy to Chat!</h3>
-                <p class="text-gray-400 text-sm max-w-xs">Select a friend from your list on the left to start a safe
-                    conversation.</p>
+            </header>
+
+            <!-- EMPTY STATE CENTRAL VIEW -->
+            <div id="no-buddy-state" class="relative z-10 flex-1 flex flex-col items-center justify-center px-4 w-full h-full">
+                <!-- Our generated Treehouse image -->
+                <img src="../images/treehouse_scene.png" alt="Treehouse" class="w-64 sm:w-80 md:w-96 mb-6 drop-shadow-2xl animate-fade-in-up transition-all" onerror="this.src='https://img.freepik.com/free-vector/fairy-tale-wooden-house-forest_1308-41221.jpg'">
+                <h2 class="text-3xl sm:text-4xl font-black text-[#2f4b18] mb-3 text-center drop-shadow-sm">Pick a Buddy to Chat!</h2>
+                <p class="text-sm sm:text-base font-bold text-[#4c6e2e] text-center max-w-sm px-4">
+                    Select a friend from your list on the left to start a safe adventure.
+                </p>
             </div>
 
-            <!-- Messages -->
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col">
-                <!-- Messages loaded here by chat_logic.js -->
-                <div id="chat-loading" class="text-center py-10">
-                    <div class="inline-flex flex-col items-center gap-2 text-gray-400">
-                        <i class="fa-solid fa-spinner fa-spin text-2xl text-cubby-green"></i>
-                        <span class="text-sm font-semibold">Loading messages...</span>
+            <!-- CHAT AREA -->
+            <div id="chat-messages" class="hidden relative z-10 flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-4">
+                <div id="chat-loading" class="text-center py-10 mt-auto mb-auto">
+                    <div class="inline-flex flex-col items-center gap-2 text-[#7f9961]">
+                        <i class="fa-solid fa-spinner fa-spin text-3xl"></i>
+                        <span class="text-sm font-black">Loading messages...</span>
                     </div>
                 </div>
             </div>
 
             <!-- Typing Indicator -->
-            <div id="typing-indicator" class="hidden px-4 pb-1">
+            <div id="typing-indicator" class="hidden px-4 pb-2 z-10 relative">
                 <div class="flex items-center gap-2">
-                    <img id="typing-avatar" src="" class="w-6 h-6 rounded-full">
-                    <div class="bg-white rounded-2xl rounded-bl-none shadow-sm px-4 py-2 flex gap-1 items-center">
+                    <img id="typing-avatar" src="" class="w-8 h-8 rounded-full border-2 border-[#a17145]">
+                    <div class="bg-white/80 backdrop-blur border-2 border-[#d09e6c] rounded-2xl rounded-bl-none shadow-sm px-4 py-2 flex gap-1 items-center">
                         <span class="typing-dot"></span>
                         <span class="typing-dot"></span>
                         <span class="typing-dot"></span>
@@ -209,31 +158,39 @@
                 </div>
             </div>
 
-            <!-- Input Area -->
-            <div class="bg-white p-3 sm:p-4 border-t border-gray-200 flex gap-2 items-end">
-                <button id="emoji-btn"
-                    class="p-2 text-gray-400 hover:text-cubby-yellow transition-colors rounded-full hover:bg-gray-100">
-                    <i class="fa-solid fa-face-smile text-xl"></i>
-                </button>
-
-                <div
-                    class="flex-1 bg-gray-100 rounded-2xl flex items-center px-4 py-2 border-2 border-transparent focus-within:border-cubby-green focus-within:bg-white transition-all">
-                    <textarea id="message-input" rows="1" placeholder="Type a safe message..."
-                        class="w-full bg-transparent border-none focus:ring-0 text-sm sm:text-base text-gray-700 placeholder-gray-400 resize-none leading-relaxed max-h-32 overflow-y-auto"
-                        autocomplete="off"
-                        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+            <!-- Bottom Logging Box -->
+            <div class="relative z-20 px-4 md:px-8 pb-4 pt-3 flex-shrink-0">
+                <!-- Ground Grass Background -->
+                <div class="absolute bottom-0 inset-x-0 h-16 bg-[#93db61] border-t-[5px] border-[#74b34b]"></div>
+                
+                <div class="relative w-full mx-auto flex items-end gap-2 sm:gap-4 flex-1">
+                    <!-- Acorn mascot -->
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 bg-[#c48d5b] text-[#5c3a21] rounded-full flex items-center justify-center text-2xl sm:text-3xl border-[4px] border-[#8a5b2f] shadow-lg shrink-0 z-10 self-center hidden sm:flex">
+                        <i class="fa-solid fa-face-smile"></i>
+                    </div>
+                    
+                    <button id="emoji-btn" class="sm:hidden w-12 h-12 bg-[#c48d5b] text-[#5c3a21] rounded-full flex items-center justify-center text-xl border-[4px] border-[#8a5b2f] shadow-lg shrink-0 z-10 self-center active:translate-y-1 active:shadow-none transition-all">
+                        <i class="fa-solid fa-face-smile"></i>
+                    </button>
+                    
+                    <!-- Log input container -->
+                    <div class="flex-1 bg-[#d09e6c] border-[5px] border-[#9c6a38] rounded-full p-1.5 flex items-center gap-2 shadow-xl relative min-h-[56px] sm:min-h-[64px]">
+                        <div class="absolute inset-x-2 inset-y-1.5 bg-[#fcf1db] rounded-full shadow-inner flex items-center px-4 overflow-hidden border border-[#d6ad85]">
+                            <textarea id="message-input" rows="1" placeholder="Pick a buddy first..."
+                                class="w-full h-full bg-transparent border-none outline-none resize-none py-2 sm:py-2.5 text-[#5c3a21] font-bold text-sm sm:text-lg placeholder-[#bda389] leading-relaxed my-auto align-middle" 
+                                style="scrollbar-width: none;"></textarea>
+                        </div>
+                    </div>
+                    
+                    <button id="send-btn" class="w-12 h-12 sm:w-16 sm:h-16 bg-[#e09a5b] hover:bg-[#d08b4e] disabled:opacity-50 disabled:grayscale border-[4px] border-[#9c6a38] rounded-tr-3xl rounded-tl-xl rounded-br-xl rounded-bl-3xl flex items-center justify-center text-white text-xl sm:text-2xl shadow-[0_5px_0_#9c6a38] shrink-0 active:translate-y-[5px] active:shadow-none transition-all rotate-[-10deg] self-center">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
                 </div>
-
-                <button id="send-btn"
-                    class="p-3 bg-cubby-green hover:bg-cubby-green/80 text-white rounded-full shadow-lg shadow-cubby-green/20 transition-all transform active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fa-solid fa-paper-plane text-sm"></i>
-                </button>
             </div>
 
-            <!-- Safety Warning Toast (Hidden by default) -->
-            <div id="safety-toast"
-                class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full shadow-xl text-sm font-bold hidden flex items-center gap-2">
-                <i class="fa-solid fa-circle-exclamation"></i>
+            <!-- Safety Warning Toast -->
+            <div id="safety-toast" class="absolute top-24 left-1/2 transform -translate-x-1/2 bg-[#ff6b6b] border-[3px] border-[#d84040] text-white px-6 py-3 rounded-2xl shadow-xl text-sm font-black hidden flex items-center gap-2 z-[60] animate-bounce">
+                <i class="fa-solid fa-circle-exclamation text-xl"></i>
                 <span>That message isn't nice! Please be kind. 💛</span>
             </div>
 
@@ -353,6 +310,66 @@
         </div>
     </div>
 
+    <!-- ══════════════════════════════════════════════════════════
+         CREATE GROUP MODAL (NEW)
+    ══════════════════════════════════════════════════════════ -->
+    <div id="create-group-modal"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-[#fcf1db] rounded-3xl shadow-2xl w-full max-w-sm border-4 border-[#c08d5d] relative">
+            <!-- Header -->
+            <div class="bg-[#e3ae7d] rounded-t-3xl px-6 py-4 border-b-4 border-[#c08d5d] flex items-center justify-between">
+                <h3 class="text-lg font-black text-[#3d2510] flex items-center gap-2">
+                    <i class="fa-solid fa-people-group"></i> Create a Group
+                </h3>
+                <button onclick="closeCreateGroupModal()" class="text-[#5c3a21] hover:text-[#3d2510] text-xl">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <!-- Group Name -->
+                <div>
+                    <label class="block text-xs font-black text-[#5c3a21] uppercase tracking-wider mb-1.5">Group Name 🏕️</label>
+                    <input id="new-group-name" type="text" maxlength="50" placeholder="e.g. The Minecraft Squad"
+                        class="w-full bg-white border-[3px] border-[#d6ad85] rounded-2xl px-4 py-3 font-bold text-[#3d2510] placeholder-[#bda389] focus:outline-none focus:border-[#9c6a38] transition-colors">
+                </div>
+                <!-- Buddy Picker -->
+                <div>
+                    <label class="block text-xs font-black text-[#5c3a21] uppercase tracking-wider mb-1.5">Pick Buddies (max 9)</label>
+                    <div id="group-buddy-picker" class="bg-white border-[3px] border-[#d6ad85] rounded-2xl p-3 max-h-48 overflow-y-auto space-y-2 custom-scrollbar">
+                        <p class="text-xs text-[#bda389] font-bold">Loading your buddies...</p>
+                    </div>
+                </div>
+                <p id="group-member-count" class="text-xs font-bold text-[#8a5b2f] text-center"></p>
+                <!-- Create Button -->
+                <button id="create-group-btn" onclick="handleCreateGroup()"
+                    class="w-full bg-[#5c3a21] text-white font-black text-base py-3.5 rounded-2xl shadow-[0_5px_0_#3d2510] hover:bg-[#3d2510] active:translate-y-[5px] active:shadow-none transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rocket"></i> Create Group!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         LEAVE GROUP CONFIRM MODAL (NEW)
+    ══════════════════════════════════════════════════════════ -->
+    <div id="leave-group-modal"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xs p-7 text-center">
+            <div class="w-14 h-14 bg-orange-100 text-orange-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
+                <i class="fa-solid fa-door-open"></i>
+            </div>
+            <h3 class="text-lg font-extrabold text-gray-800 mb-1">Leave Group?</h3>
+            <p class="text-sm text-gray-500 mb-5">Are you sure you want to leave <strong id="leave-group-name"></strong>? Your parent will be notified.</p>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('leave-group-modal').classList.add('hidden')"
+                    class="flex-1 py-2.5 border-2 border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 text-sm">Cancel</button>
+                <button id="confirm-leave-group-btn" onclick="handleLeaveGroup()"
+                    class="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl text-sm">Yes, Leave</button>
+            </div>
+        </div>
+    </div>
+
+    
     <!-- Appwrite & Data -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
     <script src="../js/appwrite_config.js"></script>
@@ -361,7 +378,18 @@
     <!-- Import Logic -->
     <script src="../js/sidebar-logic.js"></script>
     <script src="../js/kid_logic.js"></script>
+    <script src="../js/buddy_logic.js"></script>
     <script src="../js/chat_logic.js"></script>
+    <style>
+        /* Wood theme overrides for injected buddy elements */
+        .buddy-item-override {
+            background-color: #f0d8b5 !important;
+            border: 3px solid #b07c4b !important;
+            border-radius: 1rem !important;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            /* matching wood look */
+        }
+    </style>
 </body>
-
 </html>
+

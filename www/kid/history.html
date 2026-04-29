@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CubbyCove - Games Arcade</title>
+    <title>CubbyCove - Watch History</title>
     <link rel="icon" type="image/png" href="../images/closedlogo.png">
 
     <!-- Fonts -->
@@ -19,7 +19,6 @@
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/kid_theme.css">
-
     <style>
         body {
             background-image: url('../images/bg_sky_3d.png');
@@ -30,7 +29,6 @@
             background-color: rgba(255, 255, 255, 0.4); /* Opacity overlay */
         }
     </style>
-
 </head>
 
 <body class="text-gray-800 antialiased overflow-x-hidden">
@@ -98,7 +96,7 @@
         <div class="flex justify-center mb-6 h-[5rem] pb-2 relative overflow-visible mt-2" id="logo-container">
             <a href="home_logged_in.html" class="block relative w-full h-full flex justify-center items-center">
                 <img id="logo-long" src="../images/longlogo.png" alt="CubbyCove" class="h-[4.5rem] absolute transition-all duration-300 opacity-100 object-contain drop-shadow-[0_2px_10px_rgba(255,255,255,0.5)] transform scale-100 mt-2">
-                <img id="logo-closed" src="../images/closedlogo.png" alt="CubbyCove" class="h-[4.5rem] absolute transition-all duration-300 opacity-0 object-contain drop-shadow-[0_2px_10_rgba(255,255,255,0.5)] pointer-events-none transform scale-50 mt-2">
+                <img id="logo-closed" src="../images/closedlogo.png" alt="CubbyCove" class="h-[4.5rem] absolute transition-all duration-300 opacity-0 object-contain drop-shadow-[0_2px_10px_rgba(255,255,255,0.5)] pointer-events-none transform scale-50 mt-2">
             </a>
         </div>
 
@@ -125,7 +123,7 @@
                 <span class="sidebar-label whitespace-nowrap drop-shadow-md ml-1 tracking-wide">Favorites</span>
             </a>
             <a href="history.html"
-                class="sidebar-link flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-gradient-to-r from-purple-400 to-purple-300 text-white rounded-full shadow-[0_6px_14_rgba(192,132,252,0.4),_inset_0_2px_0_rgba(255,255,255,0.4)] font-extrabold text-lg transition-transform hover:-translate-y-[2px] active:translate-y-1 group border border-white/60">
+                class="sidebar-link flex items-center gap-3 pr-4 pl-1.5 py-1.5 bg-gradient-to-r from-purple-400 to-purple-300 text-white rounded-full shadow-[0_6px_14px_rgba(192,132,252,0.4),_inset_0_2px_0_rgba(255,255,255,0.4)] font-extrabold text-lg transition-transform hover:-translate-y-[2px] active:translate-y-1 group border border-white/60">
                 <img src="../images/icon_history.png" class="shrink-0 w-[3.25rem] h-[3.25rem] rounded-full object-cover shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/80 group-hover:scale-105 transition-transform bg-white/20">
                 <span class="sidebar-label whitespace-nowrap drop-shadow-md ml-1 tracking-wide">History</span>
             </a>
@@ -181,70 +179,38 @@
         </div>
     </aside>
 
-    <!-- OVERLAY -->
+    <!-- MAIN CONTENT -->
     <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
 
-    <!-- MAIN CONTENT -->
-    <main id="main-content" class="lg:ml-[17.5rem] pt-[7.5rem] min-h-screen transition-all duration-300 ease-in-out">
+    <main id="main-content" class="lg:ml-[17.5rem] pt-[6.5rem] min-h-screen transition-all duration-300 ease-in-out">
+        <div class="px-8 py-6">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                    <h1 class="text-3xl font-black text-gray-800 flex items-center gap-3">
+                        <i class="fa-solid fa-clock-rotate-left text-cubby-purple"></i> Watch History
+                    </h1>
+                    <p class="text-gray-500 font-semibold mt-1">Videos you've watched recently</p>
+                </div>
 
-        <!-- Hero Banner (Featured Game) -->
-        <div class="p-6 pb-2">
-            <div class="relative w-full rounded-[2rem] overflow-hidden shadow-xl group cursor-pointer border-[6px] border-[#4ade80] bg-[#86efac] p-2 aspect-auto md:aspect-[21/9]">
-                <div class="w-full h-full relative rounded-[1.5rem] overflow-hidden">
-                    <div class="w-full h-full hero-slider absolute inset-0">
-                        <div class="slide absolute inset-0 transition-opacity duration-1000 opacity-100">
-                            <img src="https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fcapitals-of-south-america.jpg&w=1920&q=100" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
-                        </div>
-                        <div class="slide absolute inset-0 transition-opacity duration-1000 opacity-0">
-                            <img src="https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fcandy%2520sta%2520ker.jpg&w=1920&q=100" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
-                        </div>
-                        <div class="slide absolute inset-0 transition-opacity duration-1000 opacity-0">
-                            <img src="https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fslidefitgame.jpg&w=1920&q=100" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
-                        </div>
-                        <div class="slide absolute inset-0 transition-opacity duration-1000 opacity-0">
-                            <img src="https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2Fsupershuriken.jpg&w=1920&q=100" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
-                        </div>
-                        <div class="slide absolute inset-0 transition-opacity duration-1000 opacity-0">
-                            <img src="https://www.addictinggames.com/_next/image?url=https%3A%2F%2Fprod.addictinggames.com%2Fsites%2Fdefault%2Ffiles%2FCoverImage_720X468.jpg&w=1920&q=100" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
-                        </div>
-                    </div>
-                    
-                    <!-- Gradient overlay to ensure text is readable if it overlaps -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-blue-900/40 to-transparent z-10"></div>
-                    
-                    <div class="absolute top-0 left-0 p-8 md:p-12 text-white flex flex-col justify-center h-full max-w-xl">
-                        <span class="bg-cubby-yellow text-gray-900 text-xs font-black px-4 py-1.5 rounded-full mb-4 w-fit uppercase tracking-widest shadow-sm z-20 relative">FEATURED</span>
-                        <h2 class="text-4xl md:text-5xl font-black mb-3 drop-shadow-lg text-white z-20 relative">New Amazing Games!</h2>
-                        <p class="text-white/90 text-sm md:text-lg mb-6 font-bold drop-shadow-md z-20 relative">Play our brand new selection of games!</p>
-                        
-                        <button onclick="playMemoryGame()" style="position:relative; z-index:20;" class="bg-[#9333ea] hover:bg-[#7e22ce] border-4 border-[#6b21a8] text-white font-black text-lg px-8 py-3 rounded-2xl shadow-[0_6px_0_#581c87] active:translate-y-2 active:shadow-none transition-all flex items-center gap-3 w-fit">
-                            <i class="fa-solid fa-play"></i> Play Now
-                        </button>
-                    </div>
+                <!-- Filter Dropdown -->
+                <div class="flex items-center gap-3">
+                    <label for="history-filter" class="text-sm font-bold text-gray-500">Show:</label>
+                    <select id="history-filter" onchange="changeHistoryFilter()"
+                        class="bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-cubby-purple/30">
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="all">Overall</option>
+                    </select>
                 </div>
             </div>
-        </div>
 
-        <!-- Game Grid — dynamically populated by renderGamesGrid() in kid_logic.js -->
-        <div class="px-6 py-6 pb-20">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="flex items-center gap-3 text-2xl font-black text-gray-800 drop-shadow-sm">
-                    <i class="fa-solid fa-shapes text-cubby-purple text-3xl"></i> All Games
-                </h2>
-                <!-- Reward hint pill -->
-                <span class="hidden sm:flex items-center gap-1.5 bg-yellow-50 border-2 border-yellow-200 text-yellow-700 text-xs font-black px-3 py-1.5 rounded-full">
-                    <i class="fa-solid fa-star text-yellow-500 animate-pulse"></i>
-                    Play 3 min → earn +10 Stars!
-                </span>
-            </div>
-
-            <!-- This container is filled by kid_logic.js → renderGamesGrid() on DOMContentLoaded -->
-            <div id="games-grid-container"
-                 class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                <!-- Loading skeleton shown until JS fires -->
-                <div class="col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-5 flex flex-col items-center py-16 text-gray-400">
-                    <i class="fa-solid fa-spinner fa-spin text-4xl text-cubby-purple mb-3"></i>
-                    <p class="font-bold">Loading games…</p>
+            <!-- Video List (grouped by date) -->
+            <div id="history-video-list">
+                <div class="text-center py-12">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-cubby-purple"></i>
+                    <p class="text-gray-400 font-semibold mt-2">Loading history...</p>
                 </div>
             </div>
         </div>

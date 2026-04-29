@@ -68,20 +68,38 @@ function setupVirtualScroll(containerId, listId, itemsHtmlArray) {
 
 // ── Notification push-based updates ──────────────────────────────────────────
 let _unsubNotifs = null;
+let _loginRequestPollInterval = null; // Dedicated rapid poll for login-request banner
 
 function startNotifPolling() {
-    checkLoginRequests(); // internal logic: fetch once immediately
-    
-    // Subscribe to access logs (login requests) and generic notifications
+    checkLoginRequests(); // fetch once immediately on load
+
+    // ── Realtime subscription: watch `login_requests` + `notifications` ──────
+    // (Previously watched `access_logs` which is wrong — login requests go into
+    //  the `login_requests` collection, NOT access_logs.)
     const { DB_ID, COLLECTIONS } = AppwriteService;
-    
-    _unsubNotifs = DataService.subscribe([
-        `databases.${DB_ID}.collections.${COLLECTIONS.ACCESS_LOGS}.documents`,
-        `databases.${DB_ID}.collections.${COLLECTIONS.NOTIFICATIONS}.documents`
-    ], () => {
-        // Any change in these collections → refresh UI
-        checkLoginRequests();
-    });
+
+    try {
+        _unsubNotifs = DataService.subscribe([
+            `databases.${DB_ID}.collections.${COLLECTIONS.LOGIN_REQUESTS}.documents`,
+            `databases.${DB_ID}.collections.${COLLECTIONS.NOTIFICATIONS}.documents`
+        ], () => {
+            // Any change in these collections → refresh the approval banner
+            checkLoginRequests();
+        });
+    } catch (e) {
+        console.warn('[NotifPoll] Realtime subscribe failed (will rely on poll):', e.message);
+    }
+
+    // ── Dedicated fast poll (15s) as a reliable fallback ─────────────────────
+    // Realtime WebSockets can be blocked by corporate firewalls / Appwrite free-tier
+    // limits. This guarantees the parent sees the banner within 15 seconds.
+    if (!_loginRequestPollInterval) {
+        _loginRequestPollInterval = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                checkLoginRequests();
+            }
+        }, 15000);
+    }
 }
 
 function stopNotifPolling() {
@@ -89,24 +107,34 @@ function stopNotifPolling() {
         _unsubNotifs();
         _unsubNotifs = null;
     }
+    if (_loginRequestPollInterval) {
+        clearInterval(_loginRequestPollInterval);
+        _loginRequestPollInterval = null;
+    }
 }
 
 async function checkLoginRequests() {
-    const user = await DataService.getCurrentUser();
-    if (!user || !user.email) return;
+    try {
+        const user = await DataService.getCurrentUser();
+        if (!user || !user.email) return;
 
-    const [pending, handled, buddyNotifs] = await Promise.all([
-        DataService.getPendingLoginRequests(user.email),
-        DataService.getHandledLoginRequests(user.email),
-        DataService.getParentNotifications(user.$id, false)
-    ]);
+        const [pending, handled, buddyNotifs] = await Promise.all([
+            DataService.getPendingLoginRequests(user.email),
+            DataService.getHandledLoginRequests(user.email),
+            DataService.getParentNotifications(user.$id, false)
+        ]);
+        
+        // --- Added: Console logging if something seems stuck but there are pending requests ---
+        if (pending.length > 0) {
+            console.log(`[Notif System] Found ${pending.length} pending login requests. Banner should display.`);
+        }
 
-    // ── 1. Bell panel (tile) — login history + buddy notifications ────────────
-    const notifList = document.getElementById('notif-list');
-    if (notifList) {
-        const loginItems = handled.map(req => {
-            const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const isApproved = req.status === 'approved';
+        // ── 1. Bell panel (tile) — login history + buddy notifications ────────────
+        const notifList = document.getElementById('notif-list');
+        if (notifList) {
+            const loginItems = handled.map(req => {
+                const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const isApproved = req.status === 'approved';
             return {
                 ts: req.requestedAt,
                 html: `
@@ -157,42 +185,98 @@ async function checkLoginRequests() {
         }
     }
 
-    // ── 2. Global Unread pending login requests (Slide-down header) ───────────
-    const unreadList = document.getElementById('global-unread-list');
-    const slideHeader = document.getElementById('global-login-request-header');
+    // ── 2. Inline Login Requests Panel (below Child Profiles) ─────────────────
+    const requestsPanel = document.getElementById('login-requests-panel');
+    const requestsList  = document.getElementById('login-requests-list');
+    const requestsCount = document.getElementById('login-requests-count');
+    const bellDot       = document.getElementById('notif-bell-dot');
 
-    if (!unreadList || !slideHeader) return;
+    if (requestsPanel && requestsList) {
+        if (pending.length === 0) {
+            requestsPanel.classList.add('hidden');
+            requestsList.innerHTML = '';
+            if (requestsCount) requestsCount.textContent = '';
+            if (bellDot) bellDot.classList.add('hidden');
+        } else {
+            requestsPanel.classList.remove('hidden');
+            if (requestsCount) requestsCount.textContent = `${pending.length} pending`;
+            if (bellDot) bellDot.classList.remove('hidden');
 
-    if (pending.length === 0) {
-        slideHeader.classList.add('-translate-y-full');
-        unreadList.innerHTML = '';
-        return;
+            requestsList.innerHTML = pending.map(req => {
+                const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const initials = (req.childName || req.childUsername || '?').charAt(0).toUpperCase();
+                return `
+                    <div class="glass-card flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-5 gap-4 border-2 border-amber-200/60 shadow-sm">
+                        <div class="flex items-center gap-4">
+                            <div class="w-11 h-11 rounded-[14px] bg-amber-100 border-2 border-amber-200 flex items-center justify-center shrink-0 text-amber-600 font-black text-lg">
+                                ${initials}
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-extrabold text-gray-800 text-[14px] leading-tight">${req.childName || req.childUsername} wants to log in</p>
+                                <p class="text-[11px] font-bold text-amber-600/80 uppercase tracking-widest mt-0.5">
+                                    <i class="fa-regular fa-clock mr-1"></i>${time}
+                                    ${req.deviceInfo ? `<span class="ml-2 text-gray-400 normal-case tracking-normal">· ${req.deviceInfo.split('·')[0].trim()}</span>` : ''}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto shrink-0">
+                            <button onclick="inlineApprove('${req.$id}', this)"
+                                class="flex-1 sm:flex-none px-5 py-2.5 bg-[#28C7AE] hover:bg-teal-500 text-white text-[13px] font-extrabold rounded-[12px] shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#28C7AE]/50 flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-check text-xs"></i> Approve
+                            </button>
+                            <button onclick="inlineDeny('${req.$id}')"
+                                class="flex-1 sm:flex-none px-5 py-2.5 bg-white hover:bg-red-50 text-gray-600 hover:text-red-500 border border-gray-200 hover:border-red-200 text-[13px] font-extrabold rounded-[12px] shadow-sm transition-all focus:outline-none flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-xmark text-xs"></i> Deny
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
     }
-
-    slideHeader.classList.remove('-translate-y-full');
-
-    unreadList.innerHTML = pending.map(req => {
-        const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        return `
-            <div class="flex flex-col md:flex-row items-start md:items-center justify-between bg-[#FFF8DF] border border-[#FBEAC5] rounded-[20px] p-3 md:p-4 shadow-sm gap-4">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-[16px] bg-white border border-[#FBEAC5] flex items-center justify-center shrink-0 shadow-sm text-amber-500">
-                        <i class="fa-solid fa-bell-ring animate-pulse text-lg"></i>
-                    </div>
-                    <div class="min-w-0">
-                        <p class="font-extrabold text-[#1C1D21] text-[15px] leading-tight tracking-tight">${req.childUsername} is requesting access</p>
-                        <p class="text-[11px] font-bold text-amber-600/70 uppercase tracking-widest mt-1">Requested at ${time}</p>
-                    </div>
-                </div>
-                <div class="flex gap-2 w-full md:w-auto shrink-0">
-                    <button onclick="inlineApprove('${req.$id}', this)" class="flex-1 md:flex-none px-6 bg-amber-500 hover:bg-amber-600 text-white text-[13px] font-extrabold py-3 rounded-[14px] shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1">Approve</button>
-                    <button onclick="inlineDeny('${req.$id}')" class="flex-1 md:flex-none px-6 bg-white hover:bg-gray-50 text-gray-700 border border-[#FBEAC5] text-[13px] font-extrabold py-3 rounded-[14px] shadow-sm transition-all focus:outline-none">Deny</button>
-                </div>
-            </div>
-        `;
-    }).join('');
+    } catch (err) {
+        console.error('[Notif System] Error checking login requests:', err);
+    }
 }
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ── Mock Helper for Testing (Console Usage) ──────────────────────────────────
+window.mockKidLoginRequest = async function(childUsername = 'DemoKid') {
+    console.log(`[Mock] Simulating kid login request for ${childUsername}...`);
+    try {
+        const user = await DataService.getCurrentUser();
+        if (!user) throw new Error("Parent not logged in.");
+        
+        // Find dummy child info to build request
+        const kids = window._currentChildren || [];
+        const childId = kids.length > 0 ? kids[0].$id : 'dummy_child_id';
+        const childName = kids.length > 0 ? kids[0].name : childUsername;
+        
+        const { databases, DB_ID, COLLECTIONS } = AppwriteService;
+        const { ID } = Appwrite;
+        
+        const now = new Date().toISOString();
+        const expires = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+        
+        const doc = await databases.createDocument(DB_ID, COLLECTIONS.LOGIN_REQUESTS, ID.unique(), {
+            childUsername: childUsername,
+            parentEmail: user.email,
+            status: 'pending',
+            requestedAt: now,
+            expiresAt: expires,
+            deviceInfo: 'Mock Test Console',
+            childName: childName,
+            childId: childId,
+            parentId: user.$id
+        });
+        
+        console.log(`✅ [Mock] Fake login request created: ${doc.$id}. The banner should appear shortly!`);
+        checkLoginRequests(); // force refresh immediately
+        return doc;
+    } catch (e) {
+        console.error("❌ [Mock] Failed to simulate request: ", e);
+    }
+};
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -600,55 +684,100 @@ window.selectChild = function (childId) {
     changeTimeMode(currentScreenTimeMode);
 };
 
-function renderActivityLogs() {
+window._activityState = { data: [], page: 1, limit: 5 };
+
+async function renderActivityLogs() {
     const listEl = document.getElementById('activity-list');
-    const children = window._currentChildren || [];
-    const activeChild = children.find(c => c.$id === _selectedChildId);
+    if (!listEl || !_selectedChildId) return;
 
-    if (!activeChild || !activeChild.activityLogs || listEl === null) {
-        if (listEl) listEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center h-full text-sm text-gray-400 font-medium pb-10">No recent activity.</div>';
-        return;
+    // Show a loading state while fetching
+    listEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center h-full"><i class="fa-solid fa-spinner fa-spin text-xl text-gray-300"></i></div>';
+
+    let logs = [];
+    try {
+        logs = await DataService.getActivityLogs(_selectedChildId, 50, 'week');
+    } catch (e) {
+        console.warn('[ActivityLogs] fetch error:', e.message);
     }
 
-    let logs;
-    if (typeof activeChild.activityLogs === 'string') {
-        try { logs = JSON.parse(activeChild.activityLogs); } catch (e) { logs = []; }
-    } else if (Array.isArray(activeChild.activityLogs)) {
-        logs = activeChild.activityLogs;
-    } else {
-        logs = [];
-    }
-
-    if (logs.length === 0) {
+    if (!logs || logs.length === 0) {
         listEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center h-full text-sm text-gray-400 font-medium pb-10">No recent activity.</div>';
         return;
     }
 
     // Sort by descending timestamp
     logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    logs = logs.slice(0, 15); // show top 15
+    window._activityState.data = logs;
+    window._activityState.page = 1;
+    _renderActivityPage();
+}
 
-    listEl.innerHTML = '<div class="absolute left-6 top-2 bottom-4 w-px bg-gray-100"></div>'; // Reset with vertical line
+window.changeActivityPage = function(delta) {
+    window._activityState.page += delta;
+    _renderActivityPage();
+};
 
-    logs.forEach(log => {
-        const timeStr = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const html = `
+function _renderActivityPage() {
+    const listEl = document.getElementById('activity-list');
+    if (!listEl) return;
+    
+    const { data, page, limit } = window._activityState;
+    const totalPages = Math.ceil(data.length / limit) || 1;
+    const slice = data.slice((page - 1) * limit, page * limit);
+
+    let html = '<div class="absolute left-6 top-2 bottom-12 w-px bg-gray-100"></div><div class="space-y-3 pb-2">';
+
+    const _typeStyle = (type) => {
+        switch ((type || '').toLowerCase()) {
+            case 'play':           return { bg: '#EEF4FF', text: '#5B8DEF', icon: 'fa-gamepad' };
+            case 'watch':          return { bg: '#FFF4EC', text: '#FF7D3A', icon: 'fa-play-circle' };
+            case 'buddy_add':      return { bg: '#F0FBF4', text: '#2ECC71', icon: 'fa-user-plus' };
+            case 'message_sent':   return { bg: '#F3F0FF', text: '#8A51FC', icon: 'fa-comment' };
+            case 'reward':         return { bg: '#FFFBEB', text: '#F59E0B', icon: 'fa-star' };
+            case 'game_reward':    return { bg: '#FFFBEB', text: '#F59E0B', icon: 'fa-trophy' };
+            case 'safety_threat':  return { bg: '#FFF1F2', text: '#FF456A', icon: 'fa-shield-exclamation' };
+            default:               return { bg: '#EEF9EC', text: '#5EC74D', icon: 'fa-circle-check' };
+        }
+    };
+
+    slice.forEach(log => {
+        const ts = log.timestamp || log.$createdAt;
+        const timeAgoStr = ts ? timeAgo(ts) : '';
+        const timeOfDay = ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        const style = _typeStyle(log.type);
+        html += `
             <div class="flex gap-4 relative items-start">
-                <div class="w-10 h-10 rounded-[14px] bg-[#EEF9EC] border-[3px] border-white shadow-sm z-10 flex-shrink-0 flex items-center justify-center text-[#5EC74D] mt-0.5 ml-1">
-                    <i class="fa-solid fa-play text-xs"></i>
+                <div class="w-10 h-10 rounded-[14px] border-[3px] border-white shadow-sm z-10 flex-shrink-0 flex items-center justify-center mt-0.5 ml-1"
+                     style="background:${style.bg}; color:${style.text};">
+                    <i class="fa-solid ${style.icon} text-xs"></i>
                 </div>
                 <div class="bg-gray-50 rounded-2xl p-4 flex-1 border border-gray-100/50 shadow-sm transition-all hover:bg-white min-w-0">
                     <p class="text-sm text-[#1C1D21] font-bold truncate">${log.action}</p>
                     <div class="flex items-center gap-2 mt-1.5 flex-wrap">
-                        <span class="text-xs font-bold text-gray-400"><i class="fa-regular fa-clock mr-1 text-[10px]"></i>${timeStr}</span>
-                        ${log.link ? `<a href="${log.link}" class="text-[11px] text-[#8A51FC] font-bold hover:underline bg-[#F8F5FF] px-2 py-0.5 rounded-md border border-[#F8F5FF]">View Content</a>` : ''}
+                        <span class="text-xs font-bold text-gray-400"><i class="fa-regular fa-clock mr-1 text-[10px]"></i>${timeOfDay}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:${style.bg}; color:${style.text};">${timeAgoStr}</span>
                     </div>
                 </div>
             </div>
         `;
-        listEl.insertAdjacentHTML('beforeend', html);
     });
+    
+    html += '</div>';
+
+    if (totalPages > 1) {
+        html += `
+            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 sticky bottom-0 bg-white/90 backdrop-blur-sm z-20 pb-2">
+                <button onclick="changeActivityPage(-1)" ${page <= 1 ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-[#28C7AE] transition-colors"'}><i class="fa-solid fa-chevron-left mr-1.5"></i>Prev</button>
+                <span class="text-[9px] font-black pointer-events-none text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded-md">Page ${page} / ${totalPages}</span>
+                <button onclick="changeActivityPage(1)" ${page >= totalPages ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-[#28C7AE] transition-colors"'}>Next<i class="fa-solid fa-chevron-right ml-1.5"></i></button>
+            </div>
+        `;
+    }
+
+    listEl.innerHTML = html;
 }
+
+window._safetyState = { data: [], page: 1, limit: 3 };
 
 async function renderSafetyAlerts() {
     const listEl = document.getElementById('safety-list');
@@ -691,57 +820,110 @@ async function renderSafetyAlerts() {
         return;
     }
 
-    listEl.innerHTML = '';
-
-    // ── Purple safety_alert notifications ─────────────────────────────────────
-    childSafetyNotifs.slice(0, 5).forEach(notif => {
-        const timeStr = timeAgo(notif.createdAt);
-        // Split the message to find the note (last line after \n\n)
-        const parts = (notif.message || '').split('\n');
-        const lastLine = parts[parts.length - 1] || '';
-        const mainMsg = parts.slice(0, parts.length - 1).join('\n').trim();
-
-        const html = `
-            <div class="bg-white rounded-2xl p-4 border border-purple-100 shadow-sm relative overflow-hidden group hover:border-cubby-purple/40 transition-colors">
-                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-cubby-purple rounded-l-2xl"></div>
-                <div class="flex items-start justify-between mb-1.5 ml-2">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-shield-cat text-cubby-purple text-sm"></i>
-                        <h4 class="text-[13px] font-bold text-cubby-purple">Safety Alert</h4>
-                    </div>
-                    <span class="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded ml-2 whitespace-nowrap">${timeStr}</span>
-                </div>
-                <p class="text-[11px] text-gray-700 font-medium italic mb-2 ml-2 leading-relaxed bg-purple-50 p-2 rounded-lg border border-purple-100 whitespace-pre-wrap break-words">${escHtml(mainMsg)}</p>
-                ${lastLine ? `<p class="text-[11px] font-bold text-cubby-purple ml-2 mt-1">${escHtml(lastLine)}</p>` : ''}
-            </div>
-        `;
-        listEl.insertAdjacentHTML('beforeend', html);
-    });
-
-    // ── Legacy threat log alerts ───────────────────────────────────────────────
-    childThreats.slice(0, 10).forEach(threat => {
-        const timeStr = timeAgo(threat.$createdAt);
-        const excerpt = threat.messageContent || threat.messagePreview || 'Inappropriate content detected.';
-        const resolved = threat.status === 'resolved';
-
-        const html = `
-            <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative overflow-hidden group hover:border-[#FF456A]/50 transition-colors">
-                <div class="absolute left-0 top-0 bottom-0 w-1.5 ${resolved ? 'bg-green-400' : 'bg-red-400'}"></div>
-                <div class="flex items-start justify-between mb-1.5 ml-2">
-                    <h4 class="text-[13px] font-bold text-[#1C1D21]">Chat Moderation Alert</h4>
-                    <span class="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded ml-2 whitespace-nowrap">${timeStr}</span>
-                </div>
-                <p class="text-[11px] text-gray-400 font-medium italic mb-3 line-clamp-2 ml-2 leading-relaxed bg-gray-50 p-2 rounded-lg">"${escHtml(excerpt)}"</p>
-                <div class="flex justify-between items-center ml-2 border-t border-gray-50 pt-2">
-                    <span class="text-[9px] font-bold px-2 py-1 rounded-md ${resolved ? 'bg-green-50 text-green-600' : 'bg-[#FFF1F2] text-[#FF456A]'} uppercase tracking-wider">
-                        ${threat.status || 'pending'}
-                    </span>
-                </div>
-            </div>
-        `;
-        listEl.insertAdjacentHTML('beforeend', html);
-    });
+    const combined = [
+        ...childSafetyNotifs.map(n => ({ kind: 'notif', data: n, ts: n.createdAt })),
+        ...childThreats.map(t => ({ kind: 'threat', data: t, ts: t.$createdAt }))
+    ];
+    combined.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+    
+    window._safetyState.data = combined;
+    window._safetyState.page = 1;
+    _renderSafetyPage();
 }
+
+window.changeSafetyPage = function(delta) {
+    window._safetyState.page += delta;
+    _renderSafetyPage();
+};
+
+function _renderSafetyPage() {
+    const listEl = document.getElementById('safety-list');
+    if (!listEl) return;
+    
+    const { data, page, limit } = window._safetyState;
+    const totalPages = Math.ceil(data.length / limit) || 1;
+    const slice = data.slice((page - 1) * limit, page * limit);
+    
+    let html = '<div class="space-y-3 pb-2">';
+    
+    slice.forEach(item => {
+        if (item.kind === 'notif') {
+            const notif = item.data;
+            const timeStr = timeAgo(notif.createdAt);
+            const parts = (notif.message || '').split('\n');
+            const lastLine = parts[parts.length - 1] || '';
+            const mainMsg = parts.slice(0, parts.length - 1).join('\n').trim();
+
+            html += `
+                <div class="bg-white/60 backdrop-blur-sm rounded-[20px] p-4 border border-white shadow-sm transition-all hover:bg-white hover:border-[#8A51FC]/30 group cursor-pointer" onclick="document.getElementById('guidance-flyout').classList.remove('translate-x-full'); document.getElementById('guidance-overlay').classList.remove('hidden');">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-[14px] bg-[#F3F0FF] text-[#8A51FC] border-[3px] border-white shadow-sm flex items-center justify-center shrink-0 mt-0.5 relative">
+                            <i class="fa-solid fa-shield-cat text-xs"></i>
+                            <div class="absolute -top-1 -right-1 w-3 h-3 bg-red-400 border-2 border-white rounded-full"></div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <h4 class="text-[14px] font-extrabold text-[#1C1D21]">Safety Alert</h4>
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${timeStr}</span>
+                            </div>
+                            <p class="text-[12px] text-gray-600 font-bold mb-2 leading-relaxed bg-white/50 p-2.5 rounded-xl border border-gray-100/50 whitespace-pre-wrap break-words">${escHtml(mainMsg)}</p>
+                            ${lastLine ? `<p class="text-[11px] font-extrabold text-[#8A51FC] mt-1.5 flex items-center gap-1"><i class="fa-solid fa-circle-info text-[9px]"></i> ${escHtml(lastLine)}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            const threat = item.data;
+            const timeStr = timeAgo(threat.$createdAt);
+            const excerpt = threat.messageContent || threat.messagePreview || 'Inappropriate content detected.';
+            const resolved = threat.status === 'resolved';
+
+            const style = resolved 
+                ? { bg: '#EEF9EC', text: '#5EC74D', icon: 'fa-shield-check', border: 'hover:border-[#5EC74D]/30' }
+                : { bg: '#FFF1F2', text: '#FF456A', icon: 'fa-shield-exclamation', border: 'hover:border-[#FF456A]/30' };
+
+            html += `
+                <div class="bg-white/60 backdrop-blur-sm rounded-[20px] p-4 border border-white shadow-sm transition-all hover:bg-white ${style.border} group">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-[14px] border-[3px] border-white shadow-sm flex items-center justify-center shrink-0 mt-0.5"
+                             style="background: ${style.bg}; color: ${style.text};">
+                            <i class="fa-solid ${style.icon} text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <h4 class="text-[14px] font-extrabold text-[#1C1D21]">Chat Moderation</h4>
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${timeStr}</span>
+                            </div>
+                            <p class="text-[12px] text-gray-500 font-medium italic mb-3 leading-relaxed bg-white/50 p-2.5 rounded-xl border border-gray-100/50 line-clamp-2">"${escHtml(excerpt)}"</p>
+                            <div class="flex justify-start">
+                                <span class="text-[9px] font-extrabold px-2.5 py-1 rounded-[8px] border border-white shadow-sm uppercase tracking-wider"
+                                      style="background: ${style.bg}; color: ${style.text};">
+                                    ${threat.status || 'pending'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    html += '</div>';
+
+    if (totalPages > 1) {
+        html += `
+            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 sticky bottom-0 bg-white/90 backdrop-blur-sm z-20 pb-2">
+                <button onclick="changeSafetyPage(-1)" ${page <= 1 ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-[#28C7AE] transition-colors"'}><i class="fa-solid fa-chevron-left mr-1.5"></i>Prev</button>
+                <span class="text-[9px] font-black pointer-events-none text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded-md">Page ${page} / ${totalPages}</span>
+                <button onclick="changeSafetyPage(1)" ${page >= totalPages ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-[#28C7AE] transition-colors"'}>Next<i class="fa-solid fa-chevron-right ml-1.5"></i></button>
+            </div>
+        `;
+    }
+
+    listEl.innerHTML = html;
+}
+
+window._rewardsState = { pathsHtml: '', rewards: [], page: 1, limit: 4 };
 
 async function renderRewardsAndPaths() {
     const container = document.getElementById('rewards-progress-container');
@@ -768,11 +950,9 @@ async function renderRewardsAndPaths() {
             return;
         }
 
-        let html = '<div class="space-y-6">';
-
-        // ── 1. Active Learning Paths Status ─────────────────────────────────────
+        let pathsHtml = '';
         if (pathStatuses.length > 0) {
-            html += `<div>
+            pathsHtml += `<div>
                 <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                     <i class="fa-solid fa-route text-cubby-purple"></i> Path Progress
                 </h4>
@@ -787,7 +967,7 @@ async function renderRewardsAndPaths() {
                 const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
                 const isCompleted = status.currentStatus === 'completed' || percent >= 100;
 
-                html += `
+                pathsHtml += `
                     <div class="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 shadow-sm">
                         <div class="flex items-center justify-between mb-2">
                             <h5 class="text-[13px] font-bold text-gray-800 truncate pr-2">${escHtml(path.title)}</h5>
@@ -804,43 +984,86 @@ async function renderRewardsAndPaths() {
                         </div>
                     </div>`;
             });
-            html += `</div></div>`;
+            pathsHtml += `</div></div>`;
         }
 
-        // ── 2. Recent Rewards Timeline ──────────────────────────────────────────
-        if (rewards.length > 0) {
-            html += `<div>
-                <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-bolt text-orange-400"></i> Recent Achievements
-                </h4>
-                <div class="space-y-2">`;
-            
-            rewards.slice(0, 10).forEach(reward => {
-                const timeStr = timeAgo(reward.earnedAt);
-                const isPathBonus = reward.rewardType === 'path_bonus';
-                
-                html += `
-                    <div class="flex items-center gap-3 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm group hover:border-orange-200 transition-colors">
-                        <div class="w-8 h-8 rounded-xl ${isPathBonus ? 'bg-purple-50 text-cubby-purple' : 'bg-orange-50 text-orange-500'} flex items-center justify-center shrink-0">
-                            <i class="fa-solid ${isPathBonus ? 'fa-trophy' : 'fa-star'} text-[10px]"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[11px] font-bold text-gray-800 truncate">${isPathBonus ? 'Learning Path Complete!' : 'Video Watch Reward'}</p>
-                            <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">${timeStr}</p>
-                        </div>
-                        <div class="text-[11px] font-black text-orange-500">+${reward.points}</div>
-                    </div>`;
-            });
-            html += `</div></div>`;
-        }
-
-        html += '</div>';
-        container.innerHTML = html;
+        window._rewardsState.pathsHtml = pathsHtml;
+        window._rewardsState.rewards = rewards.sort((a,b) => new Date(b.earnedAt) - new Date(a.earnedAt));
+        window._rewardsState.page = 1;
+        
+        _renderRewardsPage();
 
     } catch (e) {
         console.error('renderRewardsAndPaths error:', e);
         container.innerHTML = '<div class="text-center py-10 text-red-400 font-bold">Error loading progress data.</div>';
     }
+}
+
+window.changeRewardsPage = function(delta) {
+    window._rewardsState.page += delta;
+    _renderRewardsPage();
+};
+
+function _renderRewardsPage() {
+    const container = document.getElementById('rewards-progress-container');
+    if (!container) return;
+    
+    let html = '<div class="space-y-6">';
+    html += window._rewardsState.pathsHtml;
+
+    const { rewards, page, limit } = window._rewardsState;
+    
+    if (rewards.length > 0) {
+        html += `<div class="relative mt-2">
+            <div class="absolute left-[22px] top-6 bottom-0 w-px bg-gray-100 z-0"></div>
+            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
+                <i class="fa-solid fa-bolt text-orange-400"></i> Recent Achievements
+            </h4>
+            <div class="space-y-3 pb-2 relative z-10">`;
+        
+        const totalPages = Math.ceil(rewards.length / limit) || 1;
+        const slice = rewards.slice((page - 1) * limit, page * limit);
+
+        slice.forEach(reward => {
+            const timeStr = timeAgo(reward.earnedAt);
+            const isPathBonus = reward.rewardType === 'path_bonus';
+            const bgClass = isPathBonus ? 'bg-[#F3F0FF] text-[#8A51FC]' : 'bg-[#FFFBEB] text-[#F59E0B]';
+            const icon = isPathBonus ? 'fa-trophy' : 'fa-star';
+            
+            html += `
+                <div class="flex gap-4 relative items-start">
+                    <div class="w-10 h-10 rounded-[14px] border-[3px] border-white shadow-sm z-10 flex-shrink-0 flex items-center justify-center mt-0.5 ml-0.5 ${bgClass}">
+                        <i class="fa-solid ${icon} text-xs"></i>
+                    </div>
+                    <div class="bg-gray-50 rounded-2xl p-4 flex-1 border border-gray-100/50 shadow-sm transition-all hover:bg-white min-w-0 flex items-center justify-between">
+                        <div class="flex-1 min-w-0 pr-2">
+                            <p class="text-sm text-[#1C1D21] font-bold truncate">${isPathBonus ? 'Learning Path Complete!' : 'Video Watch Reward'}</p>
+                            <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                                <span class="text-xs font-bold text-gray-400"><i class="fa-regular fa-clock mr-1 text-[10px]"></i>${timeStr}</span>
+                                ${isPathBonus ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${bgClass}">Path Bonus</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="text-[14px] font-black ${isPathBonus ? 'text-[#8A51FC]' : 'text-orange-500'} bg-white px-3 py-1.5 rounded-[12px] shadow-sm border border-gray-100 shrink-0">+${reward.points}</div>
+                    </div>
+                </div>`;
+        });
+        html += `</div>`;
+        
+        if (totalPages > 1) {
+            html += `
+                <div class="flex items-center justify-between mt-3 pt-4 border-t border-gray-100 relative z-10 bg-white/90 backdrop-blur-sm">
+                    <button onclick="changeRewardsPage(-1)" ${page <= 1 ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-orange-500 transition-colors"'}><i class="fa-solid fa-chevron-left mr-1.5"></i>Prev</button>
+                    <span class="text-[9px] font-black pointer-events-none text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded-md">Page ${page} / ${totalPages}</span>
+                    <button onclick="changeRewardsPage(1)" ${page >= totalPages ? 'disabled class="text-[11px] font-extrabold text-gray-300 cursor-not-allowed"' : 'class="text-[11px] font-extrabold text-gray-600 hover:text-orange-500 transition-colors"'}>Next<i class="fa-solid fa-chevron-right ml-1.5"></i></button>
+                </div>
+            `;
+        }
+        
+        html += `</div>`;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
 }
 
 function escHtml(str) {
@@ -908,7 +1131,12 @@ function changeTimeMode(mode) {
     if (activeChild && activeChild.screenTimeLogs) {
         let logs;
         if (typeof activeChild.screenTimeLogs === 'string') {
-            try { logs = JSON.parse(activeChild.screenTimeLogs); } catch (e) { logs = []; }
+            try {
+                const parsed = JSON.parse(activeChild.screenTimeLogs);
+                // Guard: JSON.parse might return an object (e.g. {_timeSettings:...})
+                // instead of an array — check before assigning.
+                logs = Array.isArray(parsed) ? parsed : [];
+            } catch (e) { logs = []; }
         } else if (Array.isArray(activeChild.screenTimeLogs)) {
             logs = activeChild.screenTimeLogs;
         } else {
@@ -1134,16 +1362,25 @@ function renderChart(labels, datasets, type) {
     });
 }
 
-// Helper: Simple Time Ago
+// Helper: Accurate Time Ago (supports days, weeks, months)
 function timeAgo(dateString) {
+    if (!dateString) return 'Unknown';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Unknown';
     const seconds = Math.floor((new Date() - date) / 1000);
-    if (seconds < 60) return "Just now";
+    if (seconds < 60) return 'Just now';
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes} mins ago`;
+    if (minutes < 60) return `${minutes} min${minutes !== 1 ? 's' : ''} ago`;
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} hours ago`;
-    return "Yesterday";
+    if (hours < 24) return `${hours} hr${hours !== 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days} days ago`;
+    if (days < 14) return '1 week ago';
+    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+    if (days < 60) return '1 month ago';
+    if (days < 365) return `${Math.floor(days / 30)} months ago`;
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 // Function to handle "Create Profile" button click
@@ -1490,30 +1727,7 @@ window.saveParentProfile = async function () {
 
 let _activeTab = 'dashboard';
 
-window.switchTab = function (tabName) {
-    _activeTab = tabName;
-
-    // Update nav pills
-    ['dashboard', 'activity', 'reports'].forEach(t => {
-        const navEl = document.getElementById(`nav-${t}`);
-        const panelEl = document.getElementById(`tab-${t}`);
-        if (navEl) navEl.classList.toggle('active', t === tabName);
-        if (navEl) navEl.classList.toggle('text-gray-500', t !== tabName);
-        if (navEl) navEl.classList.toggle('hover:bg-white/50', t !== tabName);
-        if (panelEl) panelEl.classList.toggle('active', t === tabName);
-    });
-
-    // Update heading
-    const headings = { dashboard: 'Child Profiles', activity: 'Activity Log', reports: 'Reports & Insights' };
-    const headEl = document.getElementById('page-heading');
-    if (headEl) headEl.textContent = headings[tabName] || 'Dashboard';
-
-    // Lazy-load the tab content
-    if (tabName === 'activity') renderFullActivityLog();
-    if (tabName === 'reports') renderReports();
-
-    return false; // prevent anchor jump
-};
+// switchTab function merged below to handle all tabs
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ACTIVITY LOG — Unified Smart Feed
@@ -1580,8 +1794,20 @@ function renderFeedWithFilter(filter) {
         const cfg = categoryConfig[item.feedCategory] || categoryConfig.activity;
         const timeStr = timeAgo(item.timestamp);
         const fullTime = new Date(item.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const isThreat = item.feedCategory === 'threat';
+
+        // For threat cards: make them clickable & add a guidance cue badge
+        const guidanceCue = isThreat ? `
+            <button class="ml-auto shrink-0 flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 text-[10px] font-black px-2.5 py-1 rounded-xl transition-all">
+                <i class="fa-solid fa-lightbulb text-amber-500"></i> Guidance
+            </button>` : '';
+
+        const clickAttr = isThreat
+            ? `onclick="openGuidanceFlyout(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="cursor:pointer;"`
+            : '';
+
         return `
-        <div class="feed-card ${cfg.cardClass} rounded-2xl p-4 border border-gray-100 flex items-start gap-4 hover:shadow-sm transition-all group">
+        <div class="feed-card ${cfg.cardClass} rounded-2xl p-4 border border-gray-100 flex items-start gap-4 hover:shadow-sm transition-all group ${isThreat ? 'hover:border-amber-300 hover:bg-amber-50/30' : ''}" ${clickAttr}>
             <div class="w-10 h-10 ${cfg.bg} ${cfg.color} rounded-[14px] flex items-center justify-center shrink-0 border border-white shadow-sm mt-0.5">
                 <i class="fa-solid ${cfg.icon} text-sm"></i>
             </div>
@@ -1592,6 +1818,7 @@ function renderFeedWithFilter(filter) {
                     <span class="text-[11px] font-bold text-gray-400" title="${fullTime}"><i class="fa-regular fa-clock mr-1 opacity-60"></i>${timeStr}</span>
                 </div>
             </div>
+            ${guidanceCue}
         </div>`;
     }).join('');
 
@@ -1971,3 +2198,420 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 });
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GUIDANCE & PRIVACY HUB — Side-Panel Flyout
+// Research basis: Parental Mediation (Juarez et al., 2024) &
+//                 Privacy by Design (Pothong et al., 2024)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SAFETY_GUIDANCE_MAP = {
+    inappropriate_content: {
+        emoji: '🛡️',
+        title: 'Inappropriate Content Filtered',
+        subtext: "The filter caught content that wasn't age-appropriate.",
+        mediation: [
+            'Ask: "What were you hoping to find when you saw this?"',
+            'Discuss: Why some content is made for grown-ups, and how seeing it by accident can be confusing.',
+            'Guide: Remind them they can always tell you if they see something that makes them feel uncomfortable — no questions asked.',
+            'Reassure: "You didn\'t do anything wrong. The app caught it so you didn\'t have to worry about it."'
+        ],
+        privacyNote: 'The flagged content was analyzed by our local AI filter and was never stored permanently. Only the time and type of the event are saved to help you see patterns.',
+        retentionDays: 30
+    },
+    cyberbullying_alert: {
+        emoji: '💬',
+        title: 'Kindness Filter Triggered',
+        subtext: 'A message was blocked for not meeting our kindness standard.',
+        mediation: [
+            'Ask: "How do you think your buddy felt when you sent that?"',
+            'Discuss: The "Screen Shield" effect — it\'s easy to say hurtful things when we can\'t see someone\'s face.',
+            'Guide: Help them rephrase the message to be honest, but kind. Practice together!',
+            'Teach: "Being kind online is just as important as being kind in person."'
+        ],
+        privacyNote: "The flagged message was blocked before it was sent. The full text was not stored — only the timestamp and event type. Your child's private conversations remain private.",
+        retentionDays: 30
+    },
+    malicious_link: {
+        emoji: '🔗',
+        title: 'Suspicious Link Blocked',
+        subtext: 'Your child may have clicked on a link that was flagged as potentially unsafe.',
+        mediation: [
+            'Ask: "Where did you find this link? Did someone send it to you?"',
+            'Discuss: What phishing is — tricks people use online to disguise dangerous links as fun or friendly content.',
+            'Guide: Teach the rule: "Before clicking a link, ask a trusted adult first."',
+            'Reassure: "Clicking a bad link accidentally doesn\'t make you bad. Now you know what to look for!"'
+        ],
+        privacyNote: 'The URL was checked against a safety list. It was not logged in full — only the domain and event type are stored to help identify patterns.',
+        retentionDays: 30
+    },
+    stranger_danger: {
+        emoji: '👤',
+        title: 'Unknown Contact Alert',
+        subtext: "Someone outside your child's buddy list attempted to contact them.",
+        mediation: [
+            'Ask: "Do you know who this person is in real life?"',
+            'Discuss: Why it\'s important to only talk to people we know and trust online.',
+            'Guide: Review the buddy list together. Help them understand who is a "safe" contact.',
+            'Remind: "You can always tell me if a stranger messages you, and I won\'t be upset."'
+        ],
+        privacyNote: 'The contact attempt was blocked and no personal information was shared with the unknown user. Only the event type and time are recorded.',
+        retentionDays: 30
+    },
+    general: {
+        emoji: '🌟',
+        title: 'Safety Event Recorded',
+        subtext: 'The system flagged something for your review.',
+        mediation: [
+            'Check in: "How has your time on CubbyCove been lately? Anything surprising or confusing?"',
+            'Remind: "There are no bad questions. You can always ask me about anything you see online."',
+            'Encourage: "You\'re doing great navigating the digital world. Let\'s keep learning together."'
+        ],
+        privacyNote: "CubbyCove collects the minimum data necessary for your child's safety. Events older than 30 days are automatically removed. No audio, video, or full message text is ever stored.",
+        retentionDays: 30
+    }
+};
+
+/**
+ * Maps a feed item to a SAFETY_GUIDANCE_MAP key based on its action text.
+ */
+function _getGuidanceKey(item) {
+    const action = (item.action || item.threatType || '').toLowerCase();
+    if (action.includes('inappropriate') || action.includes('content') || action.includes('blocked')) return 'inappropriate_content';
+    if (action.includes('bully') || action.includes('kind') || action.includes('chat') || action.includes('message')) return 'cyberbullying_alert';
+    if (action.includes('link') || action.includes('url') || action.includes('phish')) return 'malicious_link';
+    if (action.includes('stranger') || action.includes('unknown') || action.includes('contact')) return 'stranger_danger';
+    return 'general';
+}
+
+/**
+ * Opens the Guidance & Privacy Hub side-panel for a given safety event.
+ */
+window.openGuidanceFlyout = function (item) {
+    const panel = document.getElementById('guidance-flyout');
+    if (!panel) return;
+
+    const key   = _getGuidanceKey(item);
+    const guide = SAFETY_GUIDANCE_MAP[key] || SAFETY_GUIDANCE_MAP.general;
+
+    const timeStr = item.timestamp
+        ? new Date(item.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : 'Recently';
+
+    const deleteDate = item.timestamp
+        ? new Date(new Date(item.timestamp).getTime() + 30 * 24 * 60 * 60 * 1000)
+              .toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'after 30 days';
+
+    // Populate panel content
+    document.getElementById('gf-emoji').textContent   = guide.emoji;
+    document.getElementById('gf-title').textContent   = guide.title;
+    document.getElementById('gf-subtext').textContent = guide.subtext;
+    document.getElementById('gf-time').textContent    = timeStr;
+    document.getElementById('gf-action').textContent  = item.action || 'Safety event';
+
+    document.getElementById('gf-tips').innerHTML = guide.mediation
+        .map((tip, i) => `
+            <div class="flex gap-3 items-start">
+                <div class="w-6 h-6 shrink-0 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[11px] font-black mt-0.5">${i + 1}</div>
+                <p class="text-sm text-gray-700 font-medium leading-relaxed">${escHtml(tip)}</p>
+            </div>`)
+        .join('');
+
+    document.getElementById('gf-privacy-note').textContent = guide.privacyNote;
+    document.getElementById('gf-delete-date').textContent  = deleteDate;
+
+    // Slide panel in from right
+    panel.classList.remove('translate-x-full');
+    panel.classList.add('translate-x-0');
+    document.getElementById('guidance-overlay')?.classList.remove('hidden');
+};
+
+/**
+ * Closes the Guidance & Privacy Hub side-panel.
+ */
+window.closeGuidanceFlyout = function () {
+    const panel = document.getElementById('guidance-flyout');
+    if (!panel) return;
+    panel.classList.remove('translate-x-0');
+    panel.classList.add('translate-x-full');
+    document.getElementById('guidance-overlay')?.classList.add('hidden');
+};
+
+/**
+ * Purges safety event logs older than 30 days from the threat_logs collection.
+ * Runs once per session on parent login — fulfills the Privacy by Design commitment.
+ */
+async function purgeOldSafetyLogs() {
+    try {
+        const { databases, DB_ID, COLLECTIONS } = AppwriteService;
+        const { Query } = Appwrite;
+        const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+        const old = await databases.listDocuments(DB_ID, COLLECTIONS.THREAT_LOGS, [
+            Query.lessThan('$createdAt', cutoff),
+            Query.limit(25) // batch: up to 25 per session
+        ]).catch(() => ({ documents: [] }));
+
+        if (old.documents.length === 0) return;
+
+        await Promise.allSettled(
+            old.documents.map(doc => databases.deleteDocument(DB_ID, COLLECTIONS.THREAT_LOGS, doc.$id))
+        );
+
+        console.log(`[PrivacyPurge] Removed ${old.documents.length} safety log(s) older than 30 days.`);
+    } catch (e) {
+        console.warn('[PrivacyPurge] Could not purge old logs:', e.message);
+    }
+}
+
+// Hook purge into the dashboard load (runs once per session)
+const _origLoadDashboardForPurge = window.loadDashboardData;
+window.loadDashboardData = async function () {
+    if (_origLoadDashboardForPurge) await _origLoadDashboardForPurge.apply(this, arguments);
+    purgeOldSafetyLogs();
+};
+
+// ── Tab Switching ─────────────────────────────────────────────────────────────
+// Tabs: dashboard | activity | reports | support
+// .tab-panel { display: none } and .tab-panel.active { display: block }  — CSS in dashboard.html
+window.switchTab = function (tab) {
+    _activeTab = tab;
+    const TABS = ['dashboard', 'activity', 'reports', 'support'];
+
+    // update panels
+    TABS.forEach(t => {
+        document.getElementById(`tab-${t}`)?.classList.toggle('active', t === tab);
+    });
+
+    // update nav pills
+    TABS.forEach(t => {
+        const el = document.getElementById(`nav-${t}`);
+        if (!el) return;
+        if (t === tab) {
+            el.classList.add('active');
+            el.classList.remove('text-gray-500', 'hover:bg-white/50');
+        } else {
+            el.classList.remove('active');
+            el.classList.add('text-gray-500', 'hover:bg-white/50');
+        }
+    });
+
+    // update page heading
+    const headings = {
+        dashboard: 'Child Profiles',
+        activity:  'Activity Log',
+        reports:   'Reports',
+        support:   'Support Inbox'
+    };
+    const h = document.getElementById('page-heading');
+    if (h) h.textContent = headings[tab] || tab;
+
+    // lazy-load content
+    if (tab === 'activity') renderFullActivityLog();
+    if (tab === 'reports') renderReports();
+    if (tab === 'support') _loadSupportTickets();
+    
+    return false;
+};
+
+// ── Support Inbox (Parent Side) ───────────────────────────────────────────────
+let _activeTicketId   = null;
+let _threadPollTimer  = null;
+let _supportSenderId  = null;  // parent user.$id, set on first load
+
+async function _getParentId() {
+    if (_supportSenderId) return _supportSenderId;
+    try {
+        const user = await DataService.getCurrentUser();
+        _supportSenderId = user?.$id || null;
+    } catch { _supportSenderId = null; }
+    return _supportSenderId;
+}
+
+async function _loadSupportTickets() {
+    const container = document.getElementById('support-ticket-list');
+    if (!container) return;
+
+    const parentId = await _getParentId();
+    if (!parentId) {
+        container.innerHTML = '<p class="text-center text-sm text-gray-400 py-8 font-bold">Please log in to view tickets.</p>';
+        return;
+    }
+
+    container.innerHTML = '<div class="flex items-center justify-center py-8 text-gray-400 font-bold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading...</div>';
+
+    const tickets = await DataService.getMyTickets(parentId);
+
+    // Hide unread badge once loaded
+    document.getElementById('support-unread-badge')?.classList.add('hidden');
+
+    if (tickets.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-12">
+                <div class="text-5xl mb-4">🎧</div>
+                <p class="font-black text-gray-500 text-base">No tickets yet</p>
+                <p class="text-sm text-gray-400 font-bold mt-2">Click <strong>New Ticket</strong> to get help from our team.</p>
+            </div>`;
+        return;
+    }
+
+    const statusStyles = {
+        open:     { bg: 'bg-blue-50',   text: 'text-blue-600',   label: 'Open'    },
+        replied:  { bg: 'bg-green-50',  text: 'text-green-600',  label: 'Replied' },
+        closed:   { bg: 'bg-gray-100',  text: 'text-gray-500',   label: 'Closed'  }
+    };
+
+    container.innerHTML = tickets.map(t => {
+        const style = statusStyles[t.status] || statusStyles.open;
+        const when = t.lastMessageAt
+            ? new Date(t.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : '';
+        return `
+            <div data-ticket-id="${t.$id}" data-ticket-status="${t.status}"
+                 class="ticket-row flex items-center gap-4 p-4 bg-white rounded-2xl border-2 border-gray-100 hover:border-[#28C7AE] hover:shadow-md transition-all cursor-pointer group">
+                <div class="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center text-teal-600 shrink-0 group-hover:bg-teal-200 transition-colors">
+                    <i class="fa-solid fa-ticket text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-extrabold text-gray-800 truncate text-sm">${escHtml(t.subject)}</p>
+                    <p class="text-[11px] font-bold text-gray-400 mt-0.5 uppercase tracking-wider">${when}</p>
+                </div>
+                <span class="text-[10px] font-black px-2.5 py-1 rounded-full ${style.bg} ${style.text} shrink-0">${style.label}</span>
+                <i class="fa-solid fa-chevron-right text-gray-300 text-xs group-hover:text-[#28C7AE] transition-colors shrink-0"></i>
+            </div>`;
+    }).join('');
+
+    // Store for click lookup (avoids inline onclick quoting issues)
+    window._ticketsCache = Object.fromEntries(tickets.map(t => [t.$id, t]));
+
+    // Delegate clicks from ticket rows
+    container.onclick = (e) => {
+        const row = e.target.closest('.ticket-row');
+        if (!row) return;
+        const id = row.dataset.ticketId;
+        const ticket = window._ticketsCache?.[id];
+        if (ticket) openTicketThread(id, ticket.subject, ticket.status);
+    };
+}
+
+window.openTicketThread = async function (ticketId, subject, status) {
+    _activeTicketId = ticketId;
+
+    const modal = document.getElementById('ticket-thread-modal');
+    const subjectEl = document.getElementById('thread-ticket-subject');
+    const messagesEl = document.getElementById('thread-messages');
+    const input = document.getElementById('thread-reply-input');
+    const sendBtn = document.getElementById('thread-send-btn');
+
+    if (!modal || !messagesEl) return;
+    if (subjectEl) subjectEl.textContent = subject;
+    if (input) { input.value = ''; input.disabled = status === 'closed'; }
+    if (sendBtn) sendBtn.disabled = status === 'closed';
+
+    modal.classList.remove('hidden');
+    await _renderThreadMessages(ticketId);
+
+    // Poll for new replies every 10 seconds while thread is open
+    clearInterval(_threadPollTimer);
+    _threadPollTimer = setInterval(() => _renderThreadMessages(ticketId), 10000);
+};
+
+window.closeTicketThread = function () {
+    document.getElementById('ticket-thread-modal')?.classList.add('hidden');
+    clearInterval(_threadPollTimer);
+    _threadPollTimer = null;
+    _activeTicketId = null;
+};
+
+async function _renderThreadMessages(ticketId) {
+    const container = document.getElementById('thread-messages');
+    if (!container) return;
+
+    const parentId = await _getParentId();
+    const messages = await DataService.getSupportMessages(ticketId);
+
+    if (messages.length === 0) {
+        container.innerHTML = '<p class="text-center text-sm text-gray-400 font-bold py-4">No messages yet.</p>';
+        return;
+    }
+
+    container.innerHTML = messages.map(m => {
+        const isMe = !m.isStaff;
+        const time = new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const bubble = isMe
+            ? `<div class="flex justify-end">
+                <div class="max-w-[80%]">
+                    <div class="bg-[#28C7AE] text-white rounded-2xl rounded-br-sm px-4 py-3 text-sm font-bold shadow-sm">${escHtml(m.text)}</div>
+                    <p class="text-[10px] text-gray-400 text-right mt-1 font-bold">${time}</p>
+                </div>
+               </div>`
+            : `<div class="flex gap-3 items-end">
+                <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-xs shrink-0">🛡️</div>
+                <div class="max-w-[80%]">
+                    <div class="bg-gray-100 text-gray-700 rounded-2xl rounded-bl-sm px-4 py-3 text-sm font-bold shadow-sm">${escHtml(m.text)}</div>
+                    <p class="text-[10px] text-gray-400 mt-1 font-bold">Support · ${time}</p>
+                </div>
+               </div>`;
+        return bubble;
+    }).join('');
+
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+}
+
+window.sendThreadReply = async function () {
+    if (!_activeTicketId) return;
+
+    const input = document.getElementById('thread-reply-input');
+    const btn = document.getElementById('thread-send-btn');
+    const text = input?.value?.trim();
+    if (!text) return;
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>'; }
+
+    try {
+        const parentId = await _getParentId();
+        await DataService.sendSupportMessage(_activeTicketId, parentId, false, text);
+        if (input) input.value = '';
+        await _renderThreadMessages(_activeTicketId);
+    } catch (e) {
+        alert('Could not send message: ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i>'; }
+    }
+};
+
+window.openNewTicketModal = function () {
+    document.getElementById('new-ticket-modal')?.classList.remove('hidden');
+    document.getElementById('ticket-subject').value = '';
+    document.getElementById('ticket-body').value = '';
+};
+
+window.closeNewTicketModal = function () {
+    document.getElementById('new-ticket-modal')?.classList.add('hidden');
+};
+
+window.submitSupportTicket = async function () {
+    const subject  = document.getElementById('ticket-subject')?.value?.trim();
+    const category = document.getElementById('ticket-category')?.value;
+    const body     = document.getElementById('ticket-body')?.value?.trim();
+    const btn      = document.getElementById('submit-ticket-btn');
+
+    if (!subject || !body) { alert('Please fill in the subject and describe the issue.'); return; }
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sending...'; }
+
+    try {
+        const parentId = await _getParentId();
+        await DataService.createSupportTicket(parentId, 'parent', subject, category, body);
+        closeNewTicketModal();
+        await _loadSupportTickets();
+        alert('✅ Ticket submitted! Our team will get back to you within 24 hours.');
+    } catch (e) {
+        alert('Error submitting ticket: ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i> Send'; }
+    }
+};

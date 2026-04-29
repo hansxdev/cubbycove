@@ -31,8 +31,14 @@ try {
         KID_REWARDS: 'kid_rewards',
         KID_PATH_STATUS: 'kid_path_status',
         CHAT_MESSAGES: 'chat_messages',
-        NOTIFICATIONS: 'notifications',
-        BUDDIES: 'buddies'
+        NOTIFICATIONS: 'parent_notifications',  // ✅ FIXED: was 'notifications', actual collection is 'parent_notifications'
+        BUDDIES: 'buddies',
+        GROUP_CHATS: 'group_chats',         // NEW: Private group chat rooms
+        ADMIN_AUDIT_LOGS: 'admin_audit_logs', // NEW: Ghost mode audit trail
+        COSMETICS: 'cosmetics',
+        SUPPORT_TICKETS: 'support_tickets',
+        SUPPORT_MESSAGES: 'support_messages',
+        LOGIN_REQUESTS: 'login_requests'      // Kid parental-approval login flow
     };
 
     // Storage Bucket IDs

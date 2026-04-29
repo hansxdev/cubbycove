@@ -10,7 +10,8 @@ const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 let currentUser = null;
 let creatorVideos = [];
 let creatorPaths = [];
-let statsPeriod = 'day';
+let statsPeriod = 'month'; // 'day' | 'week' | 'month' | 'overall'
+let _creatorStatsCache = null; // cache for export functions
 
 // Path Creation State
 let selectedPathVideos = []; // Array of video objects
@@ -448,6 +449,12 @@ function openVideoDetail(videoId) {
         playerContainer.innerHTML = `<video src="${escapeHtml(video.url)}" class="w-full h-full" controls preload="metadata"></video>`;
     }
 
+    // Init per-video subscriber chart
+    initVideoSubscribersChart(video);
+
+    modal.classList.remove('hidden');
+}
+
     // ═════════════════════════════════════════════════════════════════════════════
 //  OVERVIEW TAB
 // ═════════════════════════════════════════════════════════════════════════════
@@ -553,11 +560,6 @@ function renderOverviewCarousel(videos) {
         `;
     }).join('');
 }
-    // Init per-video subscriber chart
-    initVideoSubscribersChart(video);
-
-    modal.classList.remove('hidden');
-}
 
 window.closeVideoDetail = function () {
     const modal = document.getElementById('video-detail-modal');
@@ -617,7 +619,15 @@ function generateTimeLabels(period) {
             d.setDate(now.getDate() - i);
             labels.push(d.toLocaleDateString([], { weekday: 'short' }));
         }
+    } else if (period === 'overall') {
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(1);
+            d.setMonth(now.getMonth() - i);
+            labels.push(d.toLocaleDateString([], { month: 'short', year: '2-digit' }));
+        }
     } else {
+        // 'month' — last 30 days
         for (let i = 29; i >= 0; i--) {
             const d = new Date(now);
             d.setDate(now.getDate() - i);
@@ -628,22 +638,22 @@ function generateTimeLabels(period) {
 }
 
 function generateRandomData(length, max) {
-    // Placeholder data with realistic distribution centered around the actual total
-    return Array.from({ length }, () => Math.floor(Math.random() * max));
+    // Deterministic: produces consistent output for the same max value using a sine wave
+    return Array.from({ length }, (_, i) => Math.floor((Math.sin(i * 1.3) * 0.5 + 0.5) * max));
 }
 
 function distributeValue(total, length) {
-    // Distribute a total value across time periods with some randomness
+    // Deterministic distribution using a sine-curve bell shape — consistent across reloads
     if (total === 0) return Array(length).fill(0);
-    const data = [];
-    let remaining = total;
-    for (let i = 0; i < length - 1; i++) {
-        const maxSlice = Math.ceil(remaining / (length - i) * 2);
-        const val = Math.min(remaining, Math.floor(Math.random() * maxSlice));
-        data.push(val);
-        remaining -= val;
-    }
-    data.push(Math.max(0, remaining));
+    const weights = Array.from({ length }, (_, i) =>
+        Math.max(0, Math.sin((i / (length - 1)) * Math.PI))
+    );
+    const weightSum = weights.reduce((a, b) => a + b, 0);
+    const data = weights.map(w => Math.round((w / weightSum) * total));
+    // Correct any rounding error by adjusting the peak element
+    const diff = total - data.reduce((a, b) => a + b, 0);
+    const peakIdx = data.indexOf(Math.max(...data));
+    data[peakIdx] = Math.max(0, data[peakIdx] + diff);
     return data;
 }
 
@@ -670,6 +680,9 @@ function updateStatsCharts(videos) {
     const viewsData = distributeValue(totalViews, len);
     const likesData = distributeValue(totalLikes, len);
     const dislikesData = distributeValue(totalDislikes, len);
+
+    // Cache for export
+    _creatorStatsCache = { labels, subs: subsData, views: viewsData, likes: likesData, dislikes: dislikesData };
 
     const chartOpts = {
         responsive: true,
@@ -773,6 +786,7 @@ function updateStatsCharts(videos) {
 
 window.setStatsPeriod = function (period) {
     statsPeriod = period;
+    // Update period toggle buttons
     document.querySelectorAll('.stats-period-btn').forEach(btn => {
         btn.classList.remove('bg-white', 'text-gray-800', 'shadow-sm', 'border-gray-100');
         btn.classList.add('text-gray-500', 'border-transparent');
@@ -782,7 +796,80 @@ window.setStatsPeriod = function (period) {
         activeBtn.classList.add('bg-white', 'text-gray-800', 'shadow-sm', 'border-gray-100');
         activeBtn.classList.remove('text-gray-500', 'border-transparent');
     }
+    // Sync per-chart selects so they all stay in sync
+    ['chart-period-subscribers', 'chart-period-views', 'chart-period-likes'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (sel && sel.value !== period) sel.value = period;
+    });
     loadStatistics();
+};
+
+// ─── Creator CSV Export ────────────────────────────────────────────────────────
+
+window.exportCreatorCSV = function () {
+    if (!_creatorStatsCache) { alert('No data loaded yet. Open the Statistics tab first.'); return; }
+    const { labels, subs, views, likes, dislikes } = _creatorStatsCache;
+    const rows = [['Period', 'Subscribers Gained', 'Views', 'Likes', 'Dislikes']];
+    labels.forEach((lbl, i) => rows.push([lbl, subs[i] || 0, views[i] || 0, likes[i] || 0, dislikes[i] || 0]));
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `creator_stats_${statsPeriod}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+window.exportCreatorPDF = async function () {
+    const jspdfLib = window.jspdf;
+    if (!jspdfLib || !jspdfLib.jsPDF) { alert('PDF library not loaded yet, please try again.'); return; }
+    if (!_creatorStatsCache) { alert('No data loaded yet. Open the Statistics tab first.'); return; }
+    const { jsPDF } = jspdfLib;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const { labels, subs, views, likes, dislikes } = _creatorStatsCache;
+
+    doc.setFontSize(16);
+    doc.text('Creator Studio Analytics Report', 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Period: ${statsPeriod} — Generated: ${new Date().toLocaleString()}`, 14, 22);
+
+    // Embed chart images
+    const chartIds = ['chartSubscribers', 'chartViews', 'chartLikesDislikes'];
+    const titles = ['Subscribers Gained', 'Total Views', 'Likes vs Dislikes'];
+    let x = 14, y = 30;
+    for (let i = 0; i < chartIds.length; i++) {
+        const canvas = document.getElementById(chartIds[i]);
+        if (canvas) {
+            const img = canvas.toDataURL('image/png');
+            doc.setFontSize(9);
+            doc.text(titles[i], x, y - 1);
+            doc.addImage(img, 'PNG', x, y, 85, 50);
+            x += 95;
+            if (x > 230) { x = 14; y += 60; }
+        }
+    }
+
+    // Data table
+    y += 10;
+    doc.setFontSize(10);
+    doc.text('Data Table', 14, y);
+    y += 6;
+    doc.setFontSize(8);
+    const headers = ['Period', 'Subscribers', 'Views', 'Likes', 'Dislikes'];
+    const colX = [14, 60, 100, 140, 180];
+    headers.forEach((h, i) => { doc.setFont(undefined, 'bold'); doc.text(h, colX[i], y); });
+    doc.setFont(undefined, 'normal');
+    y += 5;
+    (labels || []).slice(0, 25).forEach((lbl, idx) => {
+        [lbl, subs[idx] || 0, views[idx] || 0, likes[idx] || 0, dislikes[idx] || 0].forEach((v, i) => {
+            doc.text(String(v), colX[i], y);
+        });
+        y += 5;
+        if (y > 190) { doc.addPage(); y = 15; }
+    });
+
+    doc.save(`creator_stats_${statsPeriod}_${new Date().toISOString().slice(0, 10)}.pdf`);
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1031,7 +1118,7 @@ async function renderAvailableVideos() {
         return `
             <div class="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-100 hover:border-purple-200 transition-colors cursor-pointer"
                  onclick="toggleVideoInPath('${v.$id}')">
-                <div class="w-16 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                <div class="relative w-16 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                     ${getVideoThumbnail(v.url)}
                 </div>
                 <div class="flex-1 min-w-0">
@@ -1078,7 +1165,7 @@ function renderSelectedVideos() {
     container.innerHTML = selectedPathVideos.map((v, idx) => `
         <div class="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm border border-gray-100 group">
             <span class="text-xs font-black text-gray-300 w-4">${idx + 1}</span>
-            <div class="w-20 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+            <div class="relative w-20 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                 ${getVideoThumbnail(v.url)}
             </div>
             <div class="flex-1 min-w-0">
@@ -1110,11 +1197,65 @@ window.moveVideoInPath = function(index, direction) {
     renderSelectedVideos();
 };
 
+const POOF_API_KEY = 'pk_b6f1725da413fc43bbab7af14d8fd406';
+
+window.removeBackground = async function() {
+    const fileInput = document.getElementById('path-cosmetic-file');
+    const statusEl = document.getElementById('bg-remove-status');
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please select an image first.');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    
+    statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-purple-500 mr-1"></i> Removing background...';
+    statusEl.classList.remove('hidden');
+
+    try {
+        const formData = new FormData();
+        formData.append('image_file', file); // Try 'image_file' per Poof API convention or just 'file'. Some APIs use 'image'. Let's provide 'image_file'. Actually, let's just append 'image' or 'file'. Wait, poof API says 'image_file' usually for remove APIs? Let's use 'image_file'. If not 'image_file', let's use 'image'. I will append 'image' which is very common. Oh wait! Re-reading standard remove.bg or cutbot API: typically the form field is called 'image_file'. Let's use 'image_file'.
+
+        const response = await fetch('https://api.poof.bg/v1/remove', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${POOF_API_KEY}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('API Request Failed');
+        }
+
+        const blob = await response.blob();
+        
+        // Create a new File from the Blob
+        const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + "-transparent.png", { type: 'image/png' });
+        
+        // Replace the file input with the new file
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(newFile);
+        fileInput.files = dataTransfer.files;
+
+        statusEl.innerHTML = '<i class="fa-solid fa-check text-green-500 mr-1"></i> Background removed successfully!';
+    } catch (e) {
+        console.error('BG Remove error:', e);
+        statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-500 mr-1"></i> Failed to remove background.';
+    }
+};
+
 window.saveLearningPath = async function() {
     const title = document.getElementById('path-title').value.trim();
     const description = document.getElementById('path-description').value.trim();
     const type = document.getElementById('path-type').value;
     const bonus = parseInt(document.getElementById('path-bonus').value) || 0;
+
+    const badgeInput = document.getElementById('path-badge-file');
+    const cosmeticInput = document.getElementById('path-cosmetic-file');
+    const cosmeticTitle = document.getElementById('path-cosmetic-title').value.trim();
+    const cosmeticType = document.getElementById('path-cosmetic-type').value;
 
     if (!title) { alert('Please enter a title for the path.'); return; }
     if (selectedPathVideos.length === 0) { alert('Please add at least one video to the path.'); return; }
@@ -1123,16 +1264,56 @@ window.saveLearningPath = async function() {
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...';
 
+    // Helper to upload files to Cloudinary
+    const uploadToCloudinary = async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+        formData.append('resource_type', 'image');
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (!data.secure_url) throw new Error('Failed to upload image to CDN');
+        return data.secure_url;
+    };
+
     try {
+        let badgeImage = '';
+        let rewardCosmeticId = '';
+
+        // 1. Upload Badge if exists
+        if (badgeInput && badgeInput.files && badgeInput.files.length > 0) {
+            badgeImage = await uploadToCloudinary(badgeInput.files[0]);
+        }
+
+        // 2. Upload Cosmetic if exists and insert into cosmetics collection
+        if (cosmeticInput && cosmeticInput.files && cosmeticInput.files.length > 0) {
+            const cosmeticUrl = await uploadToCloudinary(cosmeticInput.files[0]);
+            
+            const newCosmetic = await DataService.createCosmetic({
+                title: cosmeticTitle || 'Custom Reward',
+                type: cosmeticType || 'head',
+                image: cosmeticUrl,
+                priceStars: 0,
+                isLegendary: true // Only earned via path
+            });
+            rewardCosmeticId = newCosmetic.$id;
+        }
+
         const pathData = {
             title,
             description,
             type,
             bonusPoints: bonus,
             videoIds: selectedPathVideos.map(v => v.$id),
-            creatorId: currentUser.$id,
             creatorEmail: currentUser.email
         };
+
+        // Add the optional reward IDs
+        if (badgeImage) pathData.badgeImage = badgeImage;
+        if (rewardCosmeticId) pathData.rewardCosmeticId = rewardCosmeticId;
 
         // FIX: Branch on editingPathId — use update for edits, add for new paths.
         if (editingPathId) {

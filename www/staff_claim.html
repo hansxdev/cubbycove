@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claim Your Staff Account - CubbyCove</title>
     <link rel="icon" type="image/png" href="images/closedlogo.png">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -212,6 +212,22 @@
                 const { account, databases, DB_ID, COLLECTIONS } = svc;
                 const { ID } = Appwrite;
 
+                // Guard: check if admin pre-archived or banned the USERS doc before the claim was completed
+                if (_pendingDoc.usersDocId) {
+                    try {
+                        const usersDoc = await databases.getDocument(DB_ID, COLLECTIONS.USERS, _pendingDoc.usersDocId);
+                        if (['archived', 'banned'].includes(usersDoc.status)) {
+                            showError('Your account access has been revoked. Please contact your administrator.');
+                            btn.innerHTML = '<i class="fa-solid fa-lock-open mr-2"></i> Activate My Account';
+                            btn.disabled = false;
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn('[claimAccount] Could not verify account status:', e.message);
+                        // Proceed — the status update in step 3 would fail anyway if archived
+                    }
+                }
+
                 // 1. Create the Appwrite Auth account
                 const fullName = `${_pendingDoc.firstName} ${_pendingDoc.lastName}`.trim();
                 try {
@@ -221,6 +237,8 @@
                 }
 
                 // 2. Log in to get a session (needed to update the users doc)
+                // Clear any existing session first — Appwrite throws 401 if a session is already active
+                try { await account.deleteSession('current'); } catch (_) { }
                 await account.createEmailPasswordSession(_pendingDoc.email, newPw);
 
                 // 3. Activate the users doc (now authenticated)

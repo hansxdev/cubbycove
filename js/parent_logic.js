@@ -185,40 +185,55 @@ async function checkLoginRequests() {
         }
     }
 
-    // ── 2. Global Unread pending login requests (Slide-down header) ───────────
-    const unreadList = document.getElementById('global-unread-list');
-    const slideHeader = document.getElementById('global-login-request-header');
+    // ── 2. Inline Login Requests Panel (below Child Profiles) ─────────────────
+    const requestsPanel = document.getElementById('login-requests-panel');
+    const requestsList  = document.getElementById('login-requests-list');
+    const requestsCount = document.getElementById('login-requests-count');
+    const bellDot       = document.getElementById('notif-bell-dot');
 
-    if (!unreadList || !slideHeader) return;
+    if (requestsPanel && requestsList) {
+        if (pending.length === 0) {
+            requestsPanel.classList.add('hidden');
+            requestsList.innerHTML = '';
+            if (requestsCount) requestsCount.textContent = '';
+            if (bellDot) bellDot.classList.add('hidden');
+        } else {
+            requestsPanel.classList.remove('hidden');
+            if (requestsCount) requestsCount.textContent = `${pending.length} pending`;
+            if (bellDot) bellDot.classList.remove('hidden');
 
-    if (pending.length === 0) {
-        slideHeader.classList.add('-translate-y-full');
-        unreadList.innerHTML = '';
-        return;
+            requestsList.innerHTML = pending.map(req => {
+                const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const initials = (req.childName || req.childUsername || '?').charAt(0).toUpperCase();
+                return `
+                    <div class="glass-card flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-5 gap-4 border-2 border-amber-200/60 shadow-sm">
+                        <div class="flex items-center gap-4">
+                            <div class="w-11 h-11 rounded-[14px] bg-amber-100 border-2 border-amber-200 flex items-center justify-center shrink-0 text-amber-600 font-black text-lg">
+                                ${initials}
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-extrabold text-gray-800 text-[14px] leading-tight">${req.childName || req.childUsername} wants to log in</p>
+                                <p class="text-[11px] font-bold text-amber-600/80 uppercase tracking-widest mt-0.5">
+                                    <i class="fa-regular fa-clock mr-1"></i>${time}
+                                    ${req.deviceInfo ? `<span class="ml-2 text-gray-400 normal-case tracking-normal">· ${req.deviceInfo.split('·')[0].trim()}</span>` : ''}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto shrink-0">
+                            <button onclick="inlineApprove('${req.$id}', this)"
+                                class="flex-1 sm:flex-none px-5 py-2.5 bg-[#28C7AE] hover:bg-teal-500 text-white text-[13px] font-extrabold rounded-[12px] shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#28C7AE]/50 flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-check text-xs"></i> Approve
+                            </button>
+                            <button onclick="inlineDeny('${req.$id}')"
+                                class="flex-1 sm:flex-none px-5 py-2.5 bg-white hover:bg-red-50 text-gray-600 hover:text-red-500 border border-gray-200 hover:border-red-200 text-[13px] font-extrabold rounded-[12px] shadow-sm transition-all focus:outline-none flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-xmark text-xs"></i> Deny
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
     }
-
-    slideHeader.classList.remove('-translate-y-full');
-
-    unreadList.innerHTML = pending.map(req => {
-        const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        return `
-            <div class="flex flex-col md:flex-row items-start md:items-center justify-between bg-[#FFF8DF] border border-[#FBEAC5] rounded-[20px] p-3 md:p-4 shadow-sm gap-4">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-[16px] bg-white border border-[#FBEAC5] flex items-center justify-center shrink-0 shadow-sm text-amber-500">
-                        <i class="fa-solid fa-bell-ring animate-pulse text-lg"></i>
-                    </div>
-                    <div class="min-w-0">
-                        <p class="font-extrabold text-[#1C1D21] text-[15px] leading-tight tracking-tight">${req.childUsername} is requesting access</p>
-                        <p class="text-[11px] font-bold text-amber-600/70 uppercase tracking-widest mt-1">Requested at ${time}</p>
-                    </div>
-                </div>
-                <div class="flex gap-2 w-full md:w-auto shrink-0">
-                    <button onclick="inlineApprove('${req.$id}', this)" class="flex-1 md:flex-none px-6 bg-amber-500 hover:bg-amber-600 text-white text-[13px] font-extrabold py-3 rounded-[14px] shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1">Approve</button>
-                    <button onclick="inlineDeny('${req.$id}')" class="flex-1 md:flex-none px-6 bg-white hover:bg-gray-50 text-gray-700 border border-[#FBEAC5] text-[13px] font-extrabold py-3 rounded-[14px] shadow-sm transition-all focus:outline-none">Deny</button>
-                </div>
-            </div>
-        `;
-    }).join('');
     } catch (err) {
         console.error('[Notif System] Error checking login requests:', err);
     }

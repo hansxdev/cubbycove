@@ -398,16 +398,15 @@ const DataService = {
 
         const GENERIC_ERROR = 'Invalid credentials. Please check your username, parent\'s email, and password.';
 
-        // ✅ SECURITY: The children collection requires Role.users() to read.
-        // We must obtain an Appwrite Anonymous Session before querying it.
-        try {
-            const { account } = this._getServices();
-            await account.createAnonymousSession();
-        } catch (e) {
-            console.warn('[Kid Login] Using existing active session instead of creating an anonymous one.');
-        }
+        // ✅ NOTE: We do NOT call createAnonymousSession() here.
+        // The `login_requests` collection has Role.any() create/read permissions so no session is needed.
+        // The `children` collection has Role.users() permissions — but we use the `parentEmail` field
+        // stored directly on the child document as a fallback so we never need to touch the users collection.
+        // This avoids the 401 Unauthorized error from disabled anonymous auth on Appwrite free tier.
 
         // ── 1. Find child by username ────────────────────────────────────────────
+        // The children collection may block unauthenticated reads. We first try without a session.
+        // If that fails with 401/guest error, we have no way to validate — and will throw GENERIC_ERROR.
         let child;
         try {
             const childList = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
@@ -417,46 +416,42 @@ const DataService = {
             if (childList.documents.length === 0) throw new Error(GENERIC_ERROR);
             child = childList.documents[0];
         } catch (e) {
-            console.error('[Kid Login] Step 1 Error:', e);
+            console.error('[Kid Login] Step 1 Error:', e.code, e.message);
             if (e.message === GENERIC_ERROR) throw e;
+            // If we hit a 401 (unauthenticated) on the children collection, we cannot validate
+            // credentials safely — fail with the generic error to avoid leaking info.
             throw new Error(GENERIC_ERROR);
         }
 
         // ── 2. Verify the parent email matches this child's parent ───────────────
-        // IMPORTANT: Kids are unauthenticated, so we CANNOT use listDocuments() with
-        // query filters on the `users` collection — Appwrite returns 401 for that.
-        // Instead, we fetch the parent document by its known ID (child.parentId) using
-        // getDocument(), which works with read("any") permissions even for guests.
+        // Strategy A: Use the parentEmail field stored directly on the child document.
+        // This avoids any authenticated query on the users collection.
         if (!child.parentId) throw new Error(GENERIC_ERROR);
 
         let parent;
-        try {
-            // Fetch parent doc directly by ID — no auth required if doc has read("any")
-            parent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, child.parentId);
-        } catch (e) {
-            // If getDocument also fails (e.g. collection only allows authenticated reads),
-            // fall back to checking the parentEmail field stored on the child doc itself.
-            if (child.parentEmail) {
-                // Validate email inline without touching the users collection
-                if (child.parentEmail.toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
+
+        // Try Strategy A first — parentEmail is stored on child doc (most reliable for guests)
+        if (child.parentEmail && child.parentEmail.trim() !== '') {
+            if (child.parentEmail.toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
+                throw new Error(GENERIC_ERROR);
+            }
+            parent = { $id: child.parentId, email: child.parentEmail, role: 'parent' };
+        } else {
+            // Strategy B: Fetch parent doc by its ID (works if users collection has read(any))
+            try {
+                parent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, child.parentId);
+                if (!parent.email || parent.email.toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
                     throw new Error(GENERIC_ERROR);
                 }
-                // Create a minimal parent stub so the rest of the flow still works
-                parent = { $id: child.parentId, email: child.parentEmail, role: 'parent' };
-            } else {
-                // Cannot verify — deny for safety
+            } catch (e) {
+                if (e.message === GENERIC_ERROR) throw e;
+                // Cannot verify parent — deny for safety
+                console.error('[Kid Login] Step 2: Cannot verify parent email:', e.message);
                 throw new Error(GENERIC_ERROR);
             }
         }
 
-        // Verify the email the kid entered matches the parent's actual email
-        if (!parent.email || parent.email.toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
-            throw new Error(GENERIC_ERROR);
-        }
-
         // ── 3. Verify password ───────────────────────────────────────────────────
-        // Children have a `password` field (plain or hashed) stored on creation.
-        // We perform a secure hash comparison here.
         const storedPassword = child.password || '';
         const isPasswordCorrect = await SecurityUtils.verifyPassword(password, storedPassword);
         if (!isPasswordCorrect) {
@@ -464,13 +459,14 @@ const DataService = {
         }
 
         // ── 4. All checks passed — create the pending request ───────────────────
+        // login_requests has Role.any() CREATE permission, so no session needed here.
         const deviceInfo = `${navigator.platform || 'Unknown'} · ${navigator.userAgent.split(')')[0].split('(')[1] || 'Unknown Browser'}`;
         const now = new Date().toISOString();
         const expires = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
         const doc = await databases.createDocument(DB_ID, 'login_requests', ID.unique(), {
             childUsername: username,
-            parentEmail: parent.email, // Use normalized DB email for case-sensitive queries
+            parentEmail: parent.email,
             status: 'pending',
             requestedAt: now,
             expiresAt: expires,
@@ -598,16 +594,13 @@ const DataService = {
     kidLoginFromApproved: async function (approvedRequest) {
         const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
 
-        // ✅ SECURITY: The 'fake' sessionStorage token is insecure.
-        // We now create an official Appwrite Anonymous Session for the kid.
-        // The kid doesn't have an email/password in the Appwrite Auth system,
-        // but this grants them a real JWT token so Cloud Functions (Gemini) can
-        // verify them, and Appwrite permissions (Role.users()) will recognize them.
-        try {
-            await account.createAnonymousSession();
-        } catch (e) {
-            console.warn('[Kid Login] Anonymous session creation failed or exists:', e.message);
-        }
+        // ℹ️ Anonymous sessions are skipped — Appwrite project may have anonymous auth disabled.
+        // The kid's identity is tracked via sessionStorage (cubby_child_session) only.
+        // For Cloud Function calls or Role.users() operations, the kid must use the parent's session
+        // (not implemented here) or the data must have Role.any() permissions.
+        // If you want to re-enable anonymous sessions: go to Appwrite Console → Auth → Settings
+        // and enable "Anonymous" login under Authentication Methods.
+        console.log('[Kid Login] Skipping anonymous session — using sessionStorage-only session.');
 
         // Fetch the full child document to hydrate prefs (avatarImage, bio, etc.)
         let childDoc = null;

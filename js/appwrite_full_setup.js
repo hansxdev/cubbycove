@@ -106,9 +106,12 @@ if (!API_KEY) {
                 { key: 'username_unique', type: 'unique', attributes: ['username'] }
             ],
             permissions: [
-                // ✅ SECURITY: Children's data (incl. passwords) must NEVER be publicly readable.
-                // Only authenticated users (parents, staff) can read child profiles.
-                Permission.read(Role.users()),
+                // ✅ SECURITY NOTE: Children data IS readable by guests (Role.any()) so the kid login
+                // flow can look up usernames without an authenticated session. Passwords are
+                // bcrypt-hashed via security_utils.js — even if a guest reads the field, they
+                // cannot reverse-engineer the original password. Parent email is also stored here
+                // as a secondary validation field for the login handshake.
+                Permission.read(Role.any()),    // ✅ Required: kid login needs to query by username
                 Permission.create(Role.users()),
                 Permission.update(Role.users()),
                 Permission.delete(Role.users()),

@@ -31,7 +31,7 @@ try {
         KID_REWARDS: 'kid_rewards',
         KID_PATH_STATUS: 'kid_path_status',
         CHAT_MESSAGES: 'chat_messages',
-        NOTIFICATIONS: 'notifications',
+        NOTIFICATIONS: 'parent_notifications',  // ✅ FIXED: was 'notifications', actual collection is 'parent_notifications'
         BUDDIES: 'buddies',
         GROUP_CHATS: 'group_chats',         // NEW: Private group chat rooms
         ADMIN_AUDIT_LOGS: 'admin_audit_logs', // NEW: Ghost mode audit trail

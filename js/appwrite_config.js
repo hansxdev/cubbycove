@@ -37,7 +37,8 @@ try {
         ADMIN_AUDIT_LOGS: 'admin_audit_logs', // NEW: Ghost mode audit trail
         COSMETICS: 'cosmetics',
         SUPPORT_TICKETS: 'support_tickets',
-        SUPPORT_MESSAGES: 'support_messages'
+        SUPPORT_MESSAGES: 'support_messages',
+        LOGIN_REQUESTS: 'login_requests'      // Kid parental-approval login flow
     };
 
     // Storage Bucket IDs

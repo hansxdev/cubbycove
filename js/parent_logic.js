@@ -68,26 +68,48 @@ function setupVirtualScroll(containerId, listId, itemsHtmlArray) {
 
 // ── Notification push-based updates ──────────────────────────────────────────
 let _unsubNotifs = null;
+let _loginRequestPollInterval = null; // Dedicated rapid poll for login-request banner
 
 function startNotifPolling() {
-    checkLoginRequests(); // internal logic: fetch once immediately
-    
-    // Subscribe to access logs (login requests) and generic notifications
+    checkLoginRequests(); // fetch once immediately on load
+
+    // ── Realtime subscription: watch `login_requests` + `notifications` ──────
+    // (Previously watched `access_logs` which is wrong — login requests go into
+    //  the `login_requests` collection, NOT access_logs.)
     const { DB_ID, COLLECTIONS } = AppwriteService;
-    
-    _unsubNotifs = DataService.subscribe([
-        `databases.${DB_ID}.collections.${COLLECTIONS.ACCESS_LOGS}.documents`,
-        `databases.${DB_ID}.collections.${COLLECTIONS.NOTIFICATIONS}.documents`
-    ], () => {
-        // Any change in these collections → refresh UI
-        checkLoginRequests();
-    });
+
+    try {
+        _unsubNotifs = DataService.subscribe([
+            `databases.${DB_ID}.collections.${COLLECTIONS.LOGIN_REQUESTS}.documents`,
+            `databases.${DB_ID}.collections.${COLLECTIONS.NOTIFICATIONS}.documents`
+        ], () => {
+            // Any change in these collections → refresh the approval banner
+            checkLoginRequests();
+        });
+    } catch (e) {
+        console.warn('[NotifPoll] Realtime subscribe failed (will rely on poll):', e.message);
+    }
+
+    // ── Dedicated fast poll (15s) as a reliable fallback ─────────────────────
+    // Realtime WebSockets can be blocked by corporate firewalls / Appwrite free-tier
+    // limits. This guarantees the parent sees the banner within 15 seconds.
+    if (!_loginRequestPollInterval) {
+        _loginRequestPollInterval = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                checkLoginRequests();
+            }
+        }, 15000);
+    }
 }
 
 function stopNotifPolling() {
     if (_unsubNotifs) {
         _unsubNotifs();
         _unsubNotifs = null;
+    }
+    if (_loginRequestPollInterval) {
+        clearInterval(_loginRequestPollInterval);
+        _loginRequestPollInterval = null;
     }
 }
 

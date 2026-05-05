@@ -1,203 +1,344 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Login - CubbyCove</title>
-    <link rel="icon" type="image/png" href="images/closedlogo.png">
-
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- Icons -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CubbyCove - Sign In</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="js/tailwind-config.js"></script>
-
-    <!-- Custom Auth Styles -->
-    <link rel="stylesheet" href="css/auth.css">
+    <style>
+        body { font-family: 'Nunito', sans-serif; }
+        .floating-bg {
+            background-color: #e0f2fe;
+            background-image:
+                radial-gradient(at 40% 20%, hsla(28,100%,74%,0.4) 0px, transparent 50%),
+                radial-gradient(at 80% 0%,  hsla(189,100%,56%,0.4) 0px, transparent 50%),
+                radial-gradient(at 0%  50%, hsla(355,100%,93%,0.4) 0px, transparent 50%);
+        }
+        .input-soft { box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        @keyframes gentleFloat {
+            0%, 100% { transform: translateY(0px); }
+            50%       { transform: translateY(-14px); }
+        }
+        .tiger-float { animation: gentleFloat 4s ease-in-out infinite; }
+        .btn-play {
+            box-shadow: 0 6px 0 #d97706;
+            transition: all 0.1s ease;
+        }
+        .btn-play:active { transform: translateY(6px); box-shadow: 0 0px 0 #d97706; }
+        .btn-parent {
+            box-shadow: 0 6px 0 #6d28d9;
+            transition: all 0.1s ease;
+        }
+        .btn-parent:active { transform: translateY(6px); box-shadow: 0 0px 0 #6d28d9; }
+        .tab-active   { background: #a855f7; color: white; box-shadow: 0 2px 8px rgba(168,85,247,0.4); }
+        .tab-inactive { background: transparent; color: #94a3b8; }
+    </style>
 </head>
+<body class="floating-bg min-h-screen py-10 flex flex-col justify-center items-center p-4 relative overflow-x-hidden overflow-y-auto">
 
-<body class="bg-gray-50 h-screen flex items-center justify-center relative overflow-hidden">
+    <!-- Decorative background clouds -->
+    <i class="fa-solid fa-cloud text-white opacity-40 text-8xl absolute top-10 left-20 pointer-events-none"></i>
+    <i class="fa-solid fa-cloud text-white opacity-30 text-9xl absolute bottom-10 right-20 pointer-events-none"></i>
+    <i class="fa-solid fa-cloud text-white opacity-50 text-6xl absolute top-1/3 right-1/4 pointer-events-none"></i>
+    <i class="fa-solid fa-cloud text-white opacity-30 text-7xl absolute bottom-1/4 left-1/4 pointer-events-none"></i>
 
-    <!-- Background Blobs -->
-    <div
-        class="absolute top-0 left-0 w-64 h-64 bg-cubby-blue/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob">
-    </div>
-    <div
-        class="absolute bottom-0 right-0 w-64 h-64 bg-cubby-pink/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000">
-    </div>
+    <div class="max-w-5xl w-full bg-[#fdfbf6] rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row overflow-hidden border-4 border-white relative z-10">
 
-    <!-- Main Card -->
-    <div class="bg-white w-full max-w-4xl h-[600px] rounded-3xl shadow-2xl flex overflow-hidden relative z-10 mx-4">
+        <!-- LEFT PANEL -->
+        <div class="w-full md:w-2/5 bg-[#8bcdef] p-8 flex flex-col items-center justify-between text-center relative overflow-hidden">
+            <i class="fa-solid fa-star text-yellow-300 text-3xl absolute top-20 left-10"></i>
+            <i class="fa-solid fa-star text-yellow-300 text-2xl absolute bottom-1/3 right-10"></i>
+            <i class="fa-solid fa-music text-blue-500 text-2xl absolute top-1/3 right-16 opacity-70"></i>
+            <i class="fa-solid fa-music text-blue-500 text-3xl absolute bottom-20 left-16 opacity-70"></i>
 
-        <!-- Left Side: Graphic & Brand (Hidden on Mobile) -->
-        <div
-            class="hidden md:flex w-1/2 bg-gradient-to-br from-cubby-purple to-indigo-600 p-10 flex-col justify-between text-white relative">
+            <div class="relative z-10 mt-4">
+                <h1 class="text-4xl lg:text-5xl font-black text-white drop-shadow-md mb-1">CubbyCove</h1>
+                <p class="text-sky-100 font-bold text-lg">Safe fun for everyone.</p>
+            </div>
+
+            <!-- Enlarged Tiger — fills panel width properly -->
+            <div class="flex-1 flex items-center justify-center w-full py-4">
+                <img src="images/tiger_waving_cape.png" alt="Waving Tiger with Cape"
+                     class="w-full max-w-[320px] h-auto object-contain tiger-float drop-shadow-2xl">
+            </div>
+
             <div>
-                <div class="flex items-center gap-2 mb-2">
-                    <div class="bg-white/20 p-2 rounded-full">
-                        <i class="fa-solid fa-shield-cat text-2xl"></i>
-                    </div>
-                    <span class="text-2xl font-extrabold">CubbyCove</span>
-                </div>
-                <h2 class="text-4xl font-bold mt-4 leading-tight">Safe fun for everyone.</h2>
+                <p class="text-sky-100 font-semibold text-xs tracking-wider uppercase">© 2026 CubbyCove Capstone</p>
             </div>
-
-            <div class="text-center">
-                <img src="https://api.dicebear.com/7.x/fun-emoji/svg?seed=Happy"
-                    class="w-48 h-48 mx-auto drop-shadow-2xl animate-bounce-slow" alt="Mascot">
-            </div>
-
-            <p class="text-sm text-white/70">© 2026 CubbyCove Capstone</p>
-
-            <!-- Circles Decoration -->
-            <div class="absolute top-10 right-10 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
-            <div class="absolute bottom-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
         </div>
 
-        <!-- Right Side: Login Forms -->
-        <div class="w-full md:w-1/2 p-8 md:p-12 relative">
+        <!-- RIGHT PANEL -->
+        <div class="w-full md:w-3/5 p-8 lg:p-12 flex flex-col">
 
-            <!-- Back Button -->
-            <a href="index.html"
-                class="absolute top-4 right-4 md:top-6 md:right-6 text-gray-400 hover:text-cubby-purple transition-colors bg-gray-100 hover:bg-purple-50 w-10 h-10 flex items-center justify-center rounded-full z-20 shadow-sm"
-                title="Back to Home">
-                <i class="fa-solid fa-arrow-left"></i>
-            </a>
-
-            <!-- Role Toggle Switch -->
-            <div class="flex bg-gray-100 rounded-full p-1 mb-8 mt-8 md:mt-0">
-                <button id="tab-kid" onclick="switchTab('kid')"
-                    class="flex-1 py-2 rounded-full text-sm font-bold transition-all bg-white shadow-sm text-cubby-purple">
-                    <i class="fa-solid fa-face-smile mr-2"></i> I'm a Kid
+            <!-- Role Toggle -->
+            <div class="flex items-center justify-center bg-gray-100 rounded-full p-1.5 mb-8 w-full max-w-sm mx-auto shadow-inner">
+                <button id="kidTab" onclick="switchRole('kid')"
+                    class="flex-1 py-2.5 rounded-full tab-active font-black text-sm flex items-center justify-center gap-2 transition-all cursor-pointer">
+                    <i class="fa-regular fa-face-smile"></i> I'm a Kid
                 </button>
-                <button id="tab-parent" onclick="switchTab('parent')"
-                    class="flex-1 py-2 rounded-full text-sm font-bold text-gray-500 hover:text-gray-700 transition-all">
-                    <i class="fa-solid fa-user-shield mr-2"></i> I'm a Parent
+                <button id="parentTab" onclick="switchRole('parent')"
+                    class="flex-1 py-2.5 rounded-full tab-inactive hover:text-slate-600 font-black text-sm flex items-center justify-center gap-2 transition-all cursor-pointer">
+                    <i class="fa-solid fa-user-shield"></i> I'm a Parent
                 </button>
             </div>
 
-            <!-- KID LOGIN FORM -->
-            <form id="form-kid" class="space-y-5 fade-in" onsubmit="event.preventDefault(); handleKidLogin()">
-                <div class="text-center mb-4">
-                    <h3 class="text-2xl font-extrabold text-gray-800">Welcome Back! 👋</h3>
-                    <p class="text-gray-500 text-sm">Fill in your details to start playing.</p>
-                </div>
+            <div class="w-full max-w-sm mx-auto flex-1 flex flex-col justify-center">
+                <h2 id="welcomeHeading" class="text-3xl lg:text-4xl font-black text-[#1e293b] mb-6 transition-all duration-300 ease-in-out">Welcome Back! 👋</h2>
 
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Your Username</label>
-                        <input type="text" id="kidUsername" placeholder="e.g. SuperMario123"
-                            class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 font-bold text-gray-700 focus:outline-none focus:border-cubby-blue focus:bg-white transition-colors"
-                            required>
+                <div class="grid relative w-full pt-2">
+                    <!-- KID SECTION -->
+                    <div id="kidSection" class="col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform translate-x-0 opacity-100 z-10 w-full pointer-events-auto">
+                        <form id="kidForm" class="space-y-5" onsubmit="handleKidLogin(); return false;">
+                            <div>
+                                <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR USERNAME</label>
+                                <input id="kidUsername" type="text" placeholder="e.g. SuperMario123"
+                                    class="w-full input-soft border-[3px] border-[#d97706] rounded-2xl px-5 py-4 focus:outline-none focus:ring-4 focus:ring-amber-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="username">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">PARENT'S EMAIL</label>
+                                <input id="kidParentEmail" type="email" placeholder="e.g. parent@email.com"
+                                    class="w-full input-soft border-[3px] border-[#d97706] rounded-2xl px-5 py-4 focus:outline-none focus:ring-4 focus:ring-amber-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="email">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR PASSWORD</label>
+                                <div class="relative">
+                                    <input id="kidPassword" type="password" placeholder="Your secret password"
+                                        class="w-full input-soft border-[3px] border-[#d97706] rounded-2xl px-5 py-4 pr-14 focus:outline-none focus:ring-4 focus:ring-amber-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="current-password">
+                                    <button type="button" onclick="togglePassword('kidPassword','kidPassIcon')"
+                                        class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
+                                        <i id="kidPassIcon" class="fa-regular fa-eye-slash text-xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="pt-2">
+                                <button type="submit" id="kidLoginBtn"
+                                    class="w-full bg-[#fde047] text-amber-900 font-black text-xl py-4 rounded-full btn-play border-2 border-[#d97706] flex items-center justify-center gap-2 cursor-pointer hover:bg-[#fef08a] transition-colors">
+                                    LET'S PLAY! <span class="text-2xl ml-1"></span>
+                                </button>
+                            </div>
+                        </form>
+                        <div id="kidHelperText" class="mt-6 text-center">
+                            <p class="text-slate-500 font-semibold text-sm">
+                                Don't have an account? <a href="parent/register_parent.html" class="text-sky-500 font-black hover:underline transition-colors">Ask a parent to create one!</a>
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Parent's Email</label>
-                        <input type="email" id="guardianEmail" placeholder="mom@gmail.com"
-                            class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 font-bold text-gray-700 focus:outline-none focus:border-cubby-blue focus:bg-white transition-colors"
-                            required>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Your Password</label>
-                        <div class="relative">
-                            <input type="password" id="kidPassword" placeholder="Your secret password"
-                                class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 pr-12 font-bold text-gray-700 focus:outline-none focus:border-cubby-blue focus:bg-white transition-colors"
-                                required>
-                            <button type="button" onclick="togglePassword('kidPassword', 'kid-eye')"
-                                class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-cubby-blue transition-colors">
-                                <i id="kid-eye" class="fa-regular fa-eye text-sm"></i>
-                            </button>
+
+                    <!-- PARENT SECTION -->
+                    <div id="parentSection" class="col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform translate-x-8 opacity-0 z-0 w-full pointer-events-none">
+                        <form id="parentForm" class="space-y-5" onsubmit="handleParentLogin(); return false;">
+                            <div>
+                                <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR EMAIL</label>
+                                <input id="parentEmail" type="email" placeholder="e.g. parent@email.com"
+                                    class="w-full input-soft border-[3px] border-[#7c3aed] rounded-2xl px-5 py-4 focus:outline-none focus:ring-4 focus:ring-purple-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="email">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">YOUR PASSWORD</label>
+                                <div class="relative">
+                                    <input id="parentPassword" type="password" placeholder="Your password"
+                                        class="w-full input-soft border-[3px] border-[#7c3aed] rounded-2xl px-5 py-4 pr-14 focus:outline-none focus:ring-4 focus:ring-purple-200 transition-all text-gray-700 font-bold placeholder-gray-400" autocomplete="current-password">
+                                    <button type="button" onclick="togglePassword('parentPassword','parentPassIcon')"
+                                        class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
+                                        <i id="parentPassIcon" class="fa-regular fa-eye-slash text-xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="pt-2">
+                                <button type="submit" id="parentLoginBtn"
+                                    class="w-full bg-purple-500 text-white font-black text-xl py-4 rounded-full btn-parent border-2 border-purple-700 flex items-center justify-center gap-2 cursor-pointer hover:bg-purple-600 transition-colors">
+                                    Sign In <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </form>
+                        <div id="parentHelperText" class="mt-6 text-center">
+                            <p class="text-slate-500 font-semibold text-sm">
+                                No parent account yet? <a href="parent/register_parent.html" class="text-purple-500 font-black hover:underline transition-colors">Register here!</a>
+                            </p>
                         </div>
                     </div>
                 </div>
-
-                <button type="submit"
-                    class="w-full bg-cubby-yellow hover:bg-yellow-400 text-gray-900 font-extrabold py-4 rounded-xl shadow-lg transform active:scale-95 transition-all text-lg">
-                    LET'S PLAY! 🚀
-                </button>
-
-                <p class="text-center text-xs text-gray-400 mt-4">Don't have an account? <a href="#"
-                        class="text-cubby-blue font-bold hover:underline">Ask a parent to create one!</a></p>
-            </form>
-
-            <!-- PARENT LOGIN FORM (Hidden by default) -->
-            <form id="form-parent" class="space-y-6 hidden fade-in"
-                onsubmit="event.preventDefault(); window.handleParentLogin()">
-                <div class="text-center mb-6">
-                    <h3 class="text-2xl font-extrabold text-gray-800">Parent Dashboard</h3>
-                    <p class="text-gray-500 text-sm">Manage settings and view reports.</p>
-                </div>
-
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Email Address</label>
-                        <input type="email" id="parentEmail"
-                            class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-cubby-purple/50 focus:border-cubby-purple transition-all"
-                            required>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Password</label>
-                        <div class="relative">
-                            <input type="password" id="parentPassword"
-                                class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 pr-12 text-gray-700 focus:outline-none focus:ring-2 focus:ring-cubby-purple/50 focus:border-cubby-purple transition-all"
-                                required>
-                            <button type="button" onclick="togglePassword('parentPassword', 'parent-eye')"
-                                class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-cubby-purple transition-colors">
-                                <i id="parent-eye" class="fa-regular fa-eye text-sm"></i>
-                            </button>
-                        </div>
-                        <div class="text-right mt-1">
-                            <a href="#" class="text-xs text-cubby-purple hover:underline">Forgot Password?</a>
-                        </div>
-                    </div>
-                </div>
-
-                <button type="submit"
-                    class="w-full bg-cubby-purple hover:bg-purple-800 text-white font-bold py-3 rounded-lg shadow-md transform active:scale-95 transition-all">
-                    Sign In Securely
-                </button>
-
-                <div class="mt-6 text-center">
-                    <p class="text-sm text-gray-500">New to CubbyCove? <a href="parent/register_parent.html"
-                            class="text-cubby-purple font-bold hover:underline">Create Parent Account</a></p>
-                </div>
-
-                <!-- Admin Link (Hidden/Subtle) -->
-                <div class="absolute bottom-4 right-4 opacity-20 hover:opacity-100 transition-opacity">
-                    <a href="staff/admin_dashboard.html" class="text-xs text-gray-400"><i class="fa-solid fa-lock"></i>
-                        Staff Login</a>
-                </div>
-            </form>
+            </div>
 
         </div>
     </div>
 
-    <!-- UI Logic for Tabs -->
+    <!-- Appwrite SDK + DataService -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
     <script src="js/appwrite_config.js"></script>
+    <script src="js/security_utils.js"></script>
     <script src="js/data_service.js"></script>
-    <script src="js/auth.js"></script>
+
     <script>
+        // ── UI Helpers ────────────────────────────────────────────────────────────
+        function switchRole(role) {
+            const kidTab = document.getElementById('kidTab');
+            const parentTab = document.getElementById('parentTab');
+            const kidSection = document.getElementById('kidSection');
+            const parentSection = document.getElementById('parentSection');
+            const heading = document.getElementById('welcomeHeading');
+
+            const activeClass = 'flex-1 py-2.5 rounded-full tab-active font-black text-sm flex items-center justify-center gap-2 transition-all cursor-pointer';
+            const inactiveClass = 'flex-1 py-2.5 rounded-full tab-inactive hover:text-slate-600 font-black text-sm flex items-center justify-center gap-2 transition-all cursor-pointer';
+
+            if (role === 'kid') {
+                kidTab.className = activeClass;
+                parentTab.className = inactiveClass;
+                
+                // Kid slides in from left, Parent slides out to right
+                kidSection.className = "col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform translate-x-0 opacity-100 z-10 w-full pointer-events-auto";
+                parentSection.className = "col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform translate-x-8 opacity-0 z-0 w-full pointer-events-none";
+                
+                heading.style.opacity = '0';
+                setTimeout(() => {
+                    heading.textContent = 'Welcome Back! 👋';
+                    heading.style.opacity = '1';
+                }, 100);
+            } else {
+                parentTab.className = activeClass;
+                kidTab.className = inactiveClass;
+                
+                // Parent slides in from right, Kid slides out to left
+                kidSection.className = "col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform -translate-x-8 opacity-0 z-0 w-full pointer-events-none";
+                parentSection.className = "col-start-1 row-start-1 flex flex-col justify-center h-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] transform translate-x-0 opacity-100 z-10 w-full pointer-events-auto";
+                
+                heading.style.opacity = '0';
+                setTimeout(() => {
+                    heading.textContent = 'Parent Sign In';
+                    heading.style.opacity = '1';
+                }, 150);
+            }
+        }
+
         function togglePassword(inputId, iconId) {
             const input = document.getElementById(inputId);
-            const icon = document.getElementById(iconId);
-            if (!input || !icon) return;
+            const icon  = document.getElementById(iconId);
             if (input.type === 'password') {
                 input.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
+                icon.className = 'fa-regular fa-eye text-xl';
             } else {
                 input.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+                icon.className = 'fa-regular fa-eye-slash text-xl';
+            }
+        }
+
+        function setLoading(btnId, loading, defaultHTML) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            btn.disabled = loading;
+            btn.innerHTML = loading
+                ? '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading...'
+                : defaultHTML;
+        }
+
+        // ── Kid Login ─────────────────────────────────────────────────────────────
+        // Kids use the parent-approval flow:
+        //   1. Submit credentials → DataService.createLoginRequest()
+        //   2. Poll until parent approves → kidLoginFromApproved() stores session
+        async function handleKidLogin() {
+            const username = document.getElementById('kidUsername').value.trim();
+            const parentEmail = document.getElementById('kidParentEmail').value.trim();
+            const password = document.getElementById('kidPassword').value;
+
+            if (!username || !parentEmail || !password) {
+                alert('Please fill in your username, your parent\'s email, and your password!');
+                return;
+            }
+
+            setLoading('kidLoginBtn', true, 'LET\'S PLAY!');
+            try {
+                const req = await DataService.createLoginRequest(username, parentEmail, password);
+
+                // Store request id so polling can pick it up
+                sessionStorage.setItem('cubby_pending_req_id', req.$id);
+
+                // Show waiting state — poll in a loop
+                showKidWaitingModal(req.$id);
+
+            } catch (err) {
+                alert(err.message || 'Login failed. Please try again.');
+            } finally {
+                setLoading('kidLoginBtn', false, 'LET\'S PLAY!');
+            }
+        }
+
+        function showKidWaitingModal(requestId) {
+            // Build a simple overlay while waiting for parent approval
+            let overlay = document.getElementById('kid-wait-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'kid-wait-overlay';
+                overlay.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-6';
+                overlay.innerHTML = `
+                    <div class="bg-white rounded-3xl shadow-2xl p-10 max-w-md w-full text-center">
+                        <div class="text-6xl mb-6">⏳</div>
+                        <h3 class="text-2xl font-black text-slate-800 mb-3">Waiting for Parent!</h3>
+                        <p class="text-slate-500 font-semibold mb-6">Ask a parent to approve your login from their dashboard. This will update automatically!</p>
+                        <div class="flex gap-4 justify-center">
+                            <div class="w-3 h-3 rounded-full bg-sky-400 animate-bounce [animation-delay:-0.3s]"></div>
+                            <div class="w-3 h-3 rounded-full bg-sky-400 animate-bounce [animation-delay:-0.15s]"></div>
+                            <div class="w-3 h-3 rounded-full bg-sky-400 animate-bounce"></div>
+                        </div>
+                        <button onclick="cancelKidWait()" class="mt-8 text-slate-400 text-sm font-bold hover:text-slate-600 underline cursor-pointer">Cancel</button>
+                    </div>`;
+                document.body.appendChild(overlay);
+            }
+            overlay.classList.remove('hidden');
+
+            // Poll every 3 seconds
+            window._kidPollInterval = setInterval(async () => {
+                try {
+                    const req = await DataService.pollLoginRequest(requestId);
+                    if (!req) return;
+
+                    if (req.status === 'approved') {
+                        clearInterval(window._kidPollInterval);
+                        await DataService.kidLoginFromApproved(req);
+                        window.location.href = 'kid/home_logged_in.html';
+                    } else if (req.status === 'denied') {
+                        clearInterval(window._kidPollInterval);
+                        overlay.classList.add('hidden');
+                        alert('Your parent denied this login request. Try again and ask them to approve!');
+                    }
+                } catch (e) { /* ignore transient errors */ }
+            }, 3000);
+        }
+
+        function cancelKidWait() {
+            clearInterval(window._kidPollInterval);
+            const overlay = document.getElementById('kid-wait-overlay');
+            if (overlay) overlay.classList.add('hidden');
+        }
+
+        // ── Parent Login ──────────────────────────────────────────────────────────
+        async function handleParentLogin() {
+            const email = document.getElementById('parentEmail').value.trim();
+            const password = document.getElementById('parentPassword').value;
+
+            if (!email || !password) {
+                alert('Please fill in your email and password!');
+                return;
+            }
+
+            setLoading('parentLoginBtn', true, 'Sign In <i class="fa-solid fa-arrow-right"></i>');
+            try {
+                const user = await DataService.login(email, password);
+
+                // Redirect based on role
+                if (['admin', 'assistant', 'creator'].includes(user.role)) {
+                    window.location.href = 'assistant/assistant_panel.html';
+                } else {
+                    window.location.href = 'parent/dashboard.html';
+                }
+
+            } catch (err) {
+                alert(err.message || 'Login failed. Please check your credentials and try again.');
+            } finally {
+                setLoading('parentLoginBtn', false, 'Sign In <i class="fa-solid fa-arrow-right"></i>');
             }
         }
     </script>
 </body>
-
 </html>

@@ -32,87 +32,217 @@ html {
     color: white;
 }
 
-/* 4. Capacitor Safe Area & Responsive Android Fixes */
+/* ══════════════════════════════════════════════════════════════════════════════
+   4. DARK MODE
+   Activated by adding class "dark-mode" to <body>.
+   Uses deep grays (not pure black) for a premium feel.
+   All transitions are smooth (0.3s) for a polished experience.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* --- Base Transition --- */
 body {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark-mode {
+    background-color: #111827;
+    color: #F3F4F6;
+}
+
+/* --- Backgrounds --- */
+body.dark-mode .bg-white {
+    background-color: #1F2937 !important;
+    transition: background-color 0.3s ease;
+}
+body.dark-mode .bg-gray-50 {
+    background-color: #111827 !important;
+}
+body.dark-mode .bg-gray-100 {
+    background-color: #1F2937 !important;
+}
+
+/* --- Cards & Surfaces --- */
+body.dark-mode [class*="shadow-md"],
+body.dark-mode [class*="shadow-lg"],
+body.dark-mode [class*="shadow-xl"] {
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4) !important;
+}
+
+/* --- Text Colors --- */
+body.dark-mode .text-gray-800,
+body.dark-mode .text-gray-900 {
+    color: #F9FAFB !important;
+}
+body.dark-mode .text-gray-700 {
+    color: #E5E7EB !important;
+}
+body.dark-mode .text-gray-600 {
+    color: #D1D5DB !important;
+}
+body.dark-mode .text-gray-500 {
+    color: #9CA3AF !important;
+}
+body.dark-mode .text-gray-400 {
+    color: #6B7280 !important;
+}
+
+/* --- Borders --- */
+body.dark-mode .border-gray-100,
+body.dark-mode .border-gray-200,
+body.dark-mode .border-gray-300 {
+    border-color: #374151 !important;
+}
+
+/* --- Hover States --- */
+body.dark-mode .hover\:bg-gray-50:hover,
+body.dark-mode .hover\:bg-gray-100:hover {
+    background-color: #374151 !important;
+}
+
+/* --- Inputs & Form Controls --- */
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select {
+    background-color: #1F2937;
+    color: #F3F4F6;
+    border-color: #374151;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder {
+    color: #6B7280;
+}
+body.dark-mode input:focus,
+body.dark-mode textarea:focus,
+body.dark-mode select:focus {
+    border-color: #60A5FA;
+}
+
+/* --- Tables (Admin / Staff) --- */
+body.dark-mode table {
+    background-color: #1F2937;
+}
+body.dark-mode th {
+    background-color: #111827;
+    color: #D1D5DB;
+}
+body.dark-mode td {
+    border-color: #374151;
+    color: #E5E7EB;
+}
+body.dark-mode tr:hover td {
+    background-color: #374151;
+}
+
+/* --- Sidebar --- */
+body.dark-mode aside {
+    background-color: #1F2937 !important;
+    border-color: #374151 !important;
+}
+
+/* --- Navigation / Header --- */
+body.dark-mode nav {
+    background-color: #1F2937 !important;
+    border-color: #374151 !important;
+}
+
+/* --- Modals --- */
+body.dark-mode .bg-black\/50 {
+    background-color: rgba(0,0,0,0.7) !important;
+}
+
+/* --- Scrollbar (dark variant) --- */
+body.dark-mode ::-webkit-scrollbar-track {
+    background: #1F2937;
+}
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: #4B5563;
+}
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: #6B7280;
+}
+
+/* --- Chart.js Canvas Container (ensure transparent background) --- */
+body.dark-mode canvas {
+    filter: none; /* Don't invert charts, we control their colors via JS */
+}
+
+/* --- Invert light icons that look bad on dark backgrounds --- */
+body.dark-mode .dark-invert {
+    filter: invert(1) brightness(2);
+}
+
+/* --- no-scrollbar utility (hides scrollbar but keeps scroll) --- */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   5. MOBILE APP OPTIMIZATIONS (CAPACITOR)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Prevent horizontal scroll globally but explicitly force vertical scrolling */
+html, body {
+    width: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important; /* Re-enables rubber-banding / momentum on iOS and Android */
+
+    /* Safe Area Support */
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
+
+    /* Disable text selection everywhere for native feel */
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    user-select: none;
 }
 
-html, body {
-    max-width: 100vw;
-    overflow-x: hidden;
+/* Allow text selection in inputs */
+input, textarea, select {
+    -webkit-user-select: auto;
+    user-select: auto;
 }
 
-* {
-    max-width: 100%;
+/* Enforce 48px minimum touch targets on mobile interactions */
+button, 
+.btn, 
+input[type="button"], 
+input[type="submit"] {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* 5. Mobile Overlap Prevention & Advanced Scaling */
-@media (max-width: 768px) {
-    /* Ensure flex containers stack if content overflows */
-    .flex:not(nav), .flex-row:not(nav, nav .flex-row) {
-        flex-wrap: wrap !important;
-    }
-    
-    /* Force grids to output single columns on small screens */
-    .grid {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* Prevent text overflow in cards */
-    h1, h2, h3, h4, p, span {
-        word-break: break-word; /* Allows long words to break */
-        word-wrap: break-word;
-        white-space: normal !important;
-    }
-
-    /* Reduce global paddings to give UI elements breathing room */
-    .p-6, .p-8, .p-12 {
-        padding: 1rem !important;
-    }
-
-    /* Force images/videos to scale responsively and not break containers */
-    img, video {
-        max-width: 100% !important;
-        height: auto !important;
-    }
-    
-    /* Fix Navigation Bar constraints */
-    nav {
-        flex-wrap: nowrap !important;
-        overflow: hidden !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
-        gap: 0.5rem !important;
-    }
-    
-    /* Hide massive search bar on tiny screens completely */
-    nav .flex-1, nav .hidden.sm\\:flex {
-        display: none !important; 
-    }
-    
-    /* Ensure the logo container scales down and doesn't push buttons out */
-    #logo-container {
-        width: 120px !important;
-        height: 40px !important;
-    }
-    #logo-long, #logo-closed {
-        height: 100% !important;
-        width: 100% !important;
-        object-fit: contain !important;
-    }
-
-    /* 6. Touch Targets & Native Feel */
-    button, a, input {
-        min-height: 48px !important;
-        /* Ensure minimum touch target size */
-    }
-
-    body {
-        /* Prevents pull-to-refresh zoom issues on Android */
-        touch-action: pan-y;
-        -webkit-tap-highlight-color: transparent;
-    }
+/* Disable hover effects on touch devices to prevent sticky hover states */
+@media (hover: none) and (pointer: coarse) {
+    /* We suppress typical Tailwind hover states by preventing pointer events passing through incorrectly or just rely on active */
+    .hover\:scale-105:hover { transform: none; }
+    .hover\:scale-110:hover { transform: none; }
+    .group:hover .group-hover\:translate-x-1 { transform: none; }
+    .group:hover .group-hover\:opacity-100 { opacity: inherit; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   6. GLOBAL SCALING & FLUID SIZING
+   Tailwind uses `rem` exclusively for layout (paddings, margins, fonts, heights).
+   By intelligently scaling the root font size based on checkpoints, the ENTIRE UI
+   automatically adjusts its elements and size depending on the device screen size.
+   ══════════════════════════════════════════════════════════════════════════════ */
+html { font-size: 13px; } /* Smallest mobile / standard shrink */
+@media (min-width: 380px) { html { font-size: 14px; } } /* Modern Mobile */
+@media (min-width: 480px) { html { font-size: 15px; } } /* Phablets */
+@media (min-width: 768px) { html { font-size: 16px; } } /* Tablets / Standard web base */
+@media (min-width: 1024px) { html { font-size: 17px; } } /* Laptops */
+@media (min-width: 1280px) { html { font-size: 18px; } } /* Desktop Displays */
+@media (min-width: 1536px) { html { font-size: 20px; } } /* Ultra Wide */

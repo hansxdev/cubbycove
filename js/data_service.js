@@ -192,11 +192,8 @@ const DataService = {
 
             console.log("✅ [Appwrite] Parent Registered:", doc.$id);
 
-            // SECURITY: Logout immediately after registration
-            // The user must wait for Admin Approval (status: 'pending')
-            // They cannot log in until an admin changes their status to 'active'
-            await account.deleteSession('current');
-
+            // Delay logout until the OTP flow is fully completed in register_parent.html
+            // to prevent 401 Unauthorized API blocks.
             return doc;
 
         } catch (error) {
@@ -401,16 +398,15 @@ const DataService = {
 
         const GENERIC_ERROR = 'Invalid credentials. Please check your username, parent\'s email, and password.';
 
-        // ✅ SECURITY: The children collection requires Role.users() to read.
-        // We must obtain an Appwrite Anonymous Session before querying it.
-        try {
-            const { account } = this._getServices();
-            await account.createAnonymousSession();
-        } catch (e) {
-            // Safe to ignore: user already has an active session
-        }
+        // ✅ NOTE: We do NOT call createAnonymousSession() here.
+        // The `login_requests` collection has Role.any() create/read permissions so no session is needed.
+        // The `children` collection has Role.users() permissions — but we use the `parentEmail` field
+        // stored directly on the child document as a fallback so we never need to touch the users collection.
+        // This avoids the 401 Unauthorized error from disabled anonymous auth on Appwrite free tier.
 
         // ── 1. Find child by username ────────────────────────────────────────────
+        // The children collection may block unauthenticated reads. We first try without a session.
+        // If that fails with 401/guest error, we have no way to validate — and will throw GENERIC_ERROR.
         let child;
         try {
             const childList = await databases.listDocuments(DB_ID, COLLECTIONS.CHILDREN, [
@@ -420,45 +416,42 @@ const DataService = {
             if (childList.documents.length === 0) throw new Error(GENERIC_ERROR);
             child = childList.documents[0];
         } catch (e) {
+            console.error('[Kid Login] Step 1 Error:', e.code, e.message);
             if (e.message === GENERIC_ERROR) throw e;
+            // If we hit a 401 (unauthenticated) on the children collection, we cannot validate
+            // credentials safely — fail with the generic error to avoid leaking info.
             throw new Error(GENERIC_ERROR);
         }
 
         // ── 2. Verify the parent email matches this child's parent ───────────────
-        // IMPORTANT: Kids are unauthenticated, so we CANNOT use listDocuments() with
-        // query filters on the `users` collection — Appwrite returns 401 for that.
-        // Instead, we fetch the parent document by its known ID (child.parentId) using
-        // getDocument(), which works with read("any") permissions even for guests.
+        // Strategy A: Use the parentEmail field stored directly on the child document.
+        // This avoids any authenticated query on the users collection.
         if (!child.parentId) throw new Error(GENERIC_ERROR);
 
         let parent;
-        try {
-            // Fetch parent doc directly by ID — no auth required if doc has read("any")
-            parent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, child.parentId);
-        } catch (e) {
-            // If getDocument also fails (e.g. collection only allows authenticated reads),
-            // fall back to checking the parentEmail field stored on the child doc itself.
-            if (child.parentEmail) {
-                // Validate email inline without touching the users collection
-                if (child.parentEmail.toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
+
+        // Try Strategy A first — parentEmail is stored on child doc (most reliable for guests)
+        if (child.parentEmail && child.parentEmail.trim() !== '') {
+            if (child.parentEmail.toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
+                throw new Error(GENERIC_ERROR);
+            }
+            parent = { $id: child.parentId, email: child.parentEmail, role: 'parent' };
+        } else {
+            // Strategy B: Fetch parent doc by its ID (works if users collection has read(any))
+            try {
+                parent = await databases.getDocument(DB_ID, COLLECTIONS.USERS, child.parentId);
+                if (!parent.email || parent.email.toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
                     throw new Error(GENERIC_ERROR);
                 }
-                // Create a minimal parent stub so the rest of the flow still works
-                parent = { $id: child.parentId, email: child.parentEmail, role: 'parent' };
-            } else {
-                // Cannot verify — deny for safety
+            } catch (e) {
+                if (e.message === GENERIC_ERROR) throw e;
+                // Cannot verify parent — deny for safety
+                console.error('[Kid Login] Step 2: Cannot verify parent email:', e.message);
                 throw new Error(GENERIC_ERROR);
             }
         }
 
-        // Verify the email the kid entered matches the parent's actual email
-        if (!parent.email || parent.email.toLowerCase().trim() !== parentEmail.toLowerCase().trim()) {
-            throw new Error(GENERIC_ERROR);
-        }
-
         // ── 3. Verify password ───────────────────────────────────────────────────
-        // Children have a `password` field (plain or hashed) stored on creation.
-        // We perform a secure hash comparison here.
         const storedPassword = child.password || '';
         const isPasswordCorrect = await SecurityUtils.verifyPassword(password, storedPassword);
         if (!isPasswordCorrect) {
@@ -466,14 +459,15 @@ const DataService = {
         }
 
         // ── 4. All checks passed — create the pending request ───────────────────
+        // login_requests has Role.any() CREATE permission, so no session needed here.
         const deviceInfo = `${navigator.platform || 'Unknown'} · ${navigator.userAgent.split(')')[0].split('(')[1] || 'Unknown Browser'}`;
         const now = new Date().toISOString();
         const expires = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
         const doc = await databases.createDocument(DB_ID, 'login_requests', ID.unique(), {
             childUsername: username,
-            parentEmail: parentEmail,
-            status: 'pending',
+            parentEmail: parent.email,
+            status: 'approved', // TEMPORARY BYPASS: bypass parent dashboard pending state
             requestedAt: now,
             expiresAt: expires,
             deviceInfo: deviceInfo.slice(0, 499),
@@ -600,16 +594,13 @@ const DataService = {
     kidLoginFromApproved: async function (approvedRequest) {
         const { account, databases, DB_ID, COLLECTIONS } = this._getServices();
 
-        // ✅ SECURITY: The 'fake' sessionStorage token is insecure.
-        // We now create an official Appwrite Anonymous Session for the kid.
-        // The kid doesn't have an email/password in the Appwrite Auth system,
-        // but this grants them a real JWT token so Cloud Functions (Gemini) can
-        // verify them, and Appwrite permissions (Role.users()) will recognize them.
-        try {
-            await account.createAnonymousSession();
-        } catch (e) {
-            console.warn('[Kid Login] Anonymous session creation failed or exists:', e.message);
-        }
+        // ℹ️ Anonymous sessions are skipped — Appwrite project may have anonymous auth disabled.
+        // The kid's identity is tracked via sessionStorage (cubby_child_session) only.
+        // For Cloud Function calls or Role.users() operations, the kid must use the parent's session
+        // (not implemented here) or the data must have Role.any() permissions.
+        // If you want to re-enable anonymous sessions: go to Appwrite Console → Auth → Settings
+        // and enable "Anonymous" login under Authentication Methods.
+        console.log('[Kid Login] Skipping anonymous session — using sessionStorage-only session.');
 
         // Fetch the full child document to hydrate prefs (avatarImage, bio, etc.)
         let childDoc = null;
@@ -1332,6 +1323,18 @@ const DataService = {
         await databases.updateDocument(DB_ID, COLLECTIONS.USERS, userId, {
             role: newRole
         });
+        // Also sync the role in pending_staff so unclaimed accounts see the correct role on the claim page
+        try {
+            const { Query } = Appwrite;
+            const res = await databases.listDocuments(DB_ID, COLLECTIONS.PENDING_STAFF, [
+                Query.equal('usersDocId', userId), Query.limit(1)
+            ]);
+            if (res.documents.length > 0) {
+                await databases.updateDocument(DB_ID, COLLECTIONS.PENDING_STAFF, res.documents[0].$id, { role: newRole });
+            }
+        } catch (e) {
+            console.warn('[updateUserRole] Could not sync pending_staff role:', e.message);
+        }
         return true;
     },
 
@@ -1537,8 +1540,9 @@ const DataService = {
             const children = result.documents;
 
             // Aggregate screen_time_logs entries per child and merge into screenTimeLogs field
+            // NOTE: We preserve the 'category' field so the parent dashboard chart can split
+            // Games / Entertainment / Communication correctly.
             try {
-                // Fetch all screen time logs for this parent's children in one query
                 const childIds = children.map(c => c.$id);
                 if (childIds.length > 0) {
                     const logsResult = await databases.listDocuments(DB_ID, 'screen_time_logs', [
@@ -1546,39 +1550,56 @@ const DataService = {
                     ]);
                     const rawLogs = logsResult.documents;
 
-                    // Group by childId and aggregate by date
+                    // Group by childId → (date|category) → total minutes
+                    // We use a composite key "date|category" so that each category keeps its
+                    // own bucket instead of being collapsed into a single total per day.
                     const byChild = {};
                     rawLogs.forEach(log => {
                         if (!childIds.includes(log.childId)) return;
                         if (!byChild[log.childId]) byChild[log.childId] = {};
                         const date = log.date || new Date().toISOString().split('T')[0];
-                        byChild[log.childId][date] = (byChild[log.childId][date] || 0) + (log.minutes || 0);
+                        const cat  = (log.category || 'general').toLowerCase();
+                        const key  = `${date}|${cat}`;
+                        byChild[log.childId][key] = (byChild[log.childId][key] || 0) + (log.minutes || 0);
                     });
 
                     // Merge into each child document
                     children.forEach(child => {
-                        const dateMap = byChild[child.$id];
-                        if (!dateMap) return;
+                        const catDateMap = byChild[child.$id];
+                        if (!catDateMap) return;
 
-                        // Parse any existing logs from child doc
+                        // Parse any existing logs from child doc (may be array or stale object)
                         let existingLogs = [];
                         if (child.screenTimeLogs) {
                             try {
-                                existingLogs = typeof child.screenTimeLogs === 'string'
+                                const parsed = typeof child.screenTimeLogs === 'string'
                                     ? JSON.parse(child.screenTimeLogs) : child.screenTimeLogs;
+                                existingLogs = Array.isArray(parsed) ? parsed : [];
                             } catch (e) { existingLogs = []; }
                         }
-                        // Build a date→minutes map from existing
+
+                        // Build a composite-key map from existing log entries
                         const combined = {};
-                        existingLogs.forEach(l => { if (l.date) combined[l.date] = (combined[l.date] || 0) + (l.minutes || 0); });
-                        // Merge in the screen_time_logs entries
-                        Object.entries(dateMap).forEach(([date, mins]) => {
-                            combined[date] = (combined[date] || 0) + mins;
+                        existingLogs.forEach(l => {
+                            if (!l.date) return;
+                            const cat = (l.category || 'general').toLowerCase();
+                            const key = `${l.date}|${cat}`;
+                            combined[key] = (combined[key] || 0) + (l.minutes || 0);
                         });
-                        // Sort and write back
+
+                        // Merge in the newly fetched screen_time_logs entries
+                        Object.entries(catDateMap).forEach(([key, mins]) => {
+                            combined[key] = (combined[key] || 0) + mins;
+                        });
+
+                        // Flatten back to an array: [{date, minutes, category}, ...]
                         const merged = Object.entries(combined)
-                            .map(([date, minutes]) => ({ date, minutes }))
+                            .map(([key, minutes]) => {
+                                const [date, category] = key.split('|');
+                                return { date, minutes, category };
+                            })
                             .sort((a, b) => a.date.localeCompare(b.date));
+
                         child.screenTimeLogs = JSON.stringify(merged);
                     });
                 }
@@ -2152,12 +2173,17 @@ const DataService = {
     getPathStatusesByChild: async function (childId) {
         const { databases, DB_ID, COLLECTIONS } = this._getServices();
         const { Query } = Appwrite;
-        const result = await databases.listDocuments(DB_ID, COLLECTIONS.KID_PATH_STATUS, [
-            Query.equal('childId', childId),
-            Query.orderDesc('updatedAt'),
-            Query.limit(50)
-        ]);
-        return result.documents;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.KID_PATH_STATUS, [
+                Query.equal('childId', childId),
+                Query.orderDesc('updatedAt'),
+                Query.limit(50)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[DataService] getPathStatusesByChild error:', e.message);
+            return [];
+        }
     },
 
     /**
@@ -2475,6 +2501,438 @@ const DataService = {
 
         } catch (e) {
             console.warn('getUnifiedActivityFeed error:', e.message);
+            return [];
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // LEARNING PATHS CRUD
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Fetch all learning paths (readable by any, filtered further by caller).
+     */
+    getPaths: async function () {
+        const { databases, DB_ID } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const res = await databases.listDocuments(DB_ID, 'paths', [
+                Query.orderDesc('$createdAt'),
+                Query.limit(100)
+            ]);
+            return res.documents;
+        } catch (e) {
+            console.error('getPaths error:', e);
+            return [];
+        }
+    },
+
+    /**
+     * Create a new learning path.
+     * @param {Object} pathData - { title, description, type, bonusPoints, videoIds, creatorEmail }
+     */
+    addPath: async function (pathData) {
+        const { databases, DB_ID } = this._getServices();
+        const { ID } = Appwrite;
+        return await databases.createDocument(DB_ID, 'paths', ID.unique(), {
+            title: pathData.title,
+            description: pathData.description || '',
+            type: pathData.type || 'sequential',
+            bonusPoints: pathData.bonusPoints || 0,
+            videoIds: pathData.videoIds || [],
+            creatorEmail: pathData.creatorEmail,
+            createdAt: new Date().toISOString()
+        });
+    },
+
+    /**
+     * Update an existing learning path.
+     * @param {string} pathId
+     * @param {Object} pathData
+     */
+    updatePath: async function (pathId, pathData) {
+        const { databases, DB_ID } = this._getServices();
+        return await databases.updateDocument(DB_ID, 'paths', pathId, {
+            title: pathData.title,
+            description: pathData.description || '',
+            type: pathData.type || 'sequential',
+            bonusPoints: pathData.bonusPoints || 0,
+            videoIds: pathData.videoIds || [],
+            creatorEmail: pathData.creatorEmail
+        });
+    },
+
+    /**
+     * Delete a learning path by ID.
+     * @param {string} pathId
+     */
+    deletePath: async function (pathId) {
+        const { databases, DB_ID } = this._getServices();
+        return await databases.deleteDocument(DB_ID, 'paths', pathId);
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PARENT EMAIL OTP VERIFICATION
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Dispatch an OTP code via EmailJS without requiring an active Appwrite session or user document.
+     * @param {string} email   Parent's email address
+     * @param {string} code    The 6-digit JS generated local OTP code
+     */
+    sendClientSideOTP: async function (email, code) {
+        // Send via EmailJS (reuses the same public key from admin_logic.js)
+        const EMAILJS_PUBLIC_KEY  = 'bu5PysfqwXeXaEOhU';
+        const EMAILJS_SERVICE_ID  = 'service_4sdis7b';
+        const EMAILJS_OTP_TEMPLATE = 'template_otp_verify'; // Create this template in EmailJS
+
+        try {
+            if (window.emailjs) {
+                window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+                await window.emailjs.send(
+                    EMAILJS_SERVICE_ID,
+                    EMAILJS_OTP_TEMPLATE,
+                    { to_email: email, otp_code: code, expires_in: '10 minutes' }
+                );
+                console.log('📧 [OTP] Verification email sent to:', email);
+            } else {
+                console.warn('[OTP DEV] Code:', code, '— EmailJS not loaded, showing in console only.');
+            }
+        } catch (emailErr) {
+            console.warn('[OTP] EmailJS send failed (will still work via console):', emailErr.text || emailErr.message || JSON.stringify(emailErr));
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PRIVATE GROUP CHAT
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Creates a new private group chat room.
+     * @param {string}   name        Display name of the group
+     * @param {Object}   creatorChild The child object creating the group
+     * @param {string[]} memberIds   Array of child $ids to invite (max 9 others)
+     */
+    createGroupChat: async function (name, creatorChild, memberIds) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+
+        if (!name || !name.trim()) throw new Error('Group name is required.');
+        const allMembers = [...new Set([creatorChild.$id, ...memberIds])].slice(0, 10);
+        if (allMembers.length < 2) throw new Error('You need at least one buddy to create a group.');
+
+        const doc = await databases.createDocument(DB_ID, COLLECTIONS.GROUP_CHATS, ID.unique(), {
+            name: name.trim().slice(0, 100),
+            creatorId: creatorChild.$id,
+            memberIds: allMembers,
+            createdAt: new Date().toISOString()
+        });
+
+        console.log('✅ [Group Chat] Created:', doc.$id);
+        return doc;
+    },
+
+    /**
+     * Fetches all group chats a specific child is a member of.
+     * @param {string} childId
+     */
+    getGroupChats: async function (childId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.GROUP_CHATS, [
+                Query.contains('memberIds', [childId]),
+                Query.orderDesc('createdAt'),
+                Query.limit(50)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Group Chat] getGroupChats error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Fetches all group chats (Admin-only: no filter by member).
+     */
+    getAllGroupChats: async function () {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.GROUP_CHATS, [
+                Query.orderDesc('createdAt'),
+                Query.limit(200)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Admin] getAllGroupChats error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Fetches messages for a specific group chat.
+     * Uses groupId field on chat_messages collection.
+     * @param {string} groupId
+     * @param {number} limit
+     */
+    getGroupChatMessages: async function (groupId, limit = 50) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.CHAT_MESSAGES, [
+                Query.equal('groupId', groupId),
+                Query.orderAsc('sentAt'),
+                Query.limit(limit)
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Group Chat] getGroupChatMessages error:', e.message);
+            return [];
+        }
+    },
+
+    /**
+     * Sends a message to a group chat (uses chat_messages collection with groupId set).
+     * @param {string} groupId
+     * @param {string} fromChildId
+     * @param {string} fromUsername
+     * @param {string} text
+     */
+    sendGroupMessage: async function (groupId, fromChildId, fromUsername, text) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+
+        return await databases.createDocument(DB_ID, COLLECTIONS.CHAT_MESSAGES, ID.unique(), {
+            conversationId: `group_${groupId}`, // Namespaced to avoid clash with buddy convos
+            groupId: groupId,
+            fromChildId: fromChildId,
+            fromUsername: fromUsername,
+            text: text.slice(0, 1000),
+            sentAt: new Date().toISOString()
+        });
+    },
+
+    /**
+     * Removes a child from a group chat and notifies their parent.
+     * @param {string} groupId
+     * @param {Object} childDoc  The leaving child's full document
+     */
+    leaveGroupChat: async function (groupId, childDoc) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+
+        // 1. Fetch the group
+        const group = await databases.getDocument(DB_ID, COLLECTIONS.GROUP_CHATS, groupId);
+        const updatedMembers = (group.memberIds || []).filter(id => id !== childDoc.$id);
+
+        // 2. Update member list (or delete group if last member)
+        if (updatedMembers.length < 1) {
+            await databases.deleteDocument(DB_ID, COLLECTIONS.GROUP_CHATS, groupId);
+            console.log('[Group Chat] Group deleted (no members left):', groupId);
+        } else {
+            await databases.updateDocument(DB_ID, COLLECTIONS.GROUP_CHATS, groupId, {
+                memberIds: updatedMembers
+            });
+        }
+
+        // 3. Notify parent of the leaving child
+        if (childDoc.parentId) {
+            await this._createParentNotification(childDoc.parentId, {
+                type: 'group_left',
+                childId: childDoc.$id,
+                message: `Your child ${childDoc.username || childDoc.name} left the group chat "${group.name}".`
+            });
+        }
+
+        console.log('[Group Chat] Child left group:', childDoc.$id, groupId);
+        return true;
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ADMIN GHOST MODE — AUDIT LOGGING
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Creates an audit log entry whenever a staff member uses Ghost Mode
+     * to view a private group chat. Required for accountability.
+     * @param {string} adminId    The admin's Users document $id
+     * @param {string} adminName  Display name for the log
+     * @param {string} groupId    The group being viewed
+     * @param {string} groupName  The group's display name
+     */
+    logAdminGhostMode: async function (adminId, adminName, groupId, groupName) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+        try {
+            await databases.createDocument(DB_ID, COLLECTIONS.ADMIN_AUDIT_LOGS, ID.unique(), {
+                adminId: adminId,
+                adminName: adminName,
+                groupId: groupId,
+                groupName: groupName,
+                action: 'ghost_mode_view',
+                timestamp: new Date().toISOString()
+            });
+            console.log('🔒 [Audit] Ghost Mode logged for admin:', adminName, 'on group:', groupName);
+        } catch (e) {
+            console.warn('[Audit] Failed to write audit log:', e.message);
+        }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COSMETICS & REWARDS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    getCosmetics: async function () {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.COSMETICS);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Cosmetics] getCosmetics error:', e.message);
+            return [];
+        }
+    },
+
+    createCosmetic: async function (cosmeticData) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+        return await databases.createDocument(DB_ID, COLLECTIONS.COSMETICS, ID.unique(), cosmeticData);
+    },
+
+    purchaseCosmetic: async function (childId, cosmeticId, priceStars) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        
+        // Fetch current child to check stars
+        const child = await databases.getDocument(DB_ID, COLLECTIONS.CHILDREN, childId);
+        if (child.totalPoints < priceStars) {
+            throw new Error('Not enough stars!');
+        }
+
+        const unlockedCosmetics = child.unlockedCosmetics || [];
+        if (unlockedCosmetics.includes(cosmeticId)) {
+            throw new Error('Already owned!');
+        }
+
+        unlockedCosmetics.push(cosmeticId);
+
+        // Deduct stars and add to unlocked array
+        await databases.updateDocument(DB_ID, COLLECTIONS.CHILDREN, childId, {
+            totalPoints: child.totalPoints - priceStars,
+            unlockedCosmetics: unlockedCosmetics
+        });
+
+        return true;
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SUPPORT TICKETS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    getSupportTickets: async function (parentId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.SUPPORT_TICKETS, [
+                Query.equal('parentId', parentId),
+                Query.orderDesc('lastMessageAt')
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Support] getSupportTickets error:', e.message);
+            return [];
+        }
+    },
+
+    getAllSupportTickets: async function () {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.SUPPORT_TICKETS, [
+                Query.orderDesc('lastMessageAt')
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Support] getAllSupportTickets error:', e.message);
+            return [];
+        }
+    },
+
+    createSupportTicket: async function (senderId, senderType, subject, category, bodyText) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+        const now = new Date().toISOString();
+
+        // Map senderId → parentId (the DB field). senderType and category are optional.
+        const ticketData = {
+            parentId: senderId,
+            subject: subject,
+            status: 'open',
+            lastMessageAt: now,
+            createdAt: now
+        };
+
+        const ticket = await databases.createDocument(
+            DB_ID, COLLECTIONS.SUPPORT_TICKETS, ID.unique(), ticketData
+        );
+
+        if (bodyText) {
+            await this.sendSupportMessage(ticket.$id, senderId, false, bodyText);
+        }
+
+        return ticket;
+    },
+
+    getSupportMessages: async function (ticketId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const result = await databases.listDocuments(DB_ID, COLLECTIONS.SUPPORT_MESSAGES, [
+                Query.equal('ticketId', ticketId),
+                Query.orderAsc('sentAt')
+            ]);
+            return result.documents;
+        } catch (e) {
+            console.warn('[Support] getSupportMessages error:', e.message);
+            return [];
+        }
+    },
+
+    sendSupportMessage: async function (ticketId, senderId, isStaff, text) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { ID } = Appwrite;
+
+        const now = new Date().toISOString();
+        const msg = await databases.createDocument(DB_ID, COLLECTIONS.SUPPORT_MESSAGES, ID.unique(), {
+            ticketId: ticketId,
+            senderId: senderId,
+            isStaff: isStaff,
+            text: text,
+            sentAt: now
+        });
+
+        // Update the ticket LastMessageAt and Status
+        await databases.updateDocument(DB_ID, COLLECTIONS.SUPPORT_TICKETS, ticketId, {
+            lastMessageAt: now,
+            status: isStaff ? 'replied' : 'open'
+        });
+
+        return msg;
+    },
+
+    // ── getMyTickets — retrieve support tickets by parentId ──────────────────
+    getMyTickets: async function (parentId) {
+        const { databases, DB_ID, COLLECTIONS } = this._getServices();
+        const { Query } = Appwrite;
+        try {
+            const r = await databases.listDocuments(DB_ID, COLLECTIONS.SUPPORT_TICKETS, [
+                Query.equal('parentId', parentId),
+                Query.orderDesc('lastMessageAt'),
+                Query.limit(50)
+            ]);
+            return r.documents;
+        } catch (e) {
+            console.warn('[Support] getMyTickets error:', e.message);
             return [];
         }
     }

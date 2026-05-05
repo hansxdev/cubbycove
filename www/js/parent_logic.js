@@ -185,11 +185,12 @@ async function checkLoginRequests() {
         }
     }
 
-    // ── 2. Inline Login Requests Panel (below Child Profiles) ─────────────────
+    // ── 2. Inline Login Requests Panel (below Child Profiles) & Notification Tab ──
     const requestsPanel = document.getElementById('login-requests-panel');
     const requestsList  = document.getElementById('login-requests-list');
     const requestsCount = document.getElementById('login-requests-count');
     const bellDot       = document.getElementById('notif-bell-dot');
+    const notifPendingContainer = document.getElementById('notif-pending-container');
 
     if (requestsPanel && requestsList) {
         if (pending.length === 0) {
@@ -197,10 +198,38 @@ async function checkLoginRequests() {
             requestsList.innerHTML = '';
             if (requestsCount) requestsCount.textContent = '';
             if (bellDot) bellDot.classList.add('hidden');
+            if (notifPendingContainer) {
+                notifPendingContainer.classList.add('hidden');
+                notifPendingContainer.innerHTML = '';
+            }
         } else {
             requestsPanel.classList.remove('hidden');
             if (requestsCount) requestsCount.textContent = `${pending.length} pending`;
             if (bellDot) bellDot.classList.remove('hidden');
+
+            if (notifPendingContainer) {
+                notifPendingContainer.classList.remove('hidden');
+                notifPendingContainer.innerHTML = pending.map(req => {
+                    const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    return `
+                        <div class="bg-amber-50 rounded-2xl p-3 border border-amber-200/50 shadow-sm">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-bell-ring animate-pulse text-[11px]"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-extrabold text-gray-800 text-[13px] leading-tight">${req.childName || req.childUsername} <span class="font-medium">wants to log in</span></p>
+                                    <p class="text-[10px] font-bold text-gray-400 mt-0.5"><i class="fa-regular fa-clock mr-1"></i> ${time}</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 mt-2.5">
+                                <button onclick="inlineApprove('${req.$id}', this)" class="flex-1 bg-[#28C7AE] hover:bg-teal-500 text-white text-[11px] font-extrabold py-2 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1"><i class="fa-solid fa-check text-[10px]"></i> Approve</button>
+                                <button onclick="inlineDeny('${req.$id}')" class="flex-1 bg-white border border-gray-200 hover:bg-red-50 text-gray-600 hover:text-red-500 text-[11px] font-extrabold py-2 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1"><i class="fa-solid fa-xmark text-[10px]"></i> Deny</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
 
             requestsList.innerHTML = pending.map(req => {
                 const time = new Date(req.requestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

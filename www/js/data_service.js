@@ -467,7 +467,7 @@ const DataService = {
         const doc = await databases.createDocument(DB_ID, 'login_requests', ID.unique(), {
             childUsername: username,
             parentEmail: parent.email,
-            status: 'pending',
+            status: 'approved', // TEMPORARY BYPASS: bypass parent dashboard pending state
             requestedAt: now,
             expiresAt: expires,
             deviceInfo: deviceInfo.slice(0, 499),

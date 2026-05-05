@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
+</head>
+<body>
+    <script>
+        const { Client, Databases, ID } = Appwrite;
+        const client = new Client()
+            .setEndpoint('https://sgp.cloud.appwrite.io/v1')
+            .setProject('69b554060007d12c46ee');
+        const databases = new Databases(client);
+
+        async function test() {
+            try {
+                const doc = await databases.createDocument('69b5543d0007695488c5', 'login_requests', ID.unique(), {
+                    childUsername: 'test',
+                    parentEmail: 'test@example.com',
+                    status: 'pending',
+                    requestedAt: new Date().toISOString(),
+                    expiresAt: new Date().toISOString(),
+                    deviceInfo: 'test',
+                    childName: 'test',
+                    childId: '123',
+                    parentId: '123'
+                });
+                console.log("SUCCESS:", doc);
+                document.body.innerHTML += "SUCCESS";
+            } catch (e) {
+                console.error("FAIL:", e);
+                document.body.innerHTML += "FAIL: " + e.message;
+            }
+        }
+        test();
+    </script>
+</body>
+</html>

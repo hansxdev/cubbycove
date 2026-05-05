@@ -785,6 +785,14 @@ window.saveSettings = async function () {
                 }
             }
             await svc.account.updateName(newUsername);
+            // Mirror the name change to the USERS DB collection so header/staff table stay in sync
+            try {
+                const { databases, DB_ID, COLLECTIONS } = DataService._getServices();
+                await databases.updateDocument(DB_ID, COLLECTIONS.USERS, currentUser.$id, {
+                    firstName: newUsername
+                });
+                currentUser.firstName = newUsername;
+            } catch (e) { console.warn('[saveSettings] Could not sync name to USERS:', e.message); }
             updatedPrefs.lastUsernameChange = new Date().toISOString();
         }
 

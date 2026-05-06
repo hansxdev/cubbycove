@@ -635,6 +635,8 @@ const DataService = {
                 coverColor: childDoc?.coverColor || '#3b82f6',
                 theme: childDoc?.theme || 'default',
                 avatarIcon: childDoc?.avatarIcon || '🐻',
+                // ✅ BUG FIX: Restore purchased shop items from DB so they survive logout/login
+                unlockedItems: childDoc?.unlockedItems || [],
             }
         };
         sessionStorage.setItem('cubby_child_session', JSON.stringify(childSession));

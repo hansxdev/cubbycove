@@ -136,10 +136,125 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('message-input').focus();
     $('buddy-search')?.addEventListener('input', filterBuddySidebar);
     
-    $('emoji-btn')?.addEventListener('click', () => {
-        alert("Emoji picker feature coming soon! 🍄");
+    $('emoji-btn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _toggleEmojiPicker();
     });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMOJI PICKER — Floating Kid-Friendly Grid
+// ─────────────────────────────────────────────────────────────────────────────
+const EMOJI_LIST = [
+    '😊','😂','🥰','😎','🤩','😜','😇','🤗','😋','🥳',
+    '👍','👏','🙌','🤝','💪','✌️','🤞','🙏','💯','🔥',
+    '❤️','💖','💕','🌟','⭐','✨','🎉','🎊','🎈','🏆',
+    '🐶','🐱','🦁','🐸','🐥','🐙','🦋','🌈','🌸','🍕',
+    '🍦','🍭','🍬','🎮','🚀','🌙','☀️','🌊','🍀','🎵',
+];
+
+let _emojiPickerOpen = false;
+
+function _toggleEmojiPicker() {
+    const existing = document.getElementById('cubby-emoji-picker');
+    if (existing) {
+        existing.remove();
+        _emojiPickerOpen = false;
+        return;
+    }
+    _emojiPickerOpen = true;
+    _openEmojiPicker();
+}
+
+function _openEmojiPicker() {
+    const btn = $('emoji-btn');
+    const input = $('message-input');
+    if (!btn || !input) return;
+
+    const picker = document.createElement('div');
+    picker.id = 'cubby-emoji-picker';
+
+    // Position it above the emoji button
+    const btnRect = btn.getBoundingClientRect();
+    picker.style.cssText = `
+        position: fixed;
+        bottom: ${window.innerHeight - btnRect.top + 8}px;
+        left: ${btnRect.left - 60}px;
+        z-index: 9999;
+        background: white;
+        border: 3px solid #e5e7eb;
+        border-radius: 20px;
+        padding: 12px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.15), 0 4px 0 #e5e7eb;
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 4px;
+        width: 320px;
+        max-width: 90vw;
+        animation: emojiPickerPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    `;
+
+    if (!document.getElementById('emoji-picker-style')) {
+        const style = document.createElement('style');
+        style.id = 'emoji-picker-style';
+        style.textContent = `
+            @keyframes emojiPickerPop {
+                from { transform: scale(0.85) translateY(8px); opacity: 0; }
+                to   { transform: scale(1) translateY(0);     opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    EMOJI_LIST.forEach(emoji => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = emoji;
+        btn.style.cssText = `
+            font-size: 20px;
+            line-height: 1;
+            padding: 6px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.1s, transform 0.1s;
+        `;
+        btn.addEventListener('mouseenter', () => { btn.style.background = '#f3f4f6'; btn.style.transform = 'scale(1.3)'; });
+        btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent'; btn.style.transform = 'scale(1)'; });
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Insert emoji at cursor position in the message input
+            const msgInput = $('message-input');
+            if (msgInput) {
+                const start = msgInput.selectionStart;
+                const end = msgInput.selectionEnd;
+                const text = msgInput.value;
+                msgInput.value = text.slice(0, start) + emoji + text.slice(end);
+                msgInput.selectionStart = msgInput.selectionEnd = start + emoji.length;
+                msgInput.focus();
+                // Trigger auto-resize
+                msgInput.dispatchEvent(new Event('input'));
+            }
+            // Close picker after selection
+            picker.remove();
+            _emojiPickerOpen = false;
+        });
+        picker.appendChild(btn);
+    });
+
+    document.body.appendChild(picker);
+
+    // Close picker on outside click
+    const closeOnOutside = (e) => {
+        if (!picker.contains(e.target) && e.target !== $('emoji-btn')) {
+            picker.remove();
+            _emojiPickerOpen = false;
+            document.removeEventListener('click', closeOnOutside);
+        }
+    };
+    setTimeout(() => document.addEventListener('click', closeOnOutside), 10);
+}
 
 // Updates the chat header with the current buddy's avatar and name.
 function updateChatHeader(buddyId, buddyName, avatarImage, avatarBgColor) {
@@ -477,9 +592,26 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Formats an ISO date string into a localized time format for display.
+// Formats an ISO date string into a smart localized timestamp:
+// - Today's messages: "Today · 3:42 PM"
+// - Yesterday's messages: "Yesterday · 9:15 AM"
+// - Older messages: "Mon, Jan 6 · 2:30 PM"
 function formatTime(isoStr) {
-    return isoStr ? new Date(isoStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    if (!isoStr) return '';
+    const date = new Date(isoStr);
+    const now = new Date();
+
+    const isToday = date.toDateString() === now.toDateString();
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+
+    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (isToday) return `Today \u00b7 ${timeStr}`;
+    if (isYesterday) return `Yesterday \u00b7 ${timeStr}`;
+    const dayStr = date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    return `${dayStr} \u00b7 ${timeStr}`;
 }
 
 // Safely terminates message polling when the user navigates away from the page.

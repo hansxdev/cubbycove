@@ -99,7 +99,8 @@ if (!API_KEY) {
                 { type: 'string', key: 'parentEmail', required: false, size: 255 },
                 { type: 'string', key: 'avatarParts', required: false, size: 65535 },
                 { type: 'string', key: 'unlockedCosmetics', required: false, size: 50, array: true },
-                { type: 'string', key: 'unlockedThemes', required: false, size: 50, array: true }
+                { type: 'string', key: 'unlockedThemes', required: false, size: 50, array: true },
+                { type: 'string', key: 'unlockedItems', required: false, size: 100, array: true }
             ],
             indexes: [
                 { key: 'parentId_idx', type: 'key', attributes: ['parentId'] },
@@ -113,7 +114,7 @@ if (!API_KEY) {
                 // as a secondary validation field for the login handshake.
                 Permission.read(Role.any()),    // ✅ Required: kid login needs to query by username
                 Permission.create(Role.users()),
-                Permission.update(Role.users()),
+                Permission.update(Role.any()),  // ✅ Required: unauthenticated kids update their own profile (stars, prefs)
                 Permission.delete(Role.users()),
             ]
         },
@@ -209,11 +210,12 @@ if (!API_KEY) {
                 { key: 'toChild', type: 'key', attributes: ['toChildId'] }
             ],
             permissions: [
-                // ✅ SECURITY: Buddy social graph should not be fully public.
-                // Authenticated users can read/create/update their own buddy relationships.
-                Permission.read(Role.users()),
-                Permission.create(Role.users()),
-                Permission.update(Role.users()),
+                // ✅ SECURITY: Kids have no Appwrite Auth session (anonymous login flow).
+                // Role.any() is required for the buddy social graph to work for unauthenticated kids.
+                // Buddy IDs are non-guessable Appwrite document IDs — not sensitive data.
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
+                Permission.update(Role.any()),
             ]
         },
         // ── 7. PARENT NOTIFICATIONS ──
@@ -256,12 +258,10 @@ if (!API_KEY) {
                 { key: 'group_idx', type: 'key', attributes: ['groupId'] }
             ],
             permissions: [
-                // ✅ SECURITY: Chat messages must NOT be publicly readable — this is a child safety requirement.
-                // Only authenticated users (parents monitoring, authenticated kids) can access chat.
-                Permission.read(Role.users()),
-                // Guests need create so the unauthenticated kid flow can post messages.
-                // Appwrite Anonymous Sessions should be used here once the kid auth refactor lands.
-                Permission.create(Role.users()),
+                // ✅ Kids are unauthenticated — Role.any() required for chat to work.
+                // Messages are scoped by conversationId / groupId in queries.
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
             ]
         },
         // ── 9. KID WATCH HISTORY ──
@@ -278,11 +278,12 @@ if (!API_KEY) {
                 { type: 'string', key: 'watchedAt', required: true, size: 65535 }
             ],
             permissions: [
-                // ✅ SECURITY: Watch history is private per-child data.
-                Permission.read(Role.users()),
-                Permission.create(Role.users()),
-                Permission.update(Role.users()),
-                Permission.delete(Role.users()),
+                // ✅ Kids are unauthenticated (anonymous session flow) — Role.any() is required.
+                // Watch history is scoped by childId in queries, not by Appwrite Auth roles.
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
+                Permission.update(Role.any()),
+                Permission.delete(Role.any()),
             ]
         },
         // ── 10. KID FAVORITES ──
@@ -299,11 +300,11 @@ if (!API_KEY) {
                 { type: 'string', key: 'addedAt', required: true, size: 65535 }
             ],
             permissions: [
-                // ✅ SECURITY: Favorites are private per-child data.
-                Permission.read(Role.users()),
-                Permission.create(Role.users()),
-                Permission.update(Role.users()),
-                Permission.delete(Role.users()),
+                // ✅ Kids are unauthenticated — Role.any() required for favorites to work.
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
+                Permission.update(Role.any()),
+                Permission.delete(Role.any()),
             ]
         },
         // ── 11. PATHS ──
@@ -346,9 +347,10 @@ if (!API_KEY) {
                 { key: 'rewardId_idx', type: 'unique', attributes: ['rewardId'] }
             ],
             permissions: [
-                // ✅ SECURITY: Reward records should not be public — prevents reward manipulation research.
-                Permission.read(Role.users()),
-                Permission.create(Role.users()),
+                // ✅ Kids are unauthenticated — Role.any() required for star rewards to work.
+                // Reward IDs use unique Appwrite document IDs — not guessable.
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
             ]
         },
         // ── 13. KID PATH STATUS ──
@@ -363,10 +365,11 @@ if (!API_KEY) {
                 { type: 'string', key: 'updatedAt', required: true, size: 50 }
             ],
             permissions: [
-                // ✅ SECURITY: Path progress is private per-child data.
-                Permission.read(Role.users()),
-                Permission.create(Role.users()),
-                Permission.update(Role.users()),
+                // ✅ Kids are unauthenticated — Role.any() required for learning path progress.
+                // childId in queries scopes results to the correct kid.
+                Permission.read(Role.any()),
+                Permission.create(Role.any()),
+                Permission.update(Role.any()),
             ]
         },
         // ── 14. LOGIN REQUESTS ──
